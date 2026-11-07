@@ -1,4 +1,4 @@
-.PHONY: help install run test build up down logs reset db-check api-check
+.PHONY: help install run test build up down logs reset migrate migrate-down db-check api-check
 
 COMPOSE ?= podman-compose
 
@@ -9,6 +9,8 @@ help:
 		'down       Stop containers' \
 		'logs       Follow container logs' \
 		'reset      Delete database volume and recreate containers' \
+		'migrate    Apply SQL migrations' \
+		'migrate-down Roll back initial SQL migration' \
 		'test       Run Go tests' \
 		'build      Build API binary' \
 		'db-check   Check PostgreSQL' \
@@ -30,6 +32,12 @@ logs:
 reset:
 	$(COMPOSE) down -v
 	$(COMPOSE) up -d
+
+migrate:
+	$(COMPOSE) exec -T db psql -U postgres -d fnb-app < migrations/000001_initial.up.sql
+
+migrate-down:
+	$(COMPOSE) exec -T db psql -U postgres -d fnb-app < migrations/000001_initial.down.sql
 
 pull:
 	$(COMPOSE) pull

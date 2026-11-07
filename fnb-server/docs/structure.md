@@ -19,7 +19,7 @@ fnb-server/
 ├── pkg/                            # Reusable public helpers
 │   ├── kafka/                      # Kafka transport wrapper
 │   └── logger/                     # Logging helper
-├── migrations/                     # Versioned database schema changes
+├── migrations/                     # Versioned SQL schema changes (*.up.sql, *.down.sql)
 ├── docker/postgres/init.sql        # One-time PostgreSQL roles and grants
 ├── docker-compose.yml              # PostgreSQL and PostgREST
 ├── .env.example                    # Local configuration template

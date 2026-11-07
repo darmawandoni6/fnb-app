@@ -1,0 +1,25 @@
+BEGIN;
+
+DROP TABLE IF EXISTS refund_items;
+DROP TABLE IF EXISTS refunds;
+DROP TABLE IF EXISTS stock_movements;
+DROP TABLE IF EXISTS order_items;
+DROP TABLE IF EXISTS orders;
+DROP TABLE IF EXISTS recipe_items;
+DROP TABLE IF EXISTS menus;
+DROP TABLE IF EXISTS menu_categories;
+DROP TABLE IF EXISTS ingredients;
+DROP TABLE IF EXISTS settings;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS tables;
+DROP TABLE IF EXISTS users;
+
+DROP TYPE IF EXISTS stock_movement_type;
+DROP TYPE IF EXISTS user_role;
+DROP TYPE IF EXISTS order_type;
+DROP TYPE IF EXISTS payment_method;
+DROP TYPE IF EXISTS payment_status;
+DROP TYPE IF EXISTS order_item_status;
+DROP TYPE IF EXISTS order_status;
+
+COMMIT;

@@ -6,6 +6,7 @@ Constants rules live in [`docs/constants.md`](docs/constants.md).
 Git commit and push rules live in [`docs/git.md`](docs/git.md).
 Logging rules live in [`docs/logging.md`](docs/logging.md).
 Validation rules live in [`docs/validation.md`](docs/validation.md).
+Application flow rules live in [`docs/flow.md`](flow.md) and API draft in [`docs/api.md`](api.md).
 
 Review every new package and dependency against these checks:
 

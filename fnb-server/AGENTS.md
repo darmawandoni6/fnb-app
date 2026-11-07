@@ -3,7 +3,8 @@
 ## Read first
 
 Canonical checklist: `docs/rules.md`. It links to sibling docs in `docs/`:
-structure, api-response, constants, git, logging, validation. Read the
+structure, rules, api-response, constants, git, logging, validation, flow,
+api, and tech-stack. Read the
 relevant doc before adding code. The checklist gates every commit.
 
 ## Commands

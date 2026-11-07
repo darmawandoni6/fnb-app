@@ -71,6 +71,8 @@ delivery → usecase → repository → domain
 
 HTTP response format and Echo error handling are defined in [`api-response.md`](api-response.md). Every handler follows that document.
 
+Application execution flows are defined in [`flow.md`](flow.md). API draft and future Bruno collection source are defined in [`api.md`](api.md).
+
 Shared-value constants are defined in [`constants.md`](constants.md). Avoid repeated literals for stable application values.
 
 Commit and push workflow is defined in [`git.md`](git.md). Follow it manually before repository changes.

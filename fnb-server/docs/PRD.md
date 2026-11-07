@@ -104,13 +104,14 @@ The seed creates an owner only if the `users` table has no users. Public registr
 
 ## 5. Order and Item Status
 
-Production status is stored in `order_items`, because each item can finish at a different time. Delivery status remains at order level.
+Production and delivery status are stored in `order_items`, because each item can finish at a different time.
 
 ```text
-PENDING → COOKING → READY
+PENDING → COOKING → READY → DELIVERED
+    └────────────────────→ CANCELLED
 ```
 
-Item status can only move forward. The kitchen changes item status; all actors can cancel an item only while it is `PENDING`. Status `DIANTAR` is not stored in `order_items` in M1.
+Item status can only move forward. The kitchen changes `COOKING` and `READY`; the cashier changes `DELIVERED`. All actors can cancel an item only while it is `PENDING`.
 
 Order status is the aggregate production and delivery status:
 
@@ -125,12 +126,12 @@ MENUNGGU → DIPROSES → SIAP → DIANTAR → SELESAI
 |---|---|
 | All items `PENDING` | `MENUNGGU` |
 | At least one item `COOKING` and not all `READY` | `DIPROSES` |
-| All items `READY` | `SIAP` |
-| At least one item is `DIANTAR` and not all items are complete | `DIANTAR` |
+| All active items `READY` | `SIAP` |
+| At least one item `DELIVERED` and not all active items are delivered | `DIANTAR` |
 | All items are complete and payment is `LUNAS` | `SELESAI` |
 | All items are cancelled | `DIBATALKAN` |
 
-Statuses `MENUNGGU`, `DIPROSES`, and `SIAP` are calculated automatically from item status. Statuses `DIANTAR` and `SELESAI` are managed by the cashier/owner based on delivery and payment.
+Statuses `MENUNGGU`, `DIPROSES`, `SIAP`, `DIANTAR`, and `SELESAI` are calculated automatically from item statuses and payment.
 
 ### 5.2 Item Status Transitions
 
@@ -138,20 +139,21 @@ Statuses `MENUNGGU`, `DIPROSES`, and `SIAP` are calculated automatically from it
 |---|---|---|
 | `PENDING` | `COOKING` | `KITCHEN`, `OWNER` |
 | `COOKING` | `READY` | `KITCHEN`, `OWNER` |
+| `READY` | `DELIVERED` | `CASHIER`, `OWNER` |
 | `PENDING` | cancel | The customer who owns the order, `CASHIER`, `OWNER` |
 
 Cancelled items are excluded from active item calculations. If all items are cancelled, the order automatically becomes `DIBATALKAN`.
 
-### 5.3 Transisi pengantaran and payments
+### 5.3 Delivery and Payment Transitions
 
 | Dari | Ke | Actor |
 |---|---|---|
-| `SIAP` | `DIANTAR` | `CASHIER`, `OWNER` |
-| `DIANTAR` | `SELESAI` | `CASHIER`, `OWNER`, with payments `LUNAS` |
-| before `SELESAI` | cancel item | `CASHIER`, `OWNER` |
+| first item `DELIVERED` | `DIANTAR` | `CASHIER`, `OWNER` |
+| all active items `DELIVERED` | `SELESAI` | `CASHIER`, `OWNER`, with payment `LUNAS` |
+| before `SELESAI` | cancel item | any actor, only while item is `PENDING` |
 | all valid transitions | as needed | `OWNER` |
 
-Payment remains at order level. `payment_status` and `order.status` are separate fields, but the order must be `LUNAS` before `SELESAI`. Cancelling an item restores that item's stock atomically. Completed orders or items cannot be cancelled.
+Payment remains at order level. New orders start as `BELUM`. Cashier/owner marks an order `LUNAS` before the kitchen may start `COOKING`. `payment_status` and `order.status` are separate fields, but the order must be `LUNAS` before `SELESAI`. Cancelling an item restores that item's stock atomically. Completed orders or items cannot be cancelled.
 
 ## 6. Main Flows
 
@@ -165,11 +167,12 @@ Payment remains at order level. `payment_status` and `order.status` are separate
 6. The backend creates order `MENUNGGU`, creates all items with status `PENDING`, stores `tracking_token`, calculates tax, and decreases stock.
 7. QR Menu stores the order token in `localStorage`.
 8. The dashboard retrieves orders through polling.
-9. The kitchen changes each item status from `PENDING` → `COOKING` → `READY`.
-10. The backend calculates the order production status from item statuses.
-11. The cashier handles payment, delivers ready items, then marks items complete.
-12. The order becomes `SELESAI` after all items are complete and payment is `LUNAS`.
-13. QR Menu polls order and item statuses using `tracking_token`.
+9. The cashier marks the order `LUNAS`.
+10. The kitchen changes each item status from `PENDING` → `COOKING` → `READY`.
+11. The backend calculates the order production status from item statuses.
+12. The cashier delivers ready items and marks them `DELIVERED`.
+13. The order becomes `SELESAI` after all active items are `DELIVERED` and payment is `LUNAS`.
+14. QR Menu polls order and item statuses using `tracking_token`.
 
 ### 6.2 Manual Orders
 
@@ -197,7 +200,7 @@ Payment remains at order level. `payment_status` and `order.status` are separate
 - Status transitions according to the matrix.
 - Cash/non-cash payments.
 - Polling order and item statuses.
-- Kitchen item status: `PENDING` → `COOKING` → `READY`.
+- Kitchen and delivery item status: `PENDING` → `COOKING` → `READY` → `DELIVERED`.
 - Per-item delivery and aggregate order status.
 - Ingredients, recipes, stock decrease, per-item stock restoration, and stock movements.
 - Settings `cafe_name` and `tax_percent`.
@@ -253,7 +256,7 @@ All following constrained values use native PostgreSQL enums. Migrations must cr
 
 ```sql
 order_status: MENUNGGU, DIPROSES, SIAP, DIANTAR, SELESAI, DIBATALKAN
-order_item_status: PENDING, COOKING, READY, CANCELLED
+order_item_status: PENDING, COOKING, READY, DELIVERED, CANCELLED
 payment_status: BELUM, LUNAS
 payment_method: CASH, NON_CASH
 order_type: QR, MANUAL
@@ -271,7 +274,7 @@ Go maps each enum to typed string constants in `internal/domain`, rather than un
 - `password_hash` text
 - `role` user_role enum: `OWNER`, `CASHIER`, `KITCHEN`
 - `is_active` boolean
-- ``created_at`, `updated_at` timestamps
+- `created_at`, `updated_at` timestamps
 
 ### `sessions`
 
@@ -288,7 +291,7 @@ Go maps each enum to typed string constants in `internal/domain`, rather than un
 - `table_number` text unique
 - `qr_token` text unique
 - `is_active` boolean
-- ``created_at`, `updated_at` timestamps
+- `created_at`, `updated_at` timestamps
 
 The QR code contains only a public URL with `qr_token`. It does not contain credentials.
 
@@ -297,7 +300,7 @@ The QR code contains only a public URL with `qr_token`. It does not contain cred
 - `id` UUID primary key
 - `name` text
 - `sort_order` integer
-- ``created_at`, `updated_at` timestamps
+- `created_at`, `updated_at` timestamps
 
 ### `menus`
 
@@ -307,7 +310,7 @@ The QR code contains only a public URL with `qr_token`. It does not contain cred
 - `price` bigint
 - `image_url` nullable text
 - `is_available` boolean
-- ``created_at`, `updated_at` timestamps
+- `created_at`, `updated_at` timestamps
 
 ### `ingredients`
 
@@ -316,7 +319,7 @@ The QR code contains only a public URL with `qr_token`. It does not contain cred
 - `unit` text
 - `stock_qty` numeric
 - `min_stock` numeric
-- ``created_at`, `updated_at` timestamps
+- `created_at`, `updated_at` timestamps
 
 ### `recipe_items`
 
@@ -346,12 +349,12 @@ The QR code contains only a public URL with `qr_token`. It does not contain cred
 - `tracking_token_hash` nullable text unique
 - `status` order_status enum: `MENUNGGU`, `DIPROSES`, `SIAP`, `DIANTAR`, `SELESAI`, `DIBATALKAN`
 - `subtotal_amount` bigint
-- `tax_percent` bigint or numeric according to the percentage implementation
+- `tax_percent` numeric
 - `tax_amount` bigint
 - `total_amount` bigint
 - `payment_status` payment_status enum: `BELUM`, `LUNAS`
 - `payment_method` nullable payment_method enum: `CASH`, `NON_CASH`
-- ``created_at`, `updated_at` timestamps
+- `created_at`, `updated_at` timestamps
 
 Tracking token asli only sent sekali to QR Menu. Database stores hash token.
 
@@ -363,15 +366,37 @@ Tracking token asli only sent sekali to QR Menu. Database stores hash token.
 - `qty` integer
 - `note` nullable text
 - `price` bigint; price snapshot when the order was created
-- `status` order_item_status enum: `PENDING`, `COOKING`, `READY`, `CANCELLED`
+- `status` order_item_status enum: `PENDING`, `COOKING`, `READY`, `DELIVERED`, `CANCELLED`
 - `cancelled_at` nullable timestamp
+
+### `refunds`
+
+- `id` UUID primary key
+- `order_id` FK → `orders`
+- `actor_id` FK → `users`
+- `reason` text
+- `subtotal_amount` bigint
+- `tax_amount` bigint
+- `total_amount` bigint
+- `payment_method` payment_method enum: `CASH`, `NON_CASH`
+- `created_at` timestamp
+
+### `refund_items`
+
+- `id` UUID primary key
+- `refund_id` FK → `refunds`
+- `order_item_id` FK → `order_items`
+- `qty` integer
+- `subtotal_amount` bigint
+- `tax_amount` bigint
+- `total_amount` bigint
 
 ### `settings`
 
 - `id` UUID primary key
 - `cafe_name` text
 - `tax_percent` numeric default `0`
-- ``created_at`, `updated_at` timestamps
+- `created_at`, `updated_at` timestamps
 
 ## 10. API and Integration
 

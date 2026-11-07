@@ -16,9 +16,10 @@ type response struct {
 }
 
 type errorBody struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
-	Debug   string `json:"debug,omitempty"`
+	Code    string            `json:"code"`
+	Message string            `json:"message"`
+	Fields  map[string]string `json:"fields,omitempty"`
+	Debug   string            `json:"debug,omitempty"`
 }
 
 func Success(c echo.Context, status int, data interface{}) error {
@@ -38,6 +39,7 @@ func ErrorHandler(isDevelopment bool, log *slog.Logger) echo.HTTPErrorHandler {
 		if errors.As(err, &appErr) {
 			body.Code = appErr.Code
 			body.Message = appErr.Message
+			body.Fields = appErr.Fields
 			status = appErr.HTTPStatus
 		} else if httpErr, ok := err.(*echo.HTTPError); ok {
 			status = httpErr.Code

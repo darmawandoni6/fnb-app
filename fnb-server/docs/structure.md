@@ -77,6 +77,8 @@ Commit and push workflow is defined in [`git.md`](git.md). Follow it manually be
 
 Logging behavior is defined in [`logging.md`](logging.md). Use one injected structured logger per process.
 
+Request validation is defined in [`validation.md`](validation.md). Validate at delivery boundary; keep business rules in usecases.
+
 ## Request Flow
 
 ```text

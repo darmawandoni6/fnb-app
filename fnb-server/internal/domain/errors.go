@@ -6,6 +6,7 @@ type AppError struct {
 	Code       string
 	Message    string
 	HTTPStatus int
+	Fields     map[string]string
 	Err        error
 }
 

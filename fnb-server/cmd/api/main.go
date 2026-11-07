@@ -24,6 +24,7 @@ func main() {
 	}
 
 	e := echo.New()
+	e.Binder = httpDelivery.NewBinder()
 	e.HTTPErrorHandler = httpDelivery.ErrorHandler(cfg.IsDevelopment(), log)
 	e.Use(httpDelivery.RequestLogger(log))
 	e.Use(middleware.Recover())

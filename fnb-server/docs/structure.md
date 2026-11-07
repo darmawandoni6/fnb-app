@@ -75,6 +75,8 @@ Shared-value constants are defined in [`constants.md`](constants.md). Avoid repe
 
 Commit and push workflow is defined in [`git.md`](git.md). Follow it manually before repository changes.
 
+Logging behavior is defined in [`logging.md`](logging.md). Use one injected structured logger per process.
+
 ## Request Flow
 
 ```text

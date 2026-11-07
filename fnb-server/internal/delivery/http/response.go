@@ -2,6 +2,7 @@ package http
 
 import (
 	"errors"
+	"log/slog"
 	"net/http"
 
 	"fnb-server/internal/domain"
@@ -24,12 +25,13 @@ func Success(c echo.Context, status int, data interface{}) error {
 	return c.JSON(status, response{Success: true, Data: data})
 }
 
-func ErrorHandler(isDevelopment bool) echo.HTTPErrorHandler {
+func ErrorHandler(isDevelopment bool, log *slog.Logger) echo.HTTPErrorHandler {
 	return func(err error, c echo.Context) {
 		if c.Response().Committed {
 			return
 		}
 
+		log.Error("HTTP request failed", "error", err, "path", c.Path(), "method", c.Request().Method)
 		body := errorBody{Code: domain.CodeInternalError, Message: "internal server error"}
 		status := http.StatusInternalServerError
 		var appErr *domain.AppError

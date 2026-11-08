@@ -16,6 +16,7 @@ fnb-server/
 │   └── delivery/
 │       ├── http/                   # HTTP handlers, router, and middleware
 │       │   ├── router.go           # Echo setup, middleware, and route registration
+│       │   ├── *_middleware.go     # HTTP middleware by feature
 │       │   └── dto/                # HTTP request and response DTOs by feature
 │       └── kafka/                  # Kafka event consumers; thin adapters
 ├── pkg/                            # Reusable public helpers
@@ -53,14 +54,15 @@ delivery → usecase → repository → domain
 7. `internal/delivery/http` translates HTTP requests and responses. Keep handlers thin.
 8. `internal/delivery/http/router.go` creates Echo, configures HTTP behavior and middleware, and registers routes.
 9. `internal/delivery/http/dto` owns HTTP transport DTOs. Keep DTOs separate from domain entities.
-10. `internal/delivery/kafka` decodes messages and calls usecases. Keep consumers thin.
-11. `pkg` contains reusable code with a stable API. App-specific code belongs under `internal`.
-12. `migrations` contains versioned schema changes. `docker/postgres/init.sql` contains bootstrap roles only.
-13. Secrets stay in `.env`; commit `.env.example`, never `.env`.
-14. New packages need a clear owner. Do not create folders for hypothetical future code.
-15. Use interfaces at dependency boundaries. Do not add interfaces with one implementation unless mocking or inversion needs them.
-16. Every non-trivial business rule gets one focused test.
-17. Keep external framework details at outer layers.
+10. HTTP middleware stays as feature-named files in `internal/delivery/http`; do not create a middleware subpackage until middleware is shared across transports.
+11. `internal/delivery/kafka` decodes messages and calls usecases. Keep consumers thin.
+12. `pkg` contains reusable code with a stable API. App-specific code belongs under `internal`.
+13. `migrations` contains versioned schema changes. `docker/postgres/init.sql` contains bootstrap roles only.
+14. Secrets stay in `.env`; commit `.env.example`, never `.env`.
+15. New packages need a clear owner. Do not create folders for hypothetical future code.
+16. Use interfaces at dependency boundaries. Do not add interfaces with one implementation unless mocking or inversion needs them.
+17. Every non-trivial business rule gets one focused test.
+18. Keep external framework details at outer layers.
 
 ## Naming Rules
 

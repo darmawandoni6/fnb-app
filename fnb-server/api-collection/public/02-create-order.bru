@@ -1,0 +1,43 @@
+meta {
+  name: Create order
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/public/tables/{{qrToken}}/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "items": [
+      {
+        "menu_id": "{{menuId}}",
+        "qty": 1,
+        "note": "no sugar"
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body.success === true) {
+    bru.setVar("trackingToken", res.body.data.tracking_token);
+    bru.setVar("itemId", res.body.data.items[0].id);
+  }
+}
+
+tests {
+  test("creates order", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data.tracking_token).to.be.a("string");
+    expect(res.body.data.items).to.be.an("array");
+  });
+}

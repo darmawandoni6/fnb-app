@@ -8,7 +8,7 @@ import (
 type Refund struct {
 	ID             uuid.UUID     `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	OrderID        uuid.UUID     `gorm:"type:uuid;not null;index" json:"order_id"`
-	ActorID        uuid.UUID     `gorm:"type:uuid;not null;index" json:"actor_id"`
+	ActorID        *uuid.UUID    `gorm:"type:uuid;index" json:"actor_id,omitempty"`
 	Reason         string        `gorm:"not null" json:"reason"`
 	SubtotalAmount int64         `gorm:"not null" json:"subtotal_amount"`
 	TaxAmount      int64         `gorm:"not null" json:"tax_amount"`

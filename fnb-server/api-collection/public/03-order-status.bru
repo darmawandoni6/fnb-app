@@ -1,0 +1,25 @@
+meta {
+  name: Get order status
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/public/orders/{{trackingToken}}
+  body: none
+  auth: none
+}
+
+script:post-response {
+  if (res.status === 200 && res.body.success === true) {
+    bru.setVar("itemId", res.body.data.items[0].id);
+  }
+}
+
+tests {
+  test("returns order status", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data.items).to.be.an("array");
+  });
+}

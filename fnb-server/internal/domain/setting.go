@@ -9,6 +9,7 @@ type Setting struct {
 	ID         uuid.UUID `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
 	CafeName   string    `gorm:"not null" json:"cafe_name"`
 	TaxPercent float64   `gorm:"type:numeric;not null;default:0" json:"tax_percent"`
+	IsOpen     bool      `gorm:"not null;default:true" json:"is_open"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }

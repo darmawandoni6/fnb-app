@@ -5,7 +5,8 @@
 ```text
 fnb-server/
 ├── cmd/
-│   ├── api/main.go                 # REST API entry point and dependency wiring
+│   ├── api/main.go                 # Process bootstrap: config, logger, DB, start
+│   ├── api/wiring.go               # Dependency construction, one function per feature
 │   └── worker/main.go              # Optional Kafka worker entry point
 ├── internal/
 │   ├── config/config.go            # Environment configuration
@@ -41,11 +42,11 @@ delivery → usecase → repository → domain
  cmd      → all required application packages
 ```
 
-`domain` stays independent. `cmd` performs wiring. No dependency injection framework.
+`domain` stays independent. `cmd` performs wiring. Repositories and usecases are constructed in `cmd`, never inside `internal/delivery`. No dependency injection framework.
 
 ## Package Rules
 
-1. `cmd/*` contains startup and wiring only. No business logic or route registration.
+1. `cmd/*` contains startup and wiring only. No business logic or route registration. Per-feature wiring lives in `cmd/api/wiring.go`.
 2. `internal/config` reads and validates environment values. It does not open connections.
 3. `internal/database` creates GORM connections and configures pools. It does not read environment variables.
 4. `internal/domain` contains entities, event payloads, and interfaces. It must not import delivery, repository, or framework packages.
@@ -63,6 +64,16 @@ delivery → usecase → repository → domain
 16. Use interfaces at dependency boundaries. Do not add interfaces with one implementation unless mocking or inversion needs them.
 17. Every non-trivial business rule gets one focused test.
 18. Keep external framework details at outer layers.
+
+## Wiring Rules
+
+1. `cmd/api/main.go` contains process bootstrap only: config, logger, database, router start.
+2. One constructor function per feature in `cmd/api/wiring.go`: `newAuthHandler`, `newPublicHandler`, `newXHandler`.
+3. `main.go` gains one line per feature. Adding a feature must not grow `main.go` beyond ~30 lines.
+4. Wiring functions take required infrastructure dependencies, such as `*gorm.DB` and `*config.Config`. They return handlers, not repos or usecases.
+5. Never construct repositories or usecases inside `internal/delivery/http`. The router receives handlers.
+6. Split `wiring.go` into `wiring_<feature>.go` files in the same package when it exceeds ~150 lines.
+7. No DI container or DI framework. Explicit constructor calls only.
 
 ## Naming Rules
 

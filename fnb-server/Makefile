@@ -1,4 +1,4 @@
-.PHONY: help install run test build up down logs reset migrate migrate-down db-check api-check run-db db-up
+.PHONY: help install run test build up down logs reset migrate migrate-down seed db-check api-check run-db db-up
 
 COMPOSE ?= podman-compose
 
@@ -38,10 +38,14 @@ reset:
 	$(COMPOSE) up -d
 
 migrate:
-	$(COMPOSE) exec -T db psql -U postgres -d fnb-app < migrations/000001_initial.up.sql
+	set -a; . ./.env; set +a; sh scripts/migrate.sh
 
 migrate-down:
-	$(COMPOSE) exec -T db psql -U postgres -d fnb-app < migrations/000001_initial.down.sql
+	@echo 'migrate-down requires explicit migration rollback review'
+	@exit 1
+
+seed:
+	$(COMPOSE) exec -T db psql -U postgres -d fnb-app < scripts/seed.sql
 
 pull:
 	$(COMPOSE) pull

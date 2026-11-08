@@ -235,6 +235,9 @@ M1 has one settings record:
 
 - `cafe_name`
 - `tax_percent`, default `0`
+- `is_open`, default `true`; when `false`, new orders are rejected with `STORE_CLOSED`. Existing orders can still be read and cancelled.
+
+Recipes are finalized before the store opens. Recipe edits are only allowed while `is_open = false`; this rule is enforced when recipe management lands in Phase 2.
 
 Server-side calculation:
 
@@ -373,12 +376,12 @@ Tracking token asli only sent sekali to QR Menu. Database stores hash token.
 
 - `id` UUID primary key
 - `order_id` FK → `orders`
-- `actor_id` FK → `users`
-- `reason` text
+- `actor_id` nullable FK → `users`; `NULL` when the refund was initiated by a public customer through the tracking token
+- `reason` text; fixed `customer cancelled item` for public cancellations
 - `subtotal_amount` bigint
 - `tax_amount` bigint
 - `total_amount` bigint
-- `payment_method` payment_method enum: `CASH`, `NON_CASH`
+- `payment_method` payment_method enum: `CASH`, `NON_CASH`; copies the order's method, falling back to `CASH` when the order has none recorded
 - `created_at` timestamp
 
 ### `refund_items`
@@ -396,6 +399,7 @@ Tracking token asli only sent sekali to QR Menu. Database stores hash token.
 - `id` UUID primary key
 - `cafe_name` text
 - `tax_percent` numeric default `0`
+- `is_open` boolean default `true`
 - `created_at`, `updated_at` timestamps
 
 ## 10. API and Integration
@@ -409,6 +413,10 @@ refund_amount = item_subtotal + item_tax
 ```
 
 The refund amount decreases `subtotal_amount`, `tax_amount`, and `total_amount` atomically. The order remains `LUNAS`; additional orders are created as new orders.
+
+Order totals are snapshots. Cancelling an item while the order is still `BELUM` does not change `subtotal_amount`, `tax_amount`, or `total_amount`, because no money has been collected; only `LUNAS` cancellations decrease the totals and create a refund. When every item is cancelled, the totals are set to `0` and the status becomes `DIBATALKAN`.
+
+Public cancellation uses the tracking token as proof of ownership: the refund row stores `actor_id = NULL` and a fixed reason. Per-item rounding can leave a residual of 1–2 rupiah on `tax_amount`; that residual is accepted in M1.
 
 Minimum public customer API:
 

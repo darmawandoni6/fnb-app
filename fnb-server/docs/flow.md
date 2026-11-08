@@ -36,13 +36,13 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     C->>API: GET /public/tables/:qr_token/menu
-    API->>DB: query table + available menu
-    DB-->>API: menu data
+    API->>DB: query table + available menu + settings
+    DB-->>API: menu data + is_open
     API-->>C: menu
 
     C->>API: POST /public/tables/:qr_token/orders
     Note over API,DB: TRANSAKSI
-    API->>DB: validate menu, recipes, and stock
+    API->>DB: validate settings.is_open, menu, recipes, and stock
     API->>DB: insert order MENUNGGU, payment BELUM
     API->>DB: insert order_items PENDING
     API->>DB: decrease stock + stock_movements OUT
@@ -88,13 +88,13 @@ sequenceDiagram
     alt payment_status = LUNAS
         API->>DB: calculate item refund + proportional tax
         API->>DB: decrease subtotal_amount, tax_amount, total_amount
-        API->>DB: save refund
+        API->>DB: save refund (actor_id NULL for public cancel, reason fixed)
     else payment_status = BELUM
-        Note right of API: no refund because payment has not been made
+        Note right of API: no refund because payment has not been made<br/>order totals stay unchanged
     end
 
     alt all items CANCELLED
-        API->>DB: order = DIBATALKAN
+        API->>DB: order = DIBATALKAN, totals = 0
     end
     API->>DB: commit
     API-->>A: success response
@@ -128,5 +128,7 @@ graph LR
 ```
 
 - Handler: bind, validate, call usecase, send response envelope.
-- Usecase: role checks, status transitions, calculations, and atomic transactions.
-- Repository: database queries, without business decisions.
+- Usecase: role checks, status transitions, calculations, and the steps executed inside a transaction.
+- Repository: opens/commits transactions and runs database queries, without business decisions.
+
+Transaction ownership is hybrid: the repository exposes `database.WithTx` (GORM mechanics), the usecase declares the transaction-scoped interface and decides the sequence of writes.

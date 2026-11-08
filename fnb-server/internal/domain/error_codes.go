@@ -9,4 +9,8 @@ const (
 	CodeUserNotFound       = "USER_NOT_FOUND"
 	CodeUserInactive       = "USER_INACTIVE"
 	CodeSessionExpired     = "SESSION_EXPIRED"
+	CodeNotFound           = "NOT_FOUND"
+	CodeStockNotEnough     = "STOCK_NOT_ENOUGH"
+	CodeInvalidTransition  = "INVALID_TRANSITION"
+	CodeStoreClosed        = "STORE_CLOSED"
 )

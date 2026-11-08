@@ -39,6 +39,43 @@ No JWT required.
 
 The server reads prices from the database. The client must not determine prices, tax, totals, or stock.
 
+Rate limits (per instance, in-memory):
+
+| Endpoint | Limit | Key |
+|---|---|---|
+| `POST /public/tables/:qr_token/orders` | 5/minute | `qr_token` |
+| `GET /public/orders/:tracking_token` | 30/minute | client IP |
+| `GET /public/tables/:qr_token/menu` | 60/minute | `qr_token` |
+
+### Menu response
+
+```json
+{
+  "cafe_name": "Demo Cafe",
+  "tax_percent": 10,
+  "is_open": true,
+  "categories": [
+    {
+      "id": "uuid",
+      "name": "Coffee",
+      "menus": [{ "id": "uuid", "name": "Latte", "price": 25000, "image_url": null }]
+    }
+  ]
+}
+```
+
+Categories with no available menu are omitted. When `is_open` is `false`, the client disables ordering; `POST .../orders` returns `409 STORE_CLOSED`.
+
+### Cancel item
+
+```json
+{
+  "item_id": "uuid"
+}
+```
+
+Only items with status `PENDING` can be cancelled. Cancelling while the order is `BELUM` keeps the order totals unchanged; cancelling while `LUNAS` records a refund and decreases the totals.
+
 ### Create QR order
 
 ```json
@@ -134,6 +171,7 @@ Role: `OWNER`.
 | `FORBIDDEN` | 403 | Role is not authorized |
 | `NOT_FOUND` | 404 | Resource not found |
 | `STOCK_NOT_ENOUGH` | 409 | Insufficient stock |
+| `STORE_CLOSED` | 409 | Store is closed for new orders |
 | `INVALID_TRANSITION` | 409 | Status violates PRD matrix |
 | `PAYMENT_REQUIRED` | 409 | Kitchen/order requires payment |
 | `REFUND_NOT_ALLOWED` | 409 | Item does not meet refund requirements |

@@ -13,4 +13,5 @@ const (
 	CodeStockNotEnough     = "STOCK_NOT_ENOUGH"
 	CodeInvalidTransition  = "INVALID_TRANSITION"
 	CodeStoreClosed        = "STORE_CLOSED"
+	CodePaymentRequired    = "PAYMENT_REQUIRED"
 )

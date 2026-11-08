@@ -1,0 +1,23 @@
+meta {
+  name: List orders
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/orders
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+tests {
+  test("lists orders", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data).to.be.an("array");
+  });
+}

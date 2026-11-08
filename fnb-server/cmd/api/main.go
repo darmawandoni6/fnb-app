@@ -6,7 +6,6 @@ import (
 
 	"fnb-server/internal/config"
 	"fnb-server/internal/database"
-	httpDelivery "fnb-server/internal/delivery/http"
 	"fnb-server/pkg/logger"
 )
 
@@ -21,7 +20,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	e := httpDelivery.NewRouter(newAuthHandler(db, cfg), newPublicHandler(db), cfg.IsDevelopment(), log)
+	e := newRouter(db, cfg, log)
 
 	if err := e.Start(":" + cfg.Port); err != nil {
 		log.Error("API server stopped", "error", err)

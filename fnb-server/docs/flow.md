@@ -54,20 +54,52 @@ sequenceDiagram
     K->>API: PATCH /orders/:id/payment
     API->>DB: update payment_status = LUNAS
 
-    Note over D: kitchen only sees paid orders
+    Note over D: kitchen only sees paid orders<br/>COOKING is rejected with PAYMENT_REQUIRED while BELUM
     D->>API: PATCH /orders/:id/items/:item_id/status COOKING
     API->>DB: item COOKING, order aggregate DIPROSES
     D->>API: PATCH /orders/:id/items/:item_id/status READY
     API->>DB: item READY, order aggregate SIAP when all are ready
 
-    K->>API: PATCH /orders/:id/status DIANTAR
-    K->>API: PATCH /orders/:id/status SELESAI
+    K->>API: PATCH /orders/:id/items/:item_id/status DELIVERED
+    API->>DB: item DELIVERED, order aggregate DIANTAR
+    K->>API: PATCH /orders/:id/items/:item_id/status DELIVERED (last active item)
+    API->>DB: order aggregate SELESAI (payment LUNAS)
+
+    Note over API: order status is never set directly<br/>it is derived from item statuses and payment (PRD §5.1)
 
     loop polling every 5 seconds
         C->>API: GET /public/orders/:tracking_token
         API-->>C: order status + each item status
     end
 ```
+
+## Manual order
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant K as Cashier (Dashboard)
+    participant API as fnb-server
+    participant DB as PostgreSQL
+
+    K->>API: POST /orders/manual (JWT)
+    Note over API,DB: TRANSAKSI
+    API->>DB: validate settings.is_open, menu, recipes, and stock
+    API->>DB: insert order MANUAL, created_by = cashier, table_id NULL
+    API->>DB: insert order_items PENDING
+    API->>DB: decrease stock + stock_movements OUT
+    API->>DB: commit
+    API-->>K: order with items
+
+    Note over K: store closed returns 409 STORE_CLOSED
+
+    K->>API: PATCH /orders/:id/payment LUNAS
+    API->>DB: payment LUNAS + order status recomputed
+    K->>API: PATCH /orders/:id/items/:item_id/status COOKING → READY → DELIVERED
+    API->>DB: item status + order aggregate recomputed
+```
+
+Manual orders have no table and no tracking token. Payment, item transitions, stock, and cancellation behave exactly like QR orders.
 
 ## Atomic Item Cancellation and Refund
 
@@ -88,7 +120,11 @@ sequenceDiagram
     alt payment_status = LUNAS
         API->>DB: calculate item refund + proportional tax
         API->>DB: decrease subtotal_amount, tax_amount, total_amount
-        API->>DB: save refund (actor_id NULL for public cancel, reason fixed)
+        alt public cancel via tracking token
+            API->>DB: save refund actor_id NULL, reason "customer cancelled item"
+        else staff cancel via JWT
+            API->>DB: save refund actor_id = user id, reason "staff cancelled item"
+        end
     else payment_status = BELUM
         Note right of API: no refund because payment has not been made<br/>order totals stay unchanged
     end

@@ -1,0 +1,49 @@
+meta {
+  name: Create manual order
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/orders/manual
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "items": [
+      {
+        "menu_id": "{{menuId}}",
+        "qty": 1,
+        "note": null
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body.success === true) {
+    bru.setVar("orderId", res.body.data.id);
+    bru.setVar("orderItemId", res.body.data.items[0].id);
+  }
+}
+
+tests {
+  test("creates manual order", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data.order_type).to.equal("MANUAL");
+    expect(res.body.data.status).to.equal("MENUNGGU");
+    expect(res.body.data.payment_status).to.equal("BELUM");
+    expect(res.body.data.items).to.be.an("array");
+  });
+}

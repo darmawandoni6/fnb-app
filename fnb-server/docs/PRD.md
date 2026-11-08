@@ -63,8 +63,8 @@ Vite SPA + TypeScript, lightweight for mobile browsers:
 | Role      | Main access                                                                                |
 | --------- | ------------------------------------------------------------------------------------------ |
 | `OWNER`   | All features, staff accounts, menus, tables/QR, stock, reports, settings, and all order transitions       |
-| `CASHIER` | QR/manual orders, payments, status `SIAP` → `DIANTAR` → `SELESAI`, cancellations, and stock viewing |
-| `KITCHEN` | Melihat production queue, `MENUNGGU` → `DIPROSES` → `SIAP`                                 |
+| `CASHIER` | QR/manual orders, payments, item `READY` → `DELIVERED`, cancellations, and stock viewing |
+| `KITCHEN` | Production queue, item `PENDING` → `COOKING` → `READY`                                          |
 
 The first owner is created through an environment seed:
 
@@ -404,7 +404,7 @@ Tracking token asli only sent sekali to QR Menu. Database stores hash token.
 
 ## 10. API and Integration
 
-Item refunds after payment are recorded through an internal endpoint. Cancelling an item before `LUNAS` does not produce a refund. For an item after `LUNAS`, the backend calculates a proportional refund:
+Item refunds after payment are recorded through the item cancel endpoint; there is no separate refund endpoint in M1. Cancelling an item before `LUNAS` does not produce a refund. For an item after `LUNAS`, the backend calculates a proportional refund:
 
 ```text
 item_subtotal = item.price × item.qty
@@ -438,11 +438,11 @@ POST /auth/logout
 Internal API protected by JWT and role middleware:
 
 ```text
-GET/PATCH /orders
+GET        /orders
+GET        /orders/:id
 POST       /orders/manual
 PATCH      /orders/:id/items/:item_id/status
 POST       /orders/:id/items/:item_id/cancel
-POST       /orders/:id/items/:item_id/refund
 PATCH      /orders/:id/payment
 GET/POST   /menus
 GET/POST   /tables

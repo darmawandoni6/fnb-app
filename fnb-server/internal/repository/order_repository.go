@@ -29,6 +29,75 @@ func (r *OrderRepository) GetByTrackingTokenHash(ctx context.Context, hash strin
 	return &order, nil
 }
 
+func (r *OrderRepository) List(ctx context.Context, filter domain.OrderFilter) ([]domain.Order, error) {
+	query := r.db.WithContext(ctx).Model(&domain.Order{}).Preload("Items.Menu").Preload("Table")
+
+	if filter.PaidOnly {
+		query = query.Where("payment_status = ?", domain.PaymentStatusPaid)
+	}
+	if filter.Status != nil {
+		query = query.Where("status = ?", *filter.Status)
+	}
+	if filter.TableID != nil {
+		query = query.Where("table_id = ?", *filter.TableID)
+	}
+	if filter.Date != nil {
+		start := filter.Date.UTC().Truncate(24 * time.Hour)
+		end := start.Add(24 * time.Hour)
+		query = query.Where("created_at >= ? AND created_at < ?", start, end)
+	}
+
+	var orders []domain.Order
+	if err := query.Order("created_at DESC").Limit(200).Find(&orders).Error; err != nil {
+		return nil, fmt.Errorf("list orders: %w", err)
+	}
+	return orders, nil
+}
+
+func (r *OrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Order, error) {
+	var order domain.Order
+	err := r.db.WithContext(ctx).Preload("Items.Menu").Preload("Table").First(&order, "id = ?", id).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get order by id: %w", err)
+	}
+	return &order, nil
+}
+
+func (r *OrderRepository) SetPayment(ctx context.Context, id uuid.UUID, status domain.PaymentStatus, method *domain.PaymentMethod) error {
+	updates := map[string]interface{}{
+		"payment_status": status,
+		"payment_method": method,
+		"updated_at":     time.Now().UTC(),
+	}
+	return r.db.WithContext(ctx).Model(&domain.Order{}).Where("id = ?", id).Updates(updates).Error
+}
+
+func (r *OrderRepository) SetItemStatus(ctx context.Context, orderID, itemID uuid.UUID, from, to domain.OrderItemStatus) error {
+	res := r.db.WithContext(ctx).Model(&domain.OrderItem{}).
+		Where("id = ? AND order_id = ? AND status = ?", itemID, orderID, from).
+		Updates(map[string]interface{}{
+			"status":     to,
+			"updated_at": time.Now().UTC(),
+		})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return domain.NewError(domain.CodeInvalidTransition, "invalid item transition", http.StatusConflict, nil)
+	}
+	return nil
+}
+
+func (r *OrderRepository) UpdateAggregate(ctx context.Context, orderID uuid.UUID, status domain.OrderStatus) error {
+	return r.db.WithContext(ctx).Model(&domain.Order{}).Where("id = ?", orderID).Updates(map[string]interface{}{
+		"status":     status,
+		"updated_at": time.Now().UTC(),
+	}).Error
+}
+
 func (r *OrderRepository) CreateOrder(ctx context.Context, order *domain.Order) error {
 	return r.db.WithContext(ctx).Create(order).Error
 }

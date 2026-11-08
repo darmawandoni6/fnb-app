@@ -27,7 +27,7 @@ type CreateOrderItemRequest struct {
 type CreateOrderRequest struct {
 	Items []CreateOrderItemRequest `json:"items" validate:"required,min=1,max=50,dive"`
 }
-type OrderItemResponse struct {
+type PublicOrderItemResponse struct {
 	ID       string  `json:"id"`
 	MenuName string  `json:"menu_name"`
 	Qty      int     `json:"qty"`
@@ -36,22 +36,22 @@ type OrderItemResponse struct {
 	Note     *string `json:"note"`
 }
 type CreateOrderResponse struct {
-	OrderID        string              `json:"order_id"`
-	TrackingToken  string              `json:"tracking_token"`
-	SubtotalAmount int64               `json:"subtotal_amount"`
-	TaxAmount      int64               `json:"tax_amount"`
-	TotalAmount    int64               `json:"total_amount"`
-	Status         string              `json:"status"`
-	Items          []OrderItemResponse `json:"items"`
+	OrderID        string                    `json:"order_id"`
+	TrackingToken  string                    `json:"tracking_token"`
+	SubtotalAmount int64                     `json:"subtotal_amount"`
+	TaxAmount      int64                     `json:"tax_amount"`
+	TotalAmount    int64                     `json:"total_amount"`
+	Status         string                    `json:"status"`
+	Items          []PublicOrderItemResponse `json:"items"`
 }
 type OrderStatusResponse struct {
-	OrderID        string              `json:"order_id"`
-	Status         string              `json:"status"`
-	PaymentStatus  string              `json:"payment_status"`
-	SubtotalAmount int64               `json:"subtotal_amount"`
-	TaxAmount      int64               `json:"tax_amount"`
-	TotalAmount    int64               `json:"total_amount"`
-	Items          []OrderItemResponse `json:"items"`
+	OrderID        string                    `json:"order_id"`
+	Status         string                    `json:"status"`
+	PaymentStatus  string                    `json:"payment_status"`
+	SubtotalAmount int64                     `json:"subtotal_amount"`
+	TaxAmount      int64                     `json:"tax_amount"`
+	TotalAmount    int64                     `json:"total_amount"`
+	Items          []PublicOrderItemResponse `json:"items"`
 }
 type CancelItemRequest struct {
 	ItemID string `json:"item_id" validate:"required,uuid"`
@@ -68,10 +68,10 @@ func MenuResponseFrom(r *usecase.MenuResult) MenuResponse {
 	}
 	return out
 }
-func ItemsFrom(items []usecase.OrderItemResult) []OrderItemResponse {
-	out := make([]OrderItemResponse, 0, len(items))
+func ItemsFrom(items []usecase.OrderItemResult) []PublicOrderItemResponse {
+	out := make([]PublicOrderItemResponse, 0, len(items))
 	for _, i := range items {
-		out = append(out, OrderItemResponse{i.ID.String(), i.MenuName, i.Qty, i.Price, string(i.Status), i.Note})
+		out = append(out, PublicOrderItemResponse{i.ID.String(), i.MenuName, i.Qty, i.Price, string(i.Status), i.Note})
 	}
 	return out
 }

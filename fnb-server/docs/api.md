@@ -98,23 +98,47 @@ All endpoints below use JWT and role middleware.
 
 | Method | Path | Role | Keterangan |
 |---|---|---|---|
-| `GET` | `/orders` | All roles | Filter by status, table, and date |
+| `GET` | `/orders` | All roles | Filter by `status`, `table_id`, `date` |
 | `GET` | `/orders/:id` | All roles | Order and item details |
 | `POST` | `/orders/manual` | `CASHIER`, `OWNER` | Create a walk-in order |
 | `PATCH` | `/orders/:id/payment` | `CASHIER`, `OWNER` | Mark payment as `LUNAS` |
-| `PATCH` | `/orders/:id/status` | `CASHIER`, `OWNER` | `SIAP` → `DIANTAR` → `SELESAI` |
 
-The kitchen can only see `LUNAS` orders.
+The kitchen only sees `LUNAS` orders in the list. Reading an unpaid order by id returns `404 NOT_FOUND` to the kitchen.
+
+There is no order status endpoint. `status` is derived from item statuses and payment according to PRD §5.1. `GET /orders` returns at most 200 rows, newest first; `date` is a UTC day (`YYYY-MM-DD`).
+
+Create manual order:
+
+```json
+{
+  "items": [
+    { "menu_id": "uuid", "qty": 1, "note": null }
+  ]
+}
+```
+
+Manual orders have `order_type = MANUAL`, `created_by` set from the JWT, and `table_id = NULL`. When `settings.is_open` is `false`, creation returns `409 STORE_CLOSED`, the same as QR orders.
+
+Payment:
+
+```json
+{ "payment_status": "LUNAS", "payment_method": "CASH" }
+```
+
+`payment_method` is required and is `CASH` or `NON_CASH`. Only `BELUM → LUNAS` is allowed in M1; repeating it returns `409 INVALID_TRANSITION`.
 
 ## Internal — kitchen items
 
 | Method | Path | Role | Body |
 |---|---|---|---|
-| `PATCH` | `/orders/:id/items/:item_id/status` | `KITCHEN`, `OWNER` | `{status: COOKING\|READY}` |
+| `PATCH` | `/orders/:id/items/:item_id/status` | `KITCHEN`, `OWNER` for `COOKING`/`READY`; `CASHIER`, `OWNER` for `DELIVERED` | `{status: COOKING\|READY\|DELIVERED}` |
 | `POST` | `/orders/:id/items/:item_id/cancel` | `CASHIER`, `OWNER` | Batal if item `PENDING` |
-| `POST` | `/orders/:id/items/:item_id/refund` | `CASHIER`, `OWNER` | Refund item that already paid |
 
-All actors may cancel `PENDING` items according to the PRD. After `COOKING`, items cannot be cancelled in M1.
+Transitions are forward only: `PENDING → COOKING → READY → DELIVERED`. `COOKING` is rejected with `409 PAYMENT_REQUIRED` while the order is `BELUM`. `DELIVERED` moves the order to `DIANTAR`; the last active item plus `LUNAS` moves it to `SELESAI`.
+
+All actors may cancel `PENDING` items according to the PRD. After `COOKING`, items cannot be cancelled in M1. A staff cancellation on a `LUNAS` order writes a refund with `actor_id` set to the staff user and reason `staff cancelled item`; a `BELUM` cancellation writes no refund.
+
+Item status and payment responses return the full order with its items, so the dashboard can read the new aggregate `status` without a second call.
 
 ## Internal — menus and tables
 
@@ -174,7 +198,6 @@ Role: `OWNER`.
 | `STORE_CLOSED` | 409 | Store is closed for new orders |
 | `INVALID_TRANSITION` | 409 | Status violates PRD matrix |
 | `PAYMENT_REQUIRED` | 409 | Kitchen/order requires payment |
-| `REFUND_NOT_ALLOWED` | 409 | Item does not meet refund requirements |
 | `INTERNAL_ERROR` | 500 | Unexpected failure |
 
 ## Bruno collection

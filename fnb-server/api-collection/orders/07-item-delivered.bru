@@ -1,0 +1,33 @@
+meta {
+  name: Update item DELIVERED
+  type: http
+  seq: 7
+}
+
+patch {
+  url: {{baseUrl}}/orders/{{orderId}}/items/{{orderItemId}}/status
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "status": "DELIVERED"
+  }
+}
+
+tests {
+  test("sets item delivered", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data.status).to.equal("SELESAI");
+  });
+}

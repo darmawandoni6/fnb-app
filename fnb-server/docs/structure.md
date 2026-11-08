@@ -68,8 +68,8 @@ delivery → usecase → repository → domain
 ## Wiring Rules
 
 1. `cmd/api/main.go` contains process bootstrap only: config, logger, database, router start.
-2. One constructor function per feature in `cmd/api/wiring.go`: `newAuthHandler`, `newPublicHandler`, `newXHandler`.
-3. `main.go` gains one line per feature. Adding a feature must not grow `main.go` beyond ~30 lines.
+2. Per-feature constructors live in `cmd/api/wiring.go` (`newAuthHandler`, `newPublicHandler`, `newOrderHandler`) and are assembled into `newRouter`.
+3. Adding a new feature only updates `wiring.go`; `main.go` remains untouched at ~25 lines.
 4. Wiring functions take required infrastructure dependencies, such as `*gorm.DB` and `*config.Config`. They return handlers, not repos or usecases.
 5. Never construct repositories or usecases inside `internal/delivery/http`. The router receives handlers.
 6. Split `wiring.go` into `wiring_<feature>.go` files in the same package when it exceeds ~150 lines.

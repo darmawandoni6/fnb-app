@@ -32,7 +32,9 @@ func ErrorHandler(isDevelopment bool, log *slog.Logger) echo.HTTPErrorHandler {
 			return
 		}
 
-		log.Error("HTTP request failed", "error", err, "path", c.Path(), "method", c.Request().Method)
+		if log != nil {
+			log.Error("HTTP request failed", "error", err, "path", c.Path(), "method", c.Request().Method)
+		}
 		body := errorBody{Code: domain.CodeInternalError, Message: "internal server error"}
 		status := http.StatusInternalServerError
 		var appErr *domain.AppError

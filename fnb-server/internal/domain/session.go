@@ -1,8 +1,10 @@
 package domain
 
 import (
-	"github.com/google/uuid"
+	"context"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type Session struct {
@@ -13,4 +15,11 @@ type Session struct {
 	ExpiresAt time.Time  `gorm:"not null" json:"expires_at"`
 	RevokedAt *time.Time `json:"revoked_at,omitempty"`
 	CreatedAt time.Time  `json:"created_at"`
+}
+
+type SessionRepository interface {
+	Create(ctx context.Context, session *Session) error
+	GetByTokenHash(ctx context.Context, tokenHash string) (*Session, error)
+	Revoke(ctx context.Context, id uuid.UUID) error
+	RevokeByUserID(ctx context.Context, userID uuid.UUID) error
 }

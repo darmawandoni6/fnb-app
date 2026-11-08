@@ -10,6 +10,7 @@ relevant doc before adding code. The checklist gates every commit.
 ## Commands
 
 - `make run` — starts Postgres + PostgREST via `podman-compose`, loads `.env`, runs API on `:8081`
+- `make up` / `make run-db` — starts containers (`run-db` runs PostgreSQL container only via `podman-compose`)
 - `make test` — `go test ./...`
 - `make build` — builds `bin/api`
 - `make db-check` / `make api-check` — probes DB and `GET /health`

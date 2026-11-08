@@ -1,4 +1,4 @@
-.PHONY: help install run test build up down logs reset migrate migrate-down db-check api-check
+.PHONY: help install run test build up down logs reset migrate migrate-down db-check api-check run-db db-up
 
 COMPOSE ?= podman-compose
 
@@ -6,6 +6,7 @@ help:
 	@printf '%s\n' \
 		'run        Start PostgreSQL, PostgREST, and API' \
 		'up         Start PostgreSQL and PostgREST' \
+		'run-db     Start PostgreSQL container only via podman' \
 		'down       Stop containers' \
 		'logs       Follow container logs' \
 		'reset      Delete database volume and recreate containers' \
@@ -22,6 +23,9 @@ run:
 
 up:
 	$(COMPOSE) up -d
+
+run-db db-up:
+	$(COMPOSE) up -d db
 
 down:
 	$(COMPOSE) down

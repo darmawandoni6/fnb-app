@@ -15,6 +15,7 @@ fnb-server/
 │   ├── usecase/                    # Business rules
 │   └── delivery/
 │       ├── http/                   # HTTP handlers and router
+│       │   └── dto/                # HTTP request and response DTOs by feature
 │       └── kafka/                  # Kafka event consumers; thin adapters
 ├── pkg/                            # Reusable public helpers
 │   ├── kafka/                      # Kafka transport wrapper
@@ -49,14 +50,15 @@ delivery → usecase → repository → domain
 5. `internal/repository` implements domain repository interfaces and owns GORM queries.
 6. `internal/usecase` owns business rules. It depends on interfaces, not concrete repositories or GORM.
 7. `internal/delivery/http` translates HTTP requests and responses. Keep handlers thin.
-8. `internal/delivery/kafka` decodes messages and calls usecases. Keep consumers thin.
-9. `pkg` contains reusable code with a stable API. App-specific code belongs under `internal`.
-10. `migrations` contains versioned schema changes. `docker/postgres/init.sql` contains bootstrap roles only.
-11. Secrets stay in `.env`; commit `.env.example`, never `.env`.
-12. New packages need a clear owner. Do not create folders for hypothetical future code.
-13. Use interfaces at dependency boundaries. Do not add interfaces with one implementation unless mocking or inversion needs them.
-14. Every non-trivial business rule gets one focused test.
-15. Keep external framework details at outer layers.
+8. `internal/delivery/http/dto` owns HTTP transport DTOs. Keep DTOs separate from domain entities.
+9. `internal/delivery/kafka` decodes messages and calls usecases. Keep consumers thin.
+10. `pkg` contains reusable code with a stable API. App-specific code belongs under `internal`.
+11. `migrations` contains versioned schema changes. `docker/postgres/init.sql` contains bootstrap roles only.
+12. Secrets stay in `.env`; commit `.env.example`, never `.env`.
+13. New packages need a clear owner. Do not create folders for hypothetical future code.
+14. Use interfaces at dependency boundaries. Do not add interfaces with one implementation unless mocking or inversion needs them.
+15. Every non-trivial business rule gets one focused test.
+16. Keep external framework details at outer layers.
 
 ## Naming Rules
 
@@ -66,6 +68,17 @@ delivery → usecase → repository → domain
 - Constructors use `NewThing`.
 - Context is the first method argument after the receiver.
 - Errors add operation context with `%w`.
+- DTO types are exported; group them by feature in `internal/delivery/http/dto/<feature>.go`.
+
+## DTO Rules
+
+- Request and response DTOs belong to `internal/delivery/http/dto`.
+- Use one DTO file per feature, such as `auth.go` and `health.go`.
+- Request DTOs use `validate` tags and bind through `http.Binder`.
+- Response DTOs use typed structs, not `map[string]interface{}` or `map[string]string`.
+- DTOs describe transport JSON; they are not domain entities.
+- DTOs may import `domain` for response data, but must not import usecase or repository packages.
+- Keep handler files focused on HTTP translation and orchestration.
 
 ## API Responses
 

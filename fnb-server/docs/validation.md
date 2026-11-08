@@ -14,6 +14,7 @@ Request validation uses `github.com/go-playground/validator/v10` at HTTP deliver
 6. Do not manually decode JSON in handlers.
 7. Do not validate request formatting in repositories.
 8. Never include passwords, tokens, or raw request bodies in validation errors.
+9. Request DTOs live in `internal/delivery/http/dto/<feature>.go`.
 
 ## Example
 

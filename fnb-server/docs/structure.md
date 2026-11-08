@@ -14,7 +14,8 @@ fnb-server/
 │   ├── repository/                 # Database implementations
 │   ├── usecase/                    # Business rules
 │   └── delivery/
-│       ├── http/                   # HTTP handlers and router
+│       ├── http/                   # HTTP handlers, router, and middleware
+│       │   ├── router.go           # Echo setup, middleware, and route registration
 │       │   └── dto/                # HTTP request and response DTOs by feature
 │       └── kafka/                  # Kafka event consumers; thin adapters
 ├── pkg/                            # Reusable public helpers
@@ -43,22 +44,23 @@ delivery → usecase → repository → domain
 
 ## Package Rules
 
-1. `cmd/*` contains startup and wiring only. No business logic.
+1. `cmd/*` contains startup and wiring only. No business logic or route registration.
 2. `internal/config` reads and validates environment values. It does not open connections.
 3. `internal/database` creates GORM connections and configures pools. It does not read environment variables.
 4. `internal/domain` contains entities, event payloads, and interfaces. It must not import delivery, repository, or framework packages.
 5. `internal/repository` implements domain repository interfaces and owns GORM queries.
 6. `internal/usecase` owns business rules. It depends on interfaces, not concrete repositories or GORM.
 7. `internal/delivery/http` translates HTTP requests and responses. Keep handlers thin.
-8. `internal/delivery/http/dto` owns HTTP transport DTOs. Keep DTOs separate from domain entities.
-9. `internal/delivery/kafka` decodes messages and calls usecases. Keep consumers thin.
-10. `pkg` contains reusable code with a stable API. App-specific code belongs under `internal`.
-11. `migrations` contains versioned schema changes. `docker/postgres/init.sql` contains bootstrap roles only.
-12. Secrets stay in `.env`; commit `.env.example`, never `.env`.
-13. New packages need a clear owner. Do not create folders for hypothetical future code.
-14. Use interfaces at dependency boundaries. Do not add interfaces with one implementation unless mocking or inversion needs them.
-15. Every non-trivial business rule gets one focused test.
-16. Keep external framework details at outer layers.
+8. `internal/delivery/http/router.go` creates Echo, configures HTTP behavior and middleware, and registers routes.
+9. `internal/delivery/http/dto` owns HTTP transport DTOs. Keep DTOs separate from domain entities.
+10. `internal/delivery/kafka` decodes messages and calls usecases. Keep consumers thin.
+11. `pkg` contains reusable code with a stable API. App-specific code belongs under `internal`.
+12. `migrations` contains versioned schema changes. `docker/postgres/init.sql` contains bootstrap roles only.
+13. Secrets stay in `.env`; commit `.env.example`, never `.env`.
+14. New packages need a clear owner. Do not create folders for hypothetical future code.
+15. Use interfaces at dependency boundaries. Do not add interfaces with one implementation unless mocking or inversion needs them.
+16. Every non-trivial business rule gets one focused test.
+17. Keep external framework details at outer layers.
 
 ## Naming Rules
 

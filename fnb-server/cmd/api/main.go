@@ -10,9 +10,6 @@ import (
 	"fnb-server/internal/repository"
 	"fnb-server/internal/usecase"
 	"fnb-server/pkg/logger"
-
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
 
 func main() {
@@ -31,18 +28,7 @@ func main() {
 	authUsecase := usecase.NewAuthUsecase(userRepo, sessionRepo, cfg.JWTSecret, cfg.AccessTTL, cfg.RefreshTTL)
 	authHandler := httpDelivery.NewAuthHandler(authUsecase, !cfg.IsDevelopment())
 
-	e := echo.New()
-	e.Binder = httpDelivery.NewBinder()
-	e.HTTPErrorHandler = httpDelivery.ErrorHandler(cfg.IsDevelopment(), log)
-	e.Use(httpDelivery.RequestLogger(log))
-	e.Use(middleware.Recover())
-
-	e.GET("/health", httpDelivery.Health)
-
-	authGroup := e.Group("/auth")
-	authGroup.POST("/login", authHandler.Login)
-	authGroup.POST("/refresh", authHandler.Refresh)
-	authGroup.POST("/logout", authHandler.Logout)
+	e := httpDelivery.NewRouter(authHandler, cfg.IsDevelopment(), log)
 
 	if err := e.Start(":" + cfg.Port); err != nil {
 		log.Error("API server stopped", "error", err)

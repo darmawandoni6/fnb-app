@@ -1,0 +1,9 @@
+{
+  "version": "1",
+  "name": "fnb-app",
+  "type": "collection",
+  "ignore": [
+    "node_modules",
+    ".git"
+  ]
+}

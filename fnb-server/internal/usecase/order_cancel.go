@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"math"
 	"net/http"
 	"time"
 
@@ -40,7 +39,7 @@ func cancelOrderItem(
 			paymentMethod = *order.PaymentMethod
 		}
 		subtotal := target.Price * int64(target.Qty)
-		tax := int64(math.Round(float64(subtotal) * order.TaxPercent / 100))
+		tax := domain.CalcTax(subtotal, order.TaxPercent)
 		refund = &domain.Refund{
 			Reason:         reason,
 			SubtotalAmount: subtotal,

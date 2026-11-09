@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"math"
 
 	"fnb-server/internal/domain"
 	"github.com/google/uuid"
@@ -62,7 +61,7 @@ func buildOrder(
 	if s != nil {
 		tax = s.TaxPercent
 	}
-	taxAmt := int64(math.Round(float64(sub) * tax / 100))
+	taxAmt := domain.CalcTax(sub, tax)
 
 	order := &domain.Order{
 		OrderType:      orderType,

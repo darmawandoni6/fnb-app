@@ -131,3 +131,23 @@ func TestValidateItemTransition(t *testing.T) {
 		}
 	}
 }
+
+func TestCalcTax(t *testing.T) {
+	cases := []struct {
+		amount  int64
+		percent float64
+		want    int64
+	}{
+		{25000, 10, 2500},   // exact
+		{33333, 10, 3333},   // rounds down (3333.3)
+		{33335, 10, 3334},   // rounds up (3333.5)
+		{0, 10, 0},          // zero amount
+		{25000, 0, 0},       // zero tax
+		{123456, 8.25, 10185}, // fractional percent (10185.12)
+	}
+	for _, c := range cases {
+		if got := CalcTax(c.amount, c.percent); got != c.want {
+			t.Errorf("CalcTax(%d, %v) = %d, want %d", c.amount, c.percent, got, c.want)
+		}
+	}
+}

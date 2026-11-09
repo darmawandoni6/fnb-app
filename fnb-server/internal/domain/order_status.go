@@ -80,3 +80,13 @@ func ValidateItemTransition(from, to OrderItemStatus) error {
 	}
 	return NewError(CodeInvalidTransition, fmt.Sprintf("invalid transition from %s to %s", from, to), http.StatusConflict, nil)
 }
+
+// CalcTax computes integer rupiah tax: amount * percent / 100, rounded half away from zero,
+// without float arithmetic (PRD §4.2). percent is stored as numeric; parse it exactly.
+func CalcTax(amount int64, percent float64) int64 {
+	// ponytail: percent arrives as float64 from the numeric column; scale by 1e6 to
+	// capture typical tax precision (e.g. 10, 8.25). Upgrade: parse numeric as string/decimal.
+	scaled := int64(percent*1e6+0.5) * amount
+	tax := (scaled + 50_000_000) / 100_000_000 // /1e6 then /100 with half-up rounding
+	return tax
+}

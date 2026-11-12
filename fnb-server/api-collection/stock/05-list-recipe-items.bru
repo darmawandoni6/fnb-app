@@ -1,0 +1,20 @@
+meta {
+  name: List recipe items
+  type: http
+  seq: 5
+}
+get {
+  url: {{baseUrl}}/recipe-items
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+tests {
+  test("lists recipe items", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data).to.be.an("array");
+  });
+}

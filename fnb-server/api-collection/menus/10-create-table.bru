@@ -1,0 +1,28 @@
+meta {
+  name: Create table
+  type: http
+  seq: 10
+}
+post {
+  url: {{baseUrl}}/tables
+  body: json
+  auth: bearer
+}
+headers {
+  Content-Type: application/json
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "table_number": "T01",
+    "qr_token": "public-token"
+  }
+}
+tests {
+  test("creates table", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.success).to.equal(true);
+  });
+}

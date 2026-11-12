@@ -1,0 +1,31 @@
+meta {
+  name: Update menu
+  type: http
+  seq: 7
+}
+patch {
+  url: {{baseUrl}}/menus/{{adminMenuId}}
+  body: json
+  auth: bearer
+}
+headers {
+  Content-Type: application/json
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "category_id": "{{categoryId}}",
+    "name": "Latte",
+    "price": 25000,
+    "image_url": null,
+    "is_available": true
+  }
+}
+tests {
+  test("updates menu", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+  });
+}

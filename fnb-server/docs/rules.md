@@ -27,6 +27,8 @@ Review every new package and dependency against these checks:
 - Were `go test ./...` and `go build ./...` run before push?
 - Are `.env`, credentials, tokens, and `bin/` excluded from staged files?
 - Does all application logging follow `docs/logging.md`?
+- Is concurrency used only for independent I/O, CPU-bound work, or background jobs?
+- Are GORM transactions confined to one goroutine and never shared across goroutines?
 - Is one injected `slog.Logger` used per process?
 - Are secrets excluded from logs?
 - Do request DTOs use validator tags and the standard binder?

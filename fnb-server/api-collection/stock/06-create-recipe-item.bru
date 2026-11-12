@@ -1,0 +1,29 @@
+meta {
+  name: Create recipe item
+  type: http
+  seq: 6
+}
+post {
+  url: {{baseUrl}}/recipe-items
+  body: json
+  auth: bearer
+}
+headers {
+  Content-Type: application/json
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "menu_id": "{{recipeMenuId}}",
+    "ingredient_id": "{{recipeIngredientId}}",
+    "qty_used": 0.02
+  }
+}
+tests {
+  test("creates recipe item", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.success).to.equal(true);
+  });
+}

@@ -14,6 +14,7 @@ type Handlers struct {
 	Public *PublicHandler
 	Order  *OrderHandler
 	Admin  *AdminHandler
+	Stock  *StockHandler
 }
 
 func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, isDevelopment bool, log *slog.Logger) *echo.Echo {
@@ -45,6 +46,16 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, uploadDir
 	admin.POST("/tables", h.Admin.CreateTable)
 	admin.PATCH("/tables/:id", h.Admin.UpdateTable)
 	admin.DELETE("/tables/:id", h.Admin.DeleteTable)
+
+	stock := e.Group("", JWTMiddleware(authUsecase))
+	stock.GET("/ingredients", h.Stock.ListIngredients, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
+	stock.POST("/ingredients", h.Stock.CreateIngredient, RequireRoles(domain.UserRoleOwner))
+	stock.PATCH("/ingredients/:id", h.Stock.UpdateIngredient, RequireRoles(domain.UserRoleOwner))
+	stock.POST("/ingredients/:id/restock", h.Stock.Restock, RequireRoles(domain.UserRoleOwner))
+	stock.GET("/recipe-items", h.Stock.ListRecipes, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
+	stock.POST("/recipe-items", h.Stock.CreateRecipe, RequireRoles(domain.UserRoleOwner))
+	stock.PATCH("/recipe-items/:id", h.Stock.UpdateRecipe, RequireRoles(domain.UserRoleOwner))
+	stock.DELETE("/recipe-items/:id", h.Stock.DeleteRecipe, RequireRoles(domain.UserRoleOwner))
 
 	authGroup := e.Group("/auth")
 	authGroup.POST("/login", h.Auth.Login)

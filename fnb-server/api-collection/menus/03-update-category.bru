@@ -1,0 +1,28 @@
+meta {
+  name: Update menu category
+  type: http
+  seq: 3
+}
+patch {
+  url: {{baseUrl}}/menu-categories/{{categoryId}}
+  body: json
+  auth: bearer
+}
+headers {
+  Content-Type: application/json
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "name": "Coffee",
+    "sort_order": 1
+  }
+}
+tests {
+  test("updates category", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+  });
+}

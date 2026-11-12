@@ -1,0 +1,19 @@
+meta {
+  name: List menus
+  type: http
+  seq: 5
+}
+get {
+  url: {{baseUrl}}/menus
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+tests {
+  test("lists menus", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+  });
+}

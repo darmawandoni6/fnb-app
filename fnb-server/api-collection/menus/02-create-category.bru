@@ -1,0 +1,28 @@
+meta {
+  name: Create menu category
+  type: http
+  seq: 2
+}
+post {
+  url: {{baseUrl}}/menu-categories
+  body: json
+  auth: bearer
+}
+headers {
+  Content-Type: application/json
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "name": "Coffee",
+    "sort_order": 1
+  }
+}
+tests {
+  test("creates category", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.success).to.equal(true);
+  });
+}

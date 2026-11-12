@@ -1,0 +1,27 @@
+meta {
+  name: Update recipe item
+  type: http
+  seq: 7
+}
+patch {
+  url: {{baseUrl}}/recipe-items/{{recipeItemId}}
+  body: json
+  auth: bearer
+}
+headers {
+  Content-Type: application/json
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "qty_used": 0.025
+  }
+}
+tests {
+  test("updates recipe item", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+  });
+}

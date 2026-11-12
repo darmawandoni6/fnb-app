@@ -1,0 +1,19 @@
+meta {
+  name: List tables
+  type: http
+  seq: 9
+}
+get {
+  url: {{baseUrl}}/tables
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+tests {
+  test("lists tables", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+  });
+}

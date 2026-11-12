@@ -1,0 +1,18 @@
+meta {
+  name: Deactivate menu
+  type: http
+  seq: 8
+}
+delete {
+  url: {{baseUrl}}/menus/{{adminMenuId}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+tests {
+  test("deactivates menu", function() {
+    expect(res.status).to.equal(204);
+  });
+}

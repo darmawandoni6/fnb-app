@@ -1,0 +1,18 @@
+meta {
+  name: Delete menu category
+  type: http
+  seq: 4
+}
+delete {
+  url: {{baseUrl}}/menu-categories/{{categoryId}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+tests {
+  test("deletes category", function() {
+    expect(res.status).to.equal(204);
+  });
+}

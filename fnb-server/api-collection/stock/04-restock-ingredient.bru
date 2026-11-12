@@ -1,0 +1,28 @@
+meta {
+  name: Restock ingredient
+  type: http
+  seq: 4
+}
+post {
+  url: {{baseUrl}}/ingredients/{{ingredientId}}/restock
+  body: json
+  auth: bearer
+}
+headers {
+  Content-Type: application/json
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "qty": 5,
+    "note": "Weekly delivery"
+  }
+}
+tests {
+  test("restocks ingredient", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+  });
+}

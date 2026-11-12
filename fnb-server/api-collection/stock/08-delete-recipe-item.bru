@@ -1,0 +1,18 @@
+meta {
+  name: Delete recipe item
+  type: http
+  seq: 8
+}
+delete {
+  url: {{baseUrl}}/recipe-items/{{recipeItemId}}
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+tests {
+  test("deletes recipe item", function() {
+    expect(res.status).to.equal(204);
+  });
+}

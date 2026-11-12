@@ -15,6 +15,7 @@ type Handlers struct {
 	Order  *OrderHandler
 	Admin  *AdminHandler
 	Stock  *StockHandler
+	Users  *UsersSettingsHandler
 }
 
 func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, isDevelopment bool, log *slog.Logger) *echo.Echo {
@@ -56,6 +57,11 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, uploadDir
 	stock.POST("/recipe-items", h.Stock.CreateRecipe, RequireRoles(domain.UserRoleOwner))
 	stock.PATCH("/recipe-items/:id", h.Stock.UpdateRecipe, RequireRoles(domain.UserRoleOwner))
 	stock.DELETE("/recipe-items/:id", h.Stock.DeleteRecipe, RequireRoles(domain.UserRoleOwner))
+	admin.GET("/users", h.Users.ListUsers)
+	admin.POST("/users", h.Users.CreateUser)
+	admin.PATCH("/users/:id", h.Users.UpdateUser)
+	admin.GET("/settings", h.Users.GetSettings)
+	admin.PATCH("/settings", h.Users.UpdateSettings)
 
 	authGroup := e.Group("/auth")
 	authGroup.POST("/login", h.Auth.Login)

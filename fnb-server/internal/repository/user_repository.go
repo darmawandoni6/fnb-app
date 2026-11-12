@@ -42,6 +42,21 @@ func (r *UserRepository) GetByEmail(ctx context.Context, email string) (*domain.
 	return &user, nil
 }
 
+func (r *UserRepository) List(ctx context.Context) ([]domain.User, error) {
+	var users []domain.User
+	if err := r.db.WithContext(ctx).Order("name").Find(&users).Error; err != nil {
+		return nil, fmt.Errorf("list users: %w", err)
+	}
+	return users, nil
+}
+
+func (r *UserRepository) Update(ctx context.Context, user *domain.User) error {
+	if err := r.db.WithContext(ctx).Save(user).Error; err != nil {
+		return fmt.Errorf("update user: %w", err)
+	}
+	return nil
+}
+
 func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	if err := r.db.WithContext(ctx).Create(user).Error; err != nil {
 		return fmt.Errorf("create user: %w", err)

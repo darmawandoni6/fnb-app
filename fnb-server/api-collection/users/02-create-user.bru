@@ -1,0 +1,35 @@
+meta {
+  name: Create staff user
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/users
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "name": "Cashier",
+    "email": "cashier@example.com",
+    "password": "password123",
+    "role": "CASHIER"
+  }
+}
+
+tests {
+  test("creates user", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.success).to.equal(true);
+  });
+}

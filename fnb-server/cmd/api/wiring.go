@@ -29,6 +29,7 @@ func newHandlers(db *gorm.DB, cfg *config.Config) (httpDelivery.Handlers, *useca
 		Order:  newOrderHandler(db),
 		Admin:  adminHandler,
 		Stock:  newStockHandler(db),
+		Users:  newUsersSettingsHandler(db),
 	}
 	return handlers, authUsecase
 }
@@ -46,6 +47,12 @@ func newStockHandler(db *gorm.DB) *httpDelivery.StockHandler {
 	ingredientUsecase := usecase.NewIngredientUsecase(ingredientRepo, repository.NewStockTx(db))
 	recipeUsecase := usecase.NewRecipeItemUsecase(recipeRepo, menuRepo, ingredientRepo)
 	return httpDelivery.NewStockHandler(ingredientUsecase, recipeUsecase)
+}
+
+func newUsersSettingsHandler(db *gorm.DB) *httpDelivery.UsersSettingsHandler {
+	userRepo := repository.NewUserRepository(db)
+	settingRepo := repository.NewSettingRepository(db)
+	return httpDelivery.NewUsersSettingsHandler(usecase.NewUserAdminUsecase(userRepo), usecase.NewSettingsUsecase(settingRepo))
 }
 
 func newAuthUsecase(db *gorm.DB, cfg *config.Config) *usecase.AuthUsecase {

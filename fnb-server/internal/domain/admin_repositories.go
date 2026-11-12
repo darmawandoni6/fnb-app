@@ -31,3 +31,16 @@ type MenuCategoryRepository interface {
 	Delete(ctx context.Context, id uuid.UUID) error
 	CountMenus(ctx context.Context, categoryID uuid.UUID) (int64, error)
 }
+
+type AdminUserRepository interface {
+	List(ctx context.Context) ([]User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*User, error)
+	GetByEmail(ctx context.Context, email string) (*User, error)
+	Create(ctx context.Context, user *User) error
+	Update(ctx context.Context, user *User) error
+}
+
+type AdminSettingRepository interface {
+	GetFirst(ctx context.Context) (*Setting, error)
+	Update(ctx context.Context, setting *Setting) error
+}

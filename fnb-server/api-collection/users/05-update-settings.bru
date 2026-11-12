@@ -1,0 +1,34 @@
+meta {
+  name: Update settings
+  type: http
+  seq: 5
+}
+
+patch {
+  url: {{baseUrl}}/settings
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "cafe_name": "Demo Cafe",
+    "tax_percent": 10,
+    "is_open": true
+  }
+}
+
+tests {
+  test("updates settings", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+  });
+}

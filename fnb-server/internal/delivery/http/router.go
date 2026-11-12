@@ -13,9 +13,14 @@ type Handlers struct {
 	Auth   *AuthHandler
 	Public *PublicHandler
 	Order  *OrderHandler
+	Admin  *AdminHandler
 }
 
 func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, isDevelopment bool, log *slog.Logger) *echo.Echo {
+	return NewRouterWithUpload(h, authUsecase, "./uploads", isDevelopment, log)
+}
+
+func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, uploadDir string, isDevelopment bool, log *slog.Logger) *echo.Echo {
 	e := echo.New()
 	e.Binder = NewBinder()
 	e.HTTPErrorHandler = ErrorHandler(isDevelopment, log)
@@ -25,6 +30,21 @@ func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, isDevelopment bool,
 	e.Use(middleware.Recover())
 
 	e.GET("/health", Health)
+	e.Static("/static", uploadDir)
+
+	admin := e.Group("", JWTMiddleware(authUsecase), RequireRoles(domain.UserRoleOwner))
+	admin.GET("/menu-categories", h.Admin.Categories)
+	admin.POST("/menu-categories", h.Admin.CreateCategory)
+	admin.PATCH("/menu-categories/:id", h.Admin.UpdateCategory)
+	admin.DELETE("/menu-categories/:id", h.Admin.DeleteCategory)
+	admin.GET("/menus", h.Admin.Menus)
+	admin.POST("/menus", h.Admin.CreateMenu)
+	admin.PATCH("/menus/:id", h.Admin.UpdateMenu)
+	admin.DELETE("/menus/:id", h.Admin.DeleteMenu)
+	admin.GET("/tables", h.Admin.Tables)
+	admin.POST("/tables", h.Admin.CreateTable)
+	admin.PATCH("/tables/:id", h.Admin.UpdateTable)
+	admin.DELETE("/tables/:id", h.Admin.DeleteTable)
 
 	authGroup := e.Group("/auth")
 	authGroup.POST("/login", h.Auth.Login)

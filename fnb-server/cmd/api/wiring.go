@@ -37,7 +37,7 @@ func newHandlers(db *gorm.DB, cfg *config.Config) (httpDelivery.Handlers, *useca
 func newAdminHandler(db *gorm.DB, categoryRepo domain.MenuCategoryRepository, cfg *config.Config) *httpDelivery.AdminHandler {
 	menuRepo := repository.NewMenuRepository(db)
 	tableRepo := repository.NewTableRepository(db)
-	return httpDelivery.NewAdminHandler(usecase.NewMenuCategoryUsecase(categoryRepo), usecase.NewMenuUsecase(menuRepo, categoryRepo), usecase.NewTableUsecase(tableRepo))
+	return httpDelivery.NewAdminHandler(usecase.NewMenuCategoryUsecase(categoryRepo), usecase.NewMenuUsecase(menuRepo, categoryRepo), usecase.NewTableUsecase(tableRepo), cfg.UploadDir)
 }
 
 func newStockHandler(db *gorm.DB) *httpDelivery.StockHandler {

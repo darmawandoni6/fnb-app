@@ -6,6 +6,7 @@ Canonical checklist: `docs/rules.md`. It links to sibling docs in `docs/`:
 structure, rules, api-response, constants, git, logging, validation, flow,
 api, and tech-stack. Read the
 relevant doc before adding code. The checklist gates every commit.
+Monorepo documentation standards: `../docs/doc-naming.md` (file naming) and `../docs/doc-language.md` (all docs in English).
 
 ## Commands
 

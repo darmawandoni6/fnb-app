@@ -30,7 +30,7 @@ The refresh token uses an httpOnly cookie. The database stores only the token ha
 
 No JWT required.
 
-| Method | Path | Keterangan |
+| Method | Path | Description |
 |---|---|---|
 | `GET` | `/public/tables/:qr_token/menu` | Available menus and categories |
 | `POST` | `/public/tables/:qr_token/orders` | Create a QR order and return a tracking token |
@@ -144,7 +144,7 @@ Item status and payment responses return the full order with its items, so the d
 
 Role: `OWNER`.
 
-| Method | Path | Keterangan |
+| Method | Path | Description |
 |---|---|---|
 | `GET` | `/menu-categories` | List categories |
 | `POST` | `/menu-categories` | Create category |
@@ -161,9 +161,9 @@ Role: `OWNER`.
 
 ## Internal — stock
 
-`GET` dapat used `CASHIER` and `OWNER`. Only `OWNER` may change stock.
+`GET` can be used by `CASHIER` and `OWNER`. Only `OWNER` may change stock.
 
-| Method | Path | Keterangan |
+| Method | Path | Description |
 |---|---|---|
 | `GET` | `/ingredients` | List ingredients and stock |
 | `POST` | `/ingredients` | Create ingredient |
@@ -178,7 +178,7 @@ Role: `OWNER`.
 
 Role: `OWNER`.
 
-| Method | Path | Keterangan |
+| Method | Path | Description |
 |---|---|---|
 | `GET` | `/users` | List users |
 | `POST` | `/users` | Create `CASHIER` or `KITCHEN` user |

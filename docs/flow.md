@@ -22,7 +22,7 @@ graph LR
 
 - QR Menu without login; uses table token and tracking token.
 - Dashboard uses JWT and role `OWNER`, `CASHIER`, `KITCHEN`.
-- MVP uses polling: dashboard 3–5 detik, QR Menu 5 detik.
+- MVP uses polling: dashboard every 3–5 seconds, QR Menu every 5 seconds.
 
 ## Order QR end-to-end
 
@@ -142,7 +142,7 @@ sequenceDiagram
 graph TD
     subgraph Dashboard
         P1[poll GET /orders<br/>3–5 detik, JWT]
-        P2[poll GET /orders?status=DIPROSES<br/>papan dapur]
+        P2[poll GET /orders?status=DIPROSES<br/>kitchen board]
     end
     subgraph QR Menu
         P3[poll GET /public/orders/:tracking_token<br/>5 detik]

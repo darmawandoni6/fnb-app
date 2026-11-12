@@ -135,7 +135,7 @@ Statuses `MENUNGGU`, `DIPROSES`, `SIAP`, `DIANTAR`, and `SELESAI` are calculated
 
 ### 5.2 Item Status Transitions
 
-| Dari | Ke | Actor |
+| From | To | Actor |
 |---|---|---|
 | `PENDING` | `COOKING` | `KITCHEN`, `OWNER` |
 | `COOKING` | `READY` | `KITCHEN`, `OWNER` |
@@ -146,7 +146,7 @@ Cancelled items are excluded from active item calculations. If all items are can
 
 ### 5.3 Delivery and Payment Transitions
 
-| Dari | Ke | Actor |
+| From | To | Actor |
 |---|---|---|
 | first item `DELIVERED` | `DIANTAR` | `CASHIER`, `OWNER` |
 | all active items `DELIVERED` | `SELESAI` | `CASHIER`, `OWNER`, with payment `LUNAS` |

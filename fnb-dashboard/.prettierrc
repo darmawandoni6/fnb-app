@@ -1,0 +1,20 @@
+{
+  "semi": false,
+  "singleQuote": true,
+  "printWidth": 100,
+  "trailingComma": "all",
+  "plugins": ["@trivago/prettier-plugin-sort-imports", "prettier-plugin-tailwindcss"],
+  "importOrder": [
+    "^react$",
+    "^react-dom",
+    "^react-router",
+    "^@tanstack/(.*)$",
+    "<THIRD_PARTY_MODULES>",
+    "^@/(api|schemas|types|constants|lib)/(.*)$",
+    "^@/(hooks|auth)/(.*)$",
+    "^@/(components|features)/(.*)$",
+    "^[./]"
+  ],
+  "importOrderSeparation": true,
+  "importOrderSortSpecifiers": true
+}

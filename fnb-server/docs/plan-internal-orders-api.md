@@ -1,7 +1,7 @@
 # Draft Plan — Internal Orders API (M1)
 
 Source: `../../docs/api.md` → "Internal — orders", "Internal — kitchen items"; `../../docs/PRD.md` §5, §6.2, §10; `../../docs/flow.md`.
-Decisions settled on 2026-11-09. Builds on `docs/public-customer-api-plan.md` (shared cancel path, transaction ownership, refund rules).
+Decisions settled on 2026-11-09. Builds on `docs/plan-public-customer-api.md` (shared cancel path, transaction ownership, refund rules).
 
 ## 1. Scope
 

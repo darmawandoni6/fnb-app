@@ -25,7 +25,7 @@ Response envelope: `../../docs/api-response.md` (`Success()` + `domain.AppError`
 | 4 | Totals when `BELUM` | Unchanged on cancel (matches `flow.md`) |
 | 5 | Totals when `LUNAS` | Decreased by the item refund |
 | 6 | Stock restore source | `recipe_items` (recipes finalized before opening) |
-| 7 | Order status aggregation | Minimal in this slice: `MENUNGGU` at create, `DIBATALKAN` when all items cancelled. Full aggregation lands in `docs/internal-orders-api-plan.md` |
+| 7 | Order status aggregation | Minimal in this slice: `MENUNGGU` at create, `DIBATALKAN` when all items cancelled. Full aggregation lands in `docs/plan-internal-orders-api.md` |
 | 8 | Duplicate `menu_id` | Allowed as separate lines; notes stay per line |
 | 9 | Seed | Public demo data only (`scripts/seed.sql`, `make seed`) |
 | 10 | Recipe locking | `settings.is_open` added now |
@@ -527,4 +527,4 @@ Acceptance:
 - No idempotency key: a double submit creates two orders.
 - `settings` still has no singleton constraint; `GetFirst` is a documented simplification (seed uses a fixed UUID).
 - Recipe edits between order and cancel change restored quantities; mitigated operationally (recipes only edited while the store is closed).
-- `PersistCancel` trusts the state computed by the usecase; the internal cancel endpoint must reuse the same computation instead of duplicating it (see `docs/internal-orders-api-plan.md`).
+- `PersistCancel` trusts the state computed by the usecase; the internal cancel endpoint must reuse the same computation instead of duplicating it (see `docs/plan-internal-orders-api.md`).

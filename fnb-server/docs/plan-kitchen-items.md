@@ -1,12 +1,12 @@
 # Plan: Internal — Kitchen Items Endpoints
 
-Source: `docs/api.md`, `docs/PRD.md`, `docs/flow.md`
+Source: `../../docs/api.md`, `../../docs/PRD.md`, `../../docs/flow.md`
 
 > **Status: IMPLEMENTED.** This plan is retained as a design record. Sections below note where the
 > implementation lives. Remaining work is listed in "Remaining Gaps" at the bottom.
 
 ## Scope
-Two endpoints from `docs/api.md`:
+Two endpoints from `../../docs/api.md`:
 1. `PATCH /orders/:id/items/:item_id/status` — transition item status (`COOKING`/`READY`/`DELIVERED`)
 2. `POST /orders/:id/items/:item_id/cancel` — cancel `PENDING` item (with refund logic if `LUNAS`)
 

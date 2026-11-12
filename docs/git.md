@@ -44,12 +44,18 @@ git diff --cached
 [ ] Documentation updated when behavior or structure changed
 ```
 
-Recommended commit check:
+Recommended checks by application:
 
 ```bash
+# Backend
+git -C fnb-server diff --check
+git -C fnb-server status --short
+cd fnb-server
 go test ./...
 go build ./...
 ```
+
+Run each frontend application's documented lint, test, and build commands before commit when frontend code changes.
 
 ## Push Rules
 

@@ -1,6 +1,6 @@
 # Plan: Internal — Users and Settings
 
-Source: `docs/api.md` (Internal — users and settings), `docs/PRD.md` §3/§8/§9, `docs/flow.md`.
+Source: `../../docs/api.md` (Internal — users and settings), `../../docs/PRD.md` §3/§8/§9, `../../docs/flow.md`.
 
 ## Scope
 

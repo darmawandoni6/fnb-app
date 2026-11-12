@@ -1,6 +1,6 @@
 # Draft Plan — Internal Orders API (M1)
 
-Source: `docs/api.md` → "Internal — orders", "Internal — kitchen items"; `docs/PRD.md` §5, §6.2, §10; `docs/flow.md`.
+Source: `../../docs/api.md` → "Internal — orders", "Internal — kitchen items"; `../../docs/PRD.md` §5, §6.2, §10; `../../docs/flow.md`.
 Decisions settled on 2026-11-09. Builds on `docs/public-customer-api-plan.md` (shared cancel path, transaction ownership, refund rules).
 
 ## 1. Scope
@@ -22,7 +22,7 @@ Out of scope for this slice (separate plans): menu/category CRUD, table CRUD, st
 
 | # | Topic | Decision |
 |---|---|---|
-| 1 | `PATCH /orders/:id/status` from `api.md` | Dropped. PRD §5.1 derives order status from item statuses + payment; a manual endpoint would bypass the matrix. `docs/api.md` updated. |
+| 1 | `PATCH /orders/:id/status` from `api.md` | Dropped. PRD §5.1 derives order status from item statuses + payment; a manual endpoint would bypass the matrix. `../../docs/api.md` updated. |
 | 2 | `POST .../items/:item_id/refund` from `api.md` | Dropped. Cancel already writes a refund when `payment_status = LUNAS`, which is the only legal refund point (items can only be cancelled while `PENDING`). |
 | 3 | Manual order when store closed | Rejected with `409 STORE_CLOSED`, same gate as QR orders. |
 | 4 | Order status ownership | Computed by `domain.AggregateOrderStatus` after every item-status, cancel, and payment write. Never accepted from the client. |
@@ -376,9 +376,9 @@ All requests send `Authorization: Bearer {{accessToken}}`, so `auth/01-login.bru
 
 | File | Change |
 |---|---|
-| `docs/api.md` | Remove `PATCH /orders/:id/status` and `POST .../refund`; document manual-order `STORE_CLOSED`, payment body, item status body, list filters, kitchen visibility, response shapes |
-| `docs/flow.md` | Manual order sequence; `DELIVERED`-driven `DIANTAR`/`SELESAI`; `PAYMENT_REQUIRED` gate; staff-vs-public refund actors |
-| `docs/PRD.md` | §10 refund recorded through the cancel endpoint; endpoint list without `/refund` |
+| `../../docs/api.md` | Remove `PATCH /orders/:id/status` and `POST .../refund`; document manual-order `STORE_CLOSED`, payment body, item status body, list filters, kitchen visibility, response shapes |
+| `../../docs/flow.md` | Manual order sequence; `DELIVERED`-driven `DIANTAR`/`SELESAI`; `PAYMENT_REQUIRED` gate; staff-vs-public refund actors |
+| `../../docs/PRD.md` | §10 refund recorded through the cancel endpoint; endpoint list without `/refund` |
 | `docs/structure.md` | No change |
 
 ## 11. Commit sequence

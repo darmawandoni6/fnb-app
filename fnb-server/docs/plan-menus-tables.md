@@ -1,6 +1,6 @@
 # Plan: Internal — Menus and Tables
 
-Source: `docs/api.md`, `docs/PRD.md`, `docs/flow.md`
+Source: `../../docs/api.md`, `../../docs/PRD.md`, `../../docs/flow.md`
 
 ## Scope
 
@@ -278,4 +278,4 @@ go build ./...
 - Category with menus cannot be deleted: `409 INVALID_TRANSITION`
 - Unexpected failures: `500 INTERNAL_ERROR`
 
-All responses use the envelope documented in `docs/api-response.md`.
+All responses use the envelope documented in `../../docs/api-response.md`.

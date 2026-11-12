@@ -451,7 +451,7 @@ GET/POST   /recipe-items
 GET/PATCH  /settings
 ```
 
-The API uses the standard response envelope in `docs/api-response.md`. Final endpoint details are documented in `docs/api.md` before handler implementation.
+The API uses the standard response envelope in `fnb-server/docs/api-response.md`. Final endpoint details are documented in `fnb-server/docs/api.md` before handler implementation.
 
 ## 11. Infrastructure and Development
 

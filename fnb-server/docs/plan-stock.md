@@ -1,6 +1,6 @@
 # Plan: Internal — Stock
 
-Source: `docs/api.md` (Internal — stock), `docs/PRD.md` §4/§9, `docs/flow.md`.
+Source: `../../docs/api.md` (Internal — stock), `../../docs/PRD.md` §4/§9, `../../docs/flow.md`.
 
 ## Scope
 

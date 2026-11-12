@@ -1,12 +1,12 @@
 # Structure Rules
 
 Canonical architecture rules live in [`docs/structure.md`](docs/structure.md).
-API response rules live in [`docs/api-response.md`](docs/api-response.md).
+API response rules live in [`../../docs/api-response.md`](../../docs/api-response.md).
 Constants rules live in [`docs/constants.md`](docs/constants.md).
-Git commit and push rules live in [`docs/git.md`](docs/git.md).
+Git commit and push rules live in [`../../docs/git.md`](../../docs/git.md).
 Logging rules live in [`docs/logging.md`](docs/logging.md).
 Validation rules live in [`docs/validation.md`](docs/validation.md).
-Application flow rules live in [`docs/flow.md`](flow.md) and API draft in [`docs/api.md`](api.md).
+Application flow rules live in [`../../docs/flow.md`](../../docs/flow.md) and API draft in [`../../docs/api.md`](../../docs/api.md).
 
 Review every new package and dependency against these checks:
 
@@ -18,12 +18,12 @@ Review every new package and dependency against these checks:
 - Are schema changes versioned under `migrations/`?
 - Are secrets excluded from Git?
 - Does non-trivial logic have a focused test?
-- Do all HTTP responses follow `docs/api-response.md`?
+- Do all HTTP responses follow `../../docs/api-response.md`?
 - Does every Echo instance configure the standard HTTP error handler?
 - Are production errors free from internal details?
 - Are repeated stable values replaced with owner-package constants?
 - Are exported constants documented when used across packages?
-- Before commit or push, is `docs/git.md` checklist complete?
+- Before commit or push, is `../../docs/git.md` checklist complete?
 - Were `go test ./...` and `go build ./...` run before push?
 - Are `.env`, credentials, tokens, and `bin/` excluded from staged files?
 - Does all application logging follow `docs/logging.md`?

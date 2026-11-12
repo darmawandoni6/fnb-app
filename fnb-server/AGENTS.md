@@ -31,14 +31,14 @@ Verification order before commit: `go test ./... && go build ./...`
 - Entrypoint: `cmd/api/main.go` only — wiring: config → database → logger → echo. No business logic in `cmd`.
 - Dependency direction: `delivery → usecase → repository → domain`. `domain` imports nothing from other internal packages.
 - Every Echo instance must set both `e.Binder = httpDelivery.NewBinder()` and `e.HTTPErrorHandler = httpDelivery.ErrorHandler(cfg.IsDevelopment(), log)`.
-- Responses: envelope `{success, data}` / `{success, error{code, message}}`. Success only via `httpDelivery.Success`; errors via `domain.NewError` with codes from `internal/domain/error_codes.go`. Details: `docs/api-response.md`.
+- Responses: envelope `{success, data}` / `{success, error{code, message}}`. Success only via `httpDelivery.Success`; errors via `domain.NewError` with codes from `internal/domain/error_codes.go`. Details: `../docs/api-response.md`.
 - Validation: `validate` struct tags + custom binder at delivery boundary. Business rules stay in usecases. Details: `docs/validation.md`.
 - Logging: one injected `*slog.Logger` created in main (`pkg/logger`). No `fmt.Print*`, no package `log`. Production logs JSON to stderr. Details: `docs/logging.md`.
 - Packages planned in `docs/structure.md` but not yet created (`repository`, `usecase`, `delivery/kafka`, `migrations`). Create only when real code lands.
 
 ## Git
 
-- Conventional Commits: `type(scope): summary`. Checklist: `docs/git.md`.
+- Conventional Commits: `type(scope): summary`. Checklist: `../docs/git.md`.
 - Always propose the commit message, show checklist result, and wait for user confirmation before committing or pushing. Never auto-commit.
 - Branch `master`, remote `origin`.
 

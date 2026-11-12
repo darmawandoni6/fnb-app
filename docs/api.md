@@ -8,7 +8,7 @@ Local base URL:
 http://localhost:8081
 ```
 
-All responses follow the envelope in `docs/api-response.md`.
+All responses follow the envelope in `api-response.md`.
 
 ## Auth
 
@@ -216,4 +216,4 @@ bruno/
 └── users/
 ```
 
-Request bodies, headers, environment variables, and response assertions follow this document and `docs/api-response.md`.
+Request bodies, headers, environment variables, and response assertions follow this document and `api-response.md`.

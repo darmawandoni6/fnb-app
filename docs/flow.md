@@ -1,6 +1,6 @@
 # Application Flow
 
-This document describes application execution flows. Role and status matrices are defined in `docs/PRD.md` §5.
+This document describes application execution flows. Role and status matrices are defined in `PRD.md` §5.
 
 ## Architecture
 

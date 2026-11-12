@@ -1,6 +1,6 @@
 # Draft Plan — Public Customer API (M1)
 
-Source: `docs/api.md` → "Public — customer", `docs/PRD.md` §5–§6, `docs/flow.md`.
+Source: `../../docs/api.md` → "Public — customer", `../../docs/PRD.md` §5–§6, `../../docs/flow.md`.
 Decisions settled through design review rounds 1–5, then revised during doc review (2026-11-08).
 
 ## 1. Scope
@@ -13,7 +13,7 @@ Decisions settled through design review rounds 1–5, then revised during doc re
 | 4 | POST | `/public/orders/:tracking_token/cancel` | none |
 
 `qr_token` is public (printed on the QR). `tracking_token` is a secret: only its SHA-256 hash is stored in `orders.tracking_token_hash`.
-Response envelope: `docs/api-response.md` (`Success()` + `domain.AppError`).
+Response envelope: `../../docs/api-response.md` (`Success()` + `domain.AppError`).
 
 ## 2. Decisions
 
@@ -480,9 +480,9 @@ api-collection/public/
 
 | File | Change |
 |---|---|
-| `docs/PRD.md` | `settings.is_open`; `refunds.actor_id` nullable; refund `payment_method` fallback; totals frozen while `BELUM`; recipe edits only while closed |
-| `docs/api.md` | `STORE_CLOSED` (409); `is_open` in menu response; cancel body `{item_id}`; rate limits |
-| `docs/flow.md` | Tx ownership hybrid; `BELUM` cancel keeps totals; public refund `actor_id = NULL` |
+| `../../docs/PRD.md` | `settings.is_open`; `refunds.actor_id` nullable; refund `payment_method` fallback; totals frozen while `BELUM`; recipe edits only while closed |
+| `../../docs/api.md` | `STORE_CLOSED` (409); `is_open` in menu response; cancel body `{item_id}`; rate limits |
+| `../../docs/flow.md` | Tx ownership hybrid; `BELUM` cancel keeps totals; public refund `actor_id = NULL` |
 | `docs/structure.md` | No change |
 
 ## 13. Commit sequence

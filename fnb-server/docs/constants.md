@@ -47,4 +47,4 @@ return domain.NewError(
 )
 ```
 
-If a new error code is used by more than one package, add it to `internal/domain/error_codes.go` and document it in `docs/api-response.md`.
+If a new error code is used by more than one package, add it to `internal/domain/error_codes.go` and document it in `../../docs/api-response.md`.

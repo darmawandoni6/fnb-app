@@ -15,7 +15,7 @@ The checklist gates every commit.
 
 ## Status
 
-Phase 1 complete: Vite 8 + React 19 + TypeScript 7 + Tailwind v4 + shadcn (radix-nova, lucide). Mock API exists in `src/mocks/`, exposed through `src/api/`. Next phase: UI slicing per `docs/implementation-plan.md` Phase 2.
+Phase 2 complete: mock UI slicing done. App shell, auth (mock role login), cashier order board, kitchen board, manual order dialog, owner stub pages. Next phase: API integration per `docs/implementation-plan.md` Phase 3.
 
 Environment gotchas learned during Phase 0:
 

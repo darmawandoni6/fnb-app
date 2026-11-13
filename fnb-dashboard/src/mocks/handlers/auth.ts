@@ -1,6 +1,6 @@
 import { API_ERROR_CODE } from '@/constants'
 import { db } from '@/mocks/db'
-import type { User } from '@/types'
+import type { Settings, User } from '@/types'
 
 import { delay, fail } from './shared'
 
@@ -27,4 +27,9 @@ export const refresh = async (): Promise<{ user: User; access_token: string }> =
 export const logout = async (): Promise<void> => {
   await delay()
   db.currentUserId = ''
+}
+
+export const getSettings = async (): Promise<Settings> => {
+  await delay()
+  return { ...db.settings }
 }

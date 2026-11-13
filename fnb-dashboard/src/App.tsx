@@ -16,6 +16,8 @@ import { useAuth } from '@/auth/context'
 import { AuthProvider } from '@/auth/context'
 import { ProtectedRoute, RoleGuard } from '@/auth/guards'
 
+import { TooltipProvider } from '@/components/ui/tooltip'
+
 const staff = [USER_ROLE.OWNER, USER_ROLE.CASHIER]
 const owner = [USER_ROLE.OWNER]
 
@@ -87,8 +89,10 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <RouterProvider router={router} />
-        <Toaster />
+        <TooltipProvider>
+          <RouterProvider router={router} />
+          <Toaster />
+        </TooltipProvider>
       </AuthProvider>
     </QueryClientProvider>
   )

@@ -15,7 +15,7 @@ The checklist gates every commit.
 
 ## Status
 
-Phase 2 complete: mock UI slicing done. App shell, auth (mock role login), cashier order board, kitchen board, manual order dialog, owner stub pages. Next phase: API integration per `docs/implementation-plan.md` Phase 3.
+Phase 2.5 complete: sidebar-08 template adapted (react-router), orders stat cards (active/unpaid/done/sales today), board filter modes, order detail tracking dialog. Next phase: API integration per `docs/implementation-plan.md` Phase 3.
 
 Environment gotchas learned during Phase 0:
 

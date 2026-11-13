@@ -20,9 +20,11 @@ const onError = (error: unknown) =>
 export function OrderCard({
   order,
   showCashierActions,
+  onClick,
 }: {
   order: Order
   showCashierActions: boolean
+  onClick?: () => void
 }) {
   const queryClient = useQueryClient()
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['orders'] })
@@ -35,7 +37,7 @@ export function OrderCard({
   })
 
   return (
-    <Card className="gap-3">
+    <Card className="cursor-pointer gap-3" onClick={onClick}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           {order.order_type === ORDER_TYPE.QR ? (

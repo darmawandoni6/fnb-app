@@ -15,7 +15,7 @@ The checklist gates every commit.
 
 ## Status
 
-Scaffolded (Phase 0 complete): Vite 8 + React 19 + TypeScript 7 + Tailwind v4 + shadcn (radix-nova, lucide). Constants and domain types exist in `src/constants/` and `src/types/`. Next phase: mock layer per `docs/implementation-plan.md` Phase 1.
+Phase 1 complete: Vite 8 + React 19 + TypeScript 7 + Tailwind v4 + shadcn (radix-nova, lucide). Mock API exists in `src/mocks/`, exposed through `src/api/`. Next phase: UI slicing per `docs/implementation-plan.md` Phase 2.
 
 Environment gotchas learned during Phase 0:
 

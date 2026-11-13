@@ -5,8 +5,13 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { DashboardLayout } from '@/pages/DashboardLayout'
 import { KitchenPage } from '@/pages/KitchenPage'
 import { LoginPage } from '@/pages/LoginPage'
+import { MenusPage } from '@/pages/MenusPage'
 import { OrdersPage } from '@/pages/OrdersPage'
+import { SettingsPage } from '@/pages/SettingsPage'
+import { StockPage } from '@/pages/StockPage'
 import { StubPage } from '@/pages/StubPage'
+import { TablesPage } from '@/pages/TablesPage'
+import { UsersPage } from '@/pages/UsersPage'
 import { Toaster } from 'sonner'
 
 import { USER_ROLE } from '@/constants/roles'
@@ -50,27 +55,27 @@ const router = createBrowserRouter([
           {
             path: ROUTES.MENUS,
             element: <RoleGuard roles={owner} />,
-            children: [{ index: true, element: <StubPage title="Menus" /> }],
+            children: [{ index: true, element: <MenusPage /> }],
           },
           {
             path: ROUTES.TABLES,
             element: <RoleGuard roles={owner} />,
-            children: [{ index: true, element: <StubPage title="Tables" /> }],
+            children: [{ index: true, element: <TablesPage /> }],
           },
           {
             path: ROUTES.STOCK,
             element: <RoleGuard roles={owner} />,
-            children: [{ index: true, element: <StubPage title="Stock" /> }],
+            children: [{ index: true, element: <StockPage /> }],
           },
           {
             path: ROUTES.USERS,
             element: <RoleGuard roles={owner} />,
-            children: [{ index: true, element: <StubPage title="Users" /> }],
+            children: [{ index: true, element: <UsersPage /> }],
           },
           {
             path: ROUTES.SETTINGS,
             element: <RoleGuard roles={owner} />,
-            children: [{ index: true, element: <StubPage title="Settings" /> }],
+            children: [{ index: true, element: <SettingsPage /> }],
           },
           {
             path: ROUTES.REPORTS,

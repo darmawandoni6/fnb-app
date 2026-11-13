@@ -31,3 +31,10 @@ export const requireRole = (...roles: UserRole[]) => {
 }
 
 export const isStaff = (role: UserRole) => role === USER_ROLE.OWNER || role === USER_ROLE.CASHIER
+
+// TS cannot narrow `T | undefined` through `fail()` even though it returns `never`,
+// so lookups use this helper which throws or returns a defined value.
+export const findOrThrow = <T>(value: T | undefined, code: ApiErrorCode, message: string): T => {
+  if (!value) fail(code, message)
+  return value!
+}

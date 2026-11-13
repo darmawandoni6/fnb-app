@@ -15,7 +15,7 @@ The checklist gates every commit.
 
 ## Status
 
-Phase 2.5 complete: sidebar-08 template adapted (react-router), orders stat cards (active/unpaid/done/sales today), board filter modes, order detail tracking dialog. Next phase: API integration per `docs/implementation-plan.md` Phase 3.
+Phase 2.5 + owner CRUD complete: sidebar-08 template adapted (react-router), orders stat cards, board filters, order detail dialog, plus Operations Administration pages (menus, tables, stock, users, settings) on the mock layer — `docs/implementation/phase-3-crud.md`. Reports remains a stub. Next phase: API integration per `docs/implementation-plan.md` Phase 3.
 
 Environment gotchas learned during Phase 0:
 

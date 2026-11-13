@@ -11,3 +11,12 @@ export type RecipeItem = {
   ingredient_id: string
   qty: number
 }
+
+export type StockMovement = {
+  id: string
+  ingredient_id: string
+  type: 'IN' | 'OUT'
+  qty: number
+  created_at: string
+  note?: string
+}

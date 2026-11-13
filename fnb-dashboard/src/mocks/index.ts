@@ -2,6 +2,7 @@ import { ingredients, recipeItems } from './data/ingredients'
 import { categories, menus } from './data/menus'
 import { orders } from './data/orders'
 import { settings } from './data/settings'
+import { stockMovements } from './data/stockMovements'
 import { tables } from './data/tables'
 import { users } from './data/users'
 import { db } from './db'
@@ -16,6 +17,7 @@ const seed = () => {
   db.users = structuredClone(users)
   db.ingredients = structuredClone(ingredients)
   db.recipeItems = structuredClone(recipeItems)
+  db.stockMovements = structuredClone(stockMovements)
   db.settings = structuredClone(settings)
 }
 

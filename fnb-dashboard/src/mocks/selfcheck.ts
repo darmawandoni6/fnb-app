@@ -42,12 +42,25 @@ export const runMockSelfCheck = async () => {
   )
   await api.updateMenu('menu-1', { category_id: 'category-1' })
 
+  // Cancel: restores stock with RESTORE movement and zeroes totals.
   const created = await api.createManualOrder({
     items: [{ menu_id: 'menu-1', qty: 1, note: null }],
   })
-  const cancelled = await api.cancelOrder(created.id)
-  assert(cancelled.status === 'DIBATALKAN', 'cancelOrder sets DIBATALKAN')
-  await throwsCode(() => api.cancelOrder(created.id), 'INVALID_TRANSITION')
+  const stockBefore = db.ingredients.find(({ id }) => id === 'ingredient-1')!.stock
+  const cancelled = await api.cancelItem(created.id, created.items[0]!.id)
+  assert(cancelled.status === 'DIBATALKAN', 'cancelling all items sets DIBATALKAN')
+  assert(cancelled.total_amount === 0, 'cancelled order totals are zero')
+  assert(
+    db.ingredients.find(({ id }) => id === 'ingredient-1')!.stock > stockBefore,
+    'cancel restores ingredient stock',
+  )
+  assert(
+    db.stockMovements.some(
+      (movement) => movement.type === 'RESTORE' && movement.order_item_id === created.items[0]!.id,
+    ),
+    'cancel writes RESTORE movement with order_item_id',
+  )
+  await throwsCode(() => api.cancelItem(created.id, created.items[0]!.id), 'INVALID_TRANSITION')
 
   await throwsCode(
     () => api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.COOKING),

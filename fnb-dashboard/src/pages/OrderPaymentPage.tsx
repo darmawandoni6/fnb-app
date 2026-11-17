@@ -42,7 +42,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PaymentReceiptDialog } from '@/features/manual-order/PaymentReceiptDialog'
-import { CancelOrderDialog } from '@/features/orders/CancelOrderDialog'
+import { CancelOrderButton } from '@/features/orders/CancelOrderButton'
 
 export function OrderPaymentPage() {
   const { id } = useParams<{ id: string }>()
@@ -155,7 +155,7 @@ export function OrderPaymentPage() {
               Pesanan Sudah Lunas
             </Badge>
           )}
-          {canCancelOrder && <CancelOrderDialog order={order} />}
+          {canCancelOrder && <CancelOrderButton order={order} />}
         </div>
       </div>
 

@@ -115,43 +115,6 @@ export const createManualOrder = async (body: CreateManualOrderInput): Promise<O
   return structuredClone(order)
 }
 
-export const cancelOrder = async (orderId: string): Promise<Order> => {
-  await delay()
-  requireRole('OWNER', 'CASHIER')
-  const order = findOrder(orderId)
-
-  if (
-    order.payment_status === PAYMENT_STATUS.LUNAS ||
-    order.items.length === 0 ||
-    order.items.some((item) => item.status !== ITEM_STATUS.PENDING)
-  ) {
-    fail(API_ERROR_CODE.INVALID_TRANSITION, 'Order cannot be cancelled')
-  }
-
-  order.items.forEach((item, itemIndex) => {
-    const recipes = db.recipeItems.filter((recipe) => recipe.menu_id === item.menu_id)
-    recipes.forEach((recipe, recipeIndex) => {
-      const ingredient = db.ingredients.find(({ id }) => id === recipe.ingredient_id)
-      if (ingredient) {
-        const qty = recipe.qty * item.qty
-        ingredient.stock += qty
-        db.stockMovements.unshift({
-          id: `movement-cancel-${Date.now()}-${itemIndex}-${recipeIndex}`,
-          ingredient_id: ingredient.id,
-          type: 'IN',
-          qty,
-          created_at: new Date().toISOString(),
-          note: `Batal pesanan #${order.id}`,
-        })
-      }
-    })
-    item.status = ITEM_STATUS.CANCELLED
-  })
-
-  order.status = deriveStatus(order)
-  return structuredClone(order)
-}
-
 export const updateItemStatus = async (
   orderId: string,
   itemId: string,
@@ -189,7 +152,31 @@ export const cancelItem = async (orderId: string, itemId: string): Promise<Order
   const orderItem = item!
   if (orderItem.status !== ITEM_STATUS.PENDING)
     fail(API_ERROR_CODE.INVALID_TRANSITION, 'Only pending items can be cancelled')
+
+  db.recipeItems
+    .filter((recipe) => recipe.menu_id === orderItem.menu_id)
+    .forEach((recipe, index) => {
+      const ingredient = db.ingredients.find(({ id }) => id === recipe.ingredient_id)
+      if (!ingredient) return
+      const qty = recipe.qty * orderItem.qty
+      ingredient.stock += qty
+      db.stockMovements.unshift({
+        id: `movement-restore-${Date.now()}-${index}`,
+        ingredient_id: ingredient.id,
+        type: 'RESTORE',
+        qty,
+        created_at: new Date().toISOString(),
+        note: `Batal item ${orderItem.menu_name} pesanan #${order.id}`,
+        order_item_id: orderItem.id,
+      })
+    })
+
   orderItem.status = ITEM_STATUS.CANCELLED
   order.status = deriveStatus(order)
+  if (order.items.every(({ status }) => status === ITEM_STATUS.CANCELLED)) {
+    order.subtotal_amount = 0
+    order.tax_amount = 0
+    order.total_amount = 0
+  }
   return structuredClone(order)
 }

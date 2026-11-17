@@ -453,7 +453,7 @@ function MovementsTab() {
         {(movements ?? []).map((movement) => (
           <TableRow key={movement.id}>
             <TableCell>
-              <Badge variant={movement.type === 'IN' ? 'default' : 'secondary'}>
+              <Badge variant={movement.type === 'OUT' ? 'secondary' : 'default'}>
                 {movement.type}
               </Badge>
             </TableCell>

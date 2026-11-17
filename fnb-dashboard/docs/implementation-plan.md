@@ -327,6 +327,8 @@ Prerequisite: `fnb-server` running at `http://localhost:8081`.
     - `PATCH /orders/:id/items/:item_id/status`.
     - `POST /orders/:id/items/:item_id/cancel`.
 
+55b. Mock alignment with PRD §9 & flow.md (separate commit): - `cancelItem` restores recipe stock, writes `StockMovement` with type `RESTORE` and `order_item_id`. - `StockMovement` type extended: `IN` | `OUT` | `RESTORE` | `ADJUSTMENT` + optional `order_item_id`. - When all items become `CANCELLED`, set `subtotal_amount = tax_amount = total_amount = 0` and order status `DIBATALKAN`. - Remove full-order cancel endpoint `POST /orders/:id/cancel` (not in PRD §10). Payment page cancels all `PENDING` items by iterating `cancelItem`. - Note: refund calculation for `LUNAS` orders (PRD §9 baris 375-395) recorded as gap; no `Refund` type in mock yet.
+
 56. Verify live API polling with two dashboard sessions.
 57. Verify error codes end-to-end:
 

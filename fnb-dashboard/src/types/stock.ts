@@ -15,8 +15,9 @@ export type RecipeItem = {
 export type StockMovement = {
   id: string
   ingredient_id: string
-  type: 'IN' | 'OUT'
+  type: 'IN' | 'OUT' | 'RESTORE' | 'ADJUSTMENT'
   qty: number
   created_at: string
   note?: string
+  order_item_id?: string | null
 }

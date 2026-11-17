@@ -5,6 +5,8 @@ export const formatRupiah = (amount: number): string =>
     maximumFractionDigits: 0,
   }).format(amount)
 
+export const formatNumber = (value: number): string => new Intl.NumberFormat('id-ID').format(value)
+
 export const formatTime = (iso: string): string =>
   new Intl.DateTimeFormat('id-ID', { hour: '2-digit', minute: '2-digit' }).format(new Date(iso))
 

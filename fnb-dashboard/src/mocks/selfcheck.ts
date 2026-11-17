@@ -42,25 +42,91 @@ export const runMockSelfCheck = async () => {
   )
   await api.updateMenu('menu-1', { category_id: 'category-1' })
 
-  // Cancel: restores stock with RESTORE movement and zeroes totals.
+  // Stock: order creation writes a negative OUT, cancel restores, min_stock persists, opname writes ADJUSTMENT.
   const created = await api.createManualOrder({
     items: [{ menu_id: 'menu-1', qty: 1, note: null }],
   })
-  const stockBefore = db.ingredients.find(({ id }) => id === 'ingredient-1')!.stock
+  const stockBefore = db.ingredients.find(({ id }) => id === 'ingredient-1')!.stock_qty
+  assert(
+    db.stockMovements.some(
+      (movement) =>
+        movement.type === 'OUT' &&
+        movement.qty < 0 &&
+        movement.order_id === created.id &&
+        movement.order_item_id === created.items[0]!.id,
+    ),
+    'order creation writes a negative OUT movement with order ids',
+  )
   const cancelled = await api.cancelItem(created.id, created.items[0]!.id)
   assert(cancelled.status === 'DIBATALKAN', 'cancelling all items sets DIBATALKAN')
   assert(cancelled.total_amount === 0, 'cancelled order totals are zero')
   assert(
-    db.ingredients.find(({ id }) => id === 'ingredient-1')!.stock > stockBefore,
+    db.ingredients.find(({ id }) => id === 'ingredient-1')!.stock_qty > stockBefore,
     'cancel restores ingredient stock',
   )
   assert(
     db.stockMovements.some(
-      (movement) => movement.type === 'RESTORE' && movement.order_item_id === created.items[0]!.id,
+      (movement) =>
+        movement.type === 'RESTORE' &&
+        movement.qty > 0 &&
+        movement.order_id === created.id &&
+        movement.order_item_id === created.items[0]!.id,
     ),
-    'cancel writes RESTORE movement with order_item_id',
+    'cancel writes RESTORE movement with order ids',
   )
   await throwsCode(() => api.cancelItem(created.id, created.items[0]!.id), 'INVALID_TRANSITION')
+
+  // Ingredients: min_stock is stored and editable, restock/adjust write signed movements.
+  const newIngredient = await api.createIngredient({
+    name: 'Gula',
+    unit: 'gram',
+    stock_qty: 100,
+    min_stock: 20,
+  })
+  assert(newIngredient.min_stock === 20, 'createIngredient stores min_stock')
+  assert(
+    db.stockMovements.some(
+      (movement) =>
+        movement.ingredient_id === newIngredient.id &&
+        movement.type === 'ADJUSTMENT' &&
+        movement.qty === 100,
+    ),
+    'createIngredient writes an opening ADJUSTMENT',
+  )
+  const updatedIngredient = await api.updateIngredient(newIngredient.id, { min_stock: 30 })
+  assert(updatedIngredient.min_stock === 30, 'updateIngredient updates min_stock')
+  const restocked = await api.restockIngredient(newIngredient.id, { qty: 25, note: 'uji' })
+  assert(restocked.stock_qty === 125, 'restock increases stock_qty')
+  assert(
+    db.stockMovements.some(
+      (movement) =>
+        movement.ingredient_id === newIngredient.id &&
+        movement.type === 'IN' &&
+        movement.qty === 25 &&
+        movement.note === 'uji',
+    ),
+    'restock writes IN movement with note',
+  )
+  const adjusted = await api.adjustIngredient(newIngredient.id, { stock_qty: 60 })
+  assert(adjusted.stock_qty === 60, 'adjustIngredient replaces stock_qty')
+  assert(
+    db.stockMovements.some(
+      (movement) =>
+        movement.ingredient_id === newIngredient.id &&
+        movement.type === 'ADJUSTMENT' &&
+        movement.qty === -65,
+    ),
+    'adjustIngredient writes a signed ADJUSTMENT',
+  )
+  await throwsCode(
+    () => api.adjustIngredient(newIngredient.id, { stock_qty: 60 }),
+    'VALIDATION_ERROR',
+  )
+  const adjustMovements = await api.getStockMovements({
+    ingredient_id: newIngredient.id,
+    type: 'ADJUSTMENT',
+  })
+  assert(adjustMovements.length === 2, 'getStockMovements filters by ingredient and type')
 
   await throwsCode(
     () => api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.COOKING),
@@ -92,6 +158,30 @@ export const runMockSelfCheck = async () => {
   await throwsCode(
     () => api.createManualOrder({ items: [{ menu_id: 'menu-1', qty: 1, note: null }] }),
     'STORE_CLOSED',
+  )
+  db.settings.is_open = true
+
+  // Recipes: rejected while the store is open, editable when closed (PRD §8).
+  await throwsCode(
+    () => api.createRecipeItem({ menu_id: 'menu-3', ingredient_id: 'ingredient-4', qty_used: 5 }),
+    'STORE_CLOSED',
+  )
+  db.settings.is_open = false
+  const recipe = await api.createRecipeItem({
+    menu_id: 'menu-3',
+    ingredient_id: 'ingredient-4',
+    qty_used: 5,
+  })
+  await throwsCode(
+    () => api.createRecipeItem({ menu_id: 'menu-3', ingredient_id: 'ingredient-4', qty_used: 6 }),
+    'VALIDATION_ERROR',
+  )
+  const updatedRecipe = await api.updateRecipeItem(recipe.id, { qty_used: 8 })
+  assert(updatedRecipe.qty_used === 8, 'updateRecipeItem updates qty_used')
+  await api.deleteRecipeItem(recipe.id)
+  assert(
+    !db.recipeItems.some(({ id }) => id === recipe.id),
+    'deleteRecipeItem removes the recipe item',
   )
   db.settings.is_open = true
 

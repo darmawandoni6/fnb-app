@@ -83,7 +83,7 @@ Out of scope:
 
 5. **`src/lib/errors.ts`** — `toastApiError(error)`: toasts `message`. Replaces repeated `onError` lambdas from Phase 2 (no behavior change).
 
-6. **`src/components/data-table.tsx`** — thin wrapper: `Table` + generic column config + loading skeleton + `Empty` state. ponytail: no TanStack Table — a column map over `TableRow`s suffices at this scale; swap when sorting/pagination are needed.
+6. **`src/components/data-table.tsx`** — generic data table on `@tanstack/react-table@9` (`useTable` + `tableFeatures`: `columnFilteringFeature`, `rowSortingFeature`, `filteredRowModel`, `sortedRowModel`). Props: `columns`, `data`, `empty`. Renders `Table` primitives, empty-state row, and exposes toolbar controls via column filter state at the call site. First consumer: `/stock` ingredients.
 
 7. **`src/components/confirm-dialog.tsx`** — `AlertDialog` wrapper used by all deletes/deactivations.
 
@@ -96,12 +96,14 @@ Out of scope:
 
 9. Categories with `sort_order` (auto-assigned at end + editable number input), menus grouped by category right (Card grid). Category header shows Edit/Delete; delete disabled when category has menus.
 10. `menuSchema`: `name` min 1, `price` integer ≥ 0, `category_id` required, `image_url` optional, `is_available` boolean. `category_id` is editable in form (moves menu between categories).
-11. Menu card: image (`object-cover`, h-28) dimmed (`opacity-60 grayscale`) when unavailable, fallback to 2-char initials in pastel color block (shared `src/lib/menu.ts`), name, price (`formatRupiah`). Card footer: availability `Switch` (`Tersedia`/`Habis`) + `Edit` button.
+11. Menu card: image (`object-cover`, h-28) dimmed (`opacity-60 grayscale`) when unavailable, fallback to 2-char initials in pastel color block (shared `src/lib/menu.ts`), name, price (`formatRupiah`). Card footer: availability `Switch` (`Tersedia`/`Habis`) + `Resep` button (ingredient count badge) + `Edit` button.
 12. Card footer switch toggles `is_available` via `updateMenu`; no dropdown, **no Delete button on menu card** — PRD Phase 2 specifies "Mark menus unavailable" only; soft delete remains in mock handler for API parity.
 13. Menu form (`sm:max-w-lg`): live image preview, 2-column grid on `sm` with required markers. Price input masked as `type="text" inputMode="numeric"` rendered with `toLocaleString('id-ID')` and `Rp` prefix (same pattern as `OrderPaymentPage` "Uang Diterima"); value sent to API stays integer rupiah. All fields keep the component default height (`h-8`) — the price input only adds the `Rp` prefix and mono font, never a height override. Image accepts a URL; upload via multipart deferred to API phase (PRD §7 "Upload menu photos locally through the backend and static files").
 14. `Category` type gains `sort_order: number` (PRD §9). `getMenuCategories` returns categories sorted by `sort_order` asc. `createCategory` auto-assigns `sort_order = count + 1`. `updateCategory` accepts `sort_order`.
 15. `updateMenu` mock handler accepts `category_id?` and moves the menu between category arrays in `db.categories`.
 16. Mock seed in `src/mocks/index.ts` fixed: `category.menus` references same objects as `db.menus` so toggling availability in UI reflects immediately.
+
+Recipe editing lives on the menu card, not `/stock`: `src/features/menus/RecipeDialog.tsx` opens from the `Resep` button and shows that menu's ingredient table with editable `qty_used`, an add row (ingredient `Select` + qty), and delete via `ConfirmDialog`. Per PRD §8 the handler rejects create/update/delete with `STORE_CLOSED` while `settings.is_open = true`; the dialog stays readable and disables every action behind a "tutup toko dulu" banner.
 
 ## Step 4 — Tables page (`src/pages/TablesPage.tsx`)
 
@@ -115,26 +117,33 @@ Out of scope:
 
 ## Step 5 — Stock page (`src/pages/StockPage.tsx`)
 
-20. Tabs: `Ingredients` | `Recipes` | `Movements`.
-21. Ingredients: name, unit, stock (`Badge` variant `destructive` when stock < `LOW_STOCK_THRESHOLD` — new constant in `src/constants/stock.ts`, default 10), restock button (dialog: qty integer ≥ 1), create/edit.
-22. Recipes: rows menu → ingredient → qty; create dialog with `Select` for menu and ingredient; edit qty; delete.
-23. Movements: simple list table (`IN`/`OUT`/`RESTORE` badge, qty, date, ingredient name).
+20. Layout: one screen, no tabs and no summary cards. `grid gap-4 lg:grid-cols-3` — ingredients panel `lg:col-span-2`, movements panel `lg:col-span-1`; below `lg` they stack with ingredients first. Ingredient counts live in the status filter chips.
+21. Types follow PRD §9: `Ingredient.stock_qty` + `Ingredient.min_stock`, `RecipeItem.qty_used`, `StockMovement.order_id`. `LOW_STOCK_THRESHOLD` is deleted from `src/constants/stock.ts`.
+22. Ingredients panel is a `Card` (title + description) wrapping the generic `src/components/data-table.tsx` (TanStack Table v9): a name search column filter, chips `Semua (n)` / `Menipis (n)` / `Habis (n)` / `Aman (n)` driving the `status` filter, sorting on `name` and `stock_qty`, and pagination (`pageSize` 10, footer shows range + Sebelumnya/Berikutnya, rendered whenever rows exist so the range line is always visible).
+23. Columns: Nama bahan, Sisa stok (number colored `text-destructive` at 0, `amber-700/dark:amber-300` when `0 < stock_qty <= min_stock`, `emerald-700/dark:emerald-300` otherwise, muted unit beside it), Batas bawah (`min_stock` + unit), Status `Badge`, Aksi dropdown. All quantities render through `formatNumber` (`src/lib/format.ts`, `id-ID`) so thousands use dots (`1.000`, `+2.000`).
+24. One color per status, shared by number, chip, and badge: Habis `text-destructive` on `bg-destructive/10`; Menipis amber 700/300 on `bg-amber-500/10`; Aman emerald 700/300 on `bg-emerald-500/10`; neutral `Semua` uses `bg-muted`. Chip active = soft tint + `ring-1` in the status color; badges use `variant="outline"` plus the same tint. Movement type badges stay neutral `outline` because the signed qty already carries direction. See `/home/doni/.opencode/plan/stock-color-pattern.md`.
+25. Aksi dropdown: Restock (`IN`, optional note), Sesuaikan stok (`ADJUSTMENT` opname), Edit bahan (name/unit/`min_stock`), Lihat pemakaian (read-only dialog with menu names + qty per portion). No delete — PRD never lists it and `recipe_items`/`stock_movements` reference ingredients.
+26. `ingredientSchema` requires `min_stock` (integer ≥ 0, default 0). `restockSchema` adds an optional `note`. `adjustStockSchema` takes the counted `stock_qty` plus an optional note.
+27. Movements panel is a grouped list, not a table: chips `Semua` / `Masuk` / `Keluar` map by the PRD §9 qty sign (`qty > 0` masuk covers `IN`, `RESTORE`, positive `ADJUSTMENT`; `qty < 0` keluar covers `OUT`, negative `ADJUSTMENT`). Rows show ingredient + relative time, type `Badge`, signed colored qty with unit, and note (`#order_id` or free text); grouped by `Hari ini` / `Kemarin` / date. Internal scroll (`lg:h-[calc(100vh-8rem)]`, mobile `max-h-96`), all movements newest first.
+28. Restock writes `IN`; Sesuaikan writes `ADJUSTMENT` with the signed delta and rejects an unchanged count. Opname is an extension beyond PRD Phase 2 — documented in `docs/api.md` and `docs/flow.md`.
+29. Order creation writes `OUT` (negative) per recipe with `order_id`/`order_item_id`; item cancellation writes `RESTORE` (positive). The log is append-only; corrections are new `ADJUSTMENT` rows.
+30. Seed: realistic `min_stock`, several lowered stocks, one ingredient at 0, movements spread across days. `src/mocks/selfcheck.ts`: assert `min_stock` persists, order writes a negative `OUT`, adjust writes `ADJUSTMENT`, cancel writes `RESTORE`, and recipe writes are rejected with `STORE_CLOSED` while the store is open.
 
 ## Step 6 — Users page (`src/pages/UsersPage.tsx`)
 
-24. List: name, email, role `Badge`, `is_active` badge, toggle activate/deactivate (`ConfirmDialog`), Edit name.
-25. Create dialog: name, email, role `Select` (`CASHIER`/`KITCHEN` only).
-26. Deactivating own account is blocked in the handler and disabled in the UI.
+30. List: name, email, role `Badge`, `is_active` badge, toggle activate/deactivate (`ConfirmDialog`), Edit name.
+31. Create dialog: name, email, role `Select` (`CASHIER`/`KITCHEN` only).
+32. Deactivating own account is blocked in the handler and disabled in the UI.
 
 ## Step 7 — Settings page (`src/pages/SettingsPage.tsx`)
 
-27. Form: `cafe_name` (Input), `tax_percent` (number Input, 0–100), `is_open` (`Switch` with description "Toko tutup menolak order baru").
-28. `settingsSchema` (Zod); save via `updateSettings`; invalidate `['settings']` (the manual-order dialog reads it).
-29. Turning the store off shows an inline warning.
+33. Form: `cafe_name` (Input), `tax_percent` (number Input, 0–100), `is_open` (`Switch` with description "Toko tutup menolak order baru").
+34. `settingsSchema` (Zod); save via `updateSettings`; invalidate `['settings']` (the manual-order dialog reads it).
+35. Turning the store off shows an inline warning.
 
 ## Step 8 — Wire routes
 
-30. `src/App.tsx`: replace `StubPage` entries with the real pages (`MENUS`, `TABLES`, `STOCK`, `USERS`, `SETTINGS`). Keep `Reports` as `StubPage` (PRD Phase 3 Insights).
+36. `src/App.tsx`: replace `StubPage` entries with the real pages (`MENUS`, `TABLES`, `STOCK`, `USERS`, `SETTINGS`). Keep `Reports` as `StubPage` (PRD Phase 3 Insights).
 
 ## Step 9 — Verify
 
@@ -147,7 +156,7 @@ npm run build
 Manual checklist:
 
 - Owner: all 6 pages CRUD works; CASHIER/KITCHEN blocked by `RoleGuard`.
-- Low-stock badge appears under threshold; restock increases stock and writes a movement.
+- Low-stock card populates from the seed; menipis/habis badges match `min_stock`; restock increases stock and writes `IN`; `Sesuaikan stok` writes `ADJUSTMENT`; creating and cancelling an order writes `OUT`/`RESTORE`.
 - Toggling a menu unavailable shows it disabled in the manual-order dialog.
 - Tables grid shows QR thumbnails; switch deactivates/activates a table; duplicate numbers are rejected.
 - `Cetak Semua QR` prints only active tables, 2×2 per A4, without dashboard chrome.

@@ -175,14 +175,22 @@ Table QR content:
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/ingredients` | List ingredients and stock |
-| `POST` | `/ingredients` | Create ingredient |
-| `PATCH` | `/ingredients/:id` | Update ingredient |
-| `POST` | `/ingredients/:id/restock` | Add stock and movement `IN` |
-| `GET` | `/recipe-items` | List recipes |
+| `GET` | `/ingredients` | List ingredients with `stock_qty` and `min_stock` |
+| `POST` | `/ingredients` | Create ingredient (`name`, `unit`, `stock_qty`, `min_stock`); writes movement `ADJUSTMENT` when `stock_qty > 0` |
+| `PATCH` | `/ingredients/:id` | Update ingredient, including `min_stock` |
+| `POST` | `/ingredients/:id/restock` | Add stock and movement `IN` (body `{ qty, note? }`) |
+| `POST` | `/ingredients/:id/adjust` | Stock opname: body `{ stock_qty, note? }`, replaces stock, writes `ADJUSTMENT` with the signed delta |
+| `GET` | `/recipe-items` | List recipes (`menu_id`, `ingredient_id`, `qty_used`) |
 | `POST` | `/recipe-items` | Add ingredient to recipe |
 | `PATCH` | `/recipe-items/:id` | Update recipe quantity |
 | `DELETE` | `/recipe-items/:id` | Delete recipe item |
+| `GET` | `/stock-movements` | List stock movements; query `ingredient_id`, `type`, `from`, `to` (ISO date) |
+
+`stock_movements.qty` is signed per PRD §9: positive for incoming (`IN`, `RESTORE`) and negative for outgoing (`OUT`). `ADJUSTMENT` stores the signed delta between the counted stock and the previous stock, so it can be positive or negative and is never zero. `order_id`/`order_item_id` are filled for `OUT` and `RESTORE`.
+
+`POST /ingredients/:id/adjust` is an extension beyond PRD Phase 2 (opname). The flow is documented in `docs/flow.md` under "Stock Opname".
+
+`POST`, `PATCH`, and `DELETE` on `/recipe-items` are rejected with `STORE_CLOSED` while `settings.is_open` is true (PRD §8: recipes are finalized before the store opens). Reading recipes stays allowed. Restock, opname, and ingredient CRUD are not gated by `is_open`.
 
 ## Internal — users and settings
 

@@ -282,6 +282,20 @@ See `docs/implementation/phase-3-crud.md` Step 4 for detail.
 - `@media print` rules in `src/index.css` shared with the payment receipt.
 - No QR regeneration in M1: token is immutable, endpoint deferred.
 
+### 2.9 Stock Redesign (Mock)
+
+See `docs/implementation/phase-3-crud.md` Step 5, `/home/doni/.opencode/plan/stock-redesign.md` (data model), `/home/doni/.opencode/plan/stock-page-two-panel.md` (layout) and `/home/doni/.opencode/plan/stock-color-pattern.md` (color + separators) for detail.
+
+- Types follow PRD §9: `stock_qty`, `min_stock`, `qty_used`, `stock_movements.order_id`; global `LOW_STOCK_THRESHOLD` removed.
+- One-screen two-panel layout (no tabs, no summary cards): ingredients 2/3 left, movements 1/3 right, stacked below `lg`.
+- Ingredients panel uses the generic `src/components/data-table.tsx` (TanStack Table v9): name search, chips `Semua/Menipis/Habis/Aman` with counts, sorting on name and stock, pagination; stock number colored by three-tier threshold.
+- One color per status across number, chip, and badge (Habis red, Menipis amber, Aman emerald, `Semua` neutral); quantities formatted `id-ID` (thousand separators). Movement type badges stay neutral.
+- Aksi dropdown: Restock (`IN`), `Sesuaikan stok` (opname, `ADJUSTMENT`), Edit bahan, Lihat pemakaian (read-only).
+- Recipes edited in `/menus` (`RecipeDialog` per menu card); PRD §8 enforced with `STORE_CLOSED` while the store is open.
+- Movements panel: grouped-by-date list, chips `Semua/Masuk/Keluar` mapped by qty sign, signed colored qty, `#order_id` note, internal scroll.
+- Order creation writes `OUT` per recipe; cancellation writes `RESTORE`; log is append-only.
+- `docs/api.md` adds `min_stock`, `POST /ingredients/:id/adjust`, `GET /stock-movements`, and the recipe `STORE_CLOSED` rule; `docs/flow.md` adds Stock Opname and Recipe Management sections.
+
 ## Phase 3 — API Integration
 
 Prerequisite: `fnb-server` running at `http://localhost:8081`.

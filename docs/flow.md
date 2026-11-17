@@ -136,6 +136,52 @@ sequenceDiagram
     API-->>A: success response
 ```
 
+## Stock Opname
+
+Extension beyond PRD Phase 2: physical stock correction (opname). The movement log is append-only; a correction is recorded as a new `ADJUSTMENT`, never an edit or delete.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as Owner (Dashboard)
+    participant API as fnb-server
+    participant DB as PostgreSQL
+
+    O->>API: POST /ingredients/:id/adjust (JWT)
+    Note over API,DB: TRANSAKSI
+    API->>DB: lock ingredient row
+    API->>DB: read current stock_qty
+    API->>DB: reject when counted stock equals current (VALIDATION_ERROR)
+    API->>DB: update stock_qty = counted stock
+    API->>DB: insert stock_movements ADJUSTMENT, qty = counted - previous
+    API->>DB: commit
+    API-->>O: ingredient
+```
+
+## Recipe Management
+
+PRD §8: recipes are finalized before the store opens, so editing is rejected while `settings.is_open = true`. Reading recipes stays allowed.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as Owner (Dashboard)
+    participant API as fnb-server
+    participant DB as PostgreSQL
+
+    O->>API: POST/PATCH/DELETE /recipe-items (JWT)
+    API->>DB: read settings.is_open
+    alt is_open = true
+        API-->>O: STORE_CLOSED
+    else is_open = false
+        Note over API,DB: TRANSAKSI
+        API->>DB: validate menu, ingredient, qty_used, unique (menu_id, ingredient_id)
+        API->>DB: write recipe_items
+        API->>DB: commit
+        API-->>O: recipe item
+    end
+```
+
 ## Polling
 
 ```mermaid

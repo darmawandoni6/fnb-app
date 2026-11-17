@@ -71,17 +71,12 @@ export const createManualOrder = async (body: CreateManualOrderInput): Promise<O
     const recipes = db.recipeItems.filter(({ menu_id }) => menu_id === input.menu_id)
     recipes.forEach((recipe) => {
       const ingredient = db.ingredients.find(({ id }) => id === recipe.ingredient_id)
-      if (!ingredient || ingredient.stock < recipe.qty * input.qty)
+      if (!ingredient || ingredient.stock_qty < recipe.qty_used * input.qty)
         fail(API_ERROR_CODE.STOCK_NOT_ENOUGH, 'Insufficient stock')
     })
     return { input, menu, recipes }
   })
-  resolved.forEach(({ input, recipes }) =>
-    recipes.forEach((recipe) => {
-      const ingredient = db.ingredients.find(({ id }) => id === recipe.ingredient_id)
-      if (ingredient) ingredient.stock -= recipe.qty * input.qty
-    }),
-  )
+  const orderId = `order-${Date.now()}`
   const items = resolved.map(({ input, menu }, index) => ({
     id: `item-${Date.now()}-${index}`,
     menu_id: menu.id,
@@ -91,10 +86,28 @@ export const createManualOrder = async (body: CreateManualOrderInput): Promise<O
     note: input.note,
     status: ITEM_STATUS.PENDING,
   }))
+  resolved.forEach(({ recipes }, itemIndex) =>
+    recipes.forEach((recipe, recipeIndex) => {
+      const ingredient = db.ingredients.find(({ id }) => id === recipe.ingredient_id)
+      if (!ingredient) return
+      const qty = recipe.qty_used * items[itemIndex]!.qty
+      ingredient.stock_qty -= qty
+      db.stockMovements.unshift({
+        id: `movement-out-${Date.now()}-${itemIndex}-${recipeIndex}`,
+        ingredient_id: ingredient.id,
+        type: 'OUT',
+        qty: -qty,
+        created_at: new Date().toISOString(),
+        note: `Pesanan #${orderId}`,
+        order_id: orderId,
+        order_item_id: items[itemIndex]!.id,
+      })
+    }),
+  )
   const subtotal = items.reduce((sum, item) => sum + item.qty * item.unit_price, 0)
   const staff = currentUser()
   const order: Order = {
-    id: `order-${Date.now()}`,
+    id: orderId,
     order_type: 'MANUAL',
     dining_option: body.dining_option ?? 'DINE_IN',
     customer_name: body.customer_name ?? null,
@@ -158,8 +171,8 @@ export const cancelItem = async (orderId: string, itemId: string): Promise<Order
     .forEach((recipe, index) => {
       const ingredient = db.ingredients.find(({ id }) => id === recipe.ingredient_id)
       if (!ingredient) return
-      const qty = recipe.qty * orderItem.qty
-      ingredient.stock += qty
+      const qty = recipe.qty_used * orderItem.qty
+      ingredient.stock_qty += qty
       db.stockMovements.unshift({
         id: `movement-restore-${Date.now()}-${index}`,
         ingredient_id: ingredient.id,
@@ -167,6 +180,7 @@ export const cancelItem = async (orderId: string, itemId: string): Promise<Order
         qty,
         created_at: new Date().toISOString(),
         note: `Batal item ${orderItem.menu_name} pesanan #${order.id}`,
+        order_id: order.id,
         order_item_id: orderItem.id,
       })
     })

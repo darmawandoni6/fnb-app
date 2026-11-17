@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 import type { Order } from '@/types'
 
 import { ORDER_STATUS, type OrderStatus } from '@/constants/orderStatus'
 import { PAYMENT_STATUS } from '@/constants/paymentStatus'
+import { ROUTES } from '@/constants/routes'
 import { formatRupiah } from '@/lib/format'
 
 import { useAuth } from '@/auth/context'
@@ -12,7 +14,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
 import { Skeleton } from '@/components/ui/skeleton'
-import { CreateOrderDialog } from '@/features/manual-order/CreateOrderDialog'
 import { OrderCard } from '@/features/orders/OrderCard'
 import { OrderDetailDialog } from '@/features/orders/OrderDetailDialog'
 import { useOrderStats } from '@/features/orders/useOrderStats'
@@ -29,10 +30,10 @@ const columns = [
 type ViewMode = 'all' | 'unpaid' | 'done'
 
 export function OrdersPage() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { data: orders, isPending } = useOrders()
   const stats = useOrderStats()
-  const [createOpen, setCreateOpen] = useState(false)
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const canAct = user?.role === 'OWNER' || user?.role === 'CASHIER'
@@ -50,7 +51,7 @@ export function OrdersPage() {
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold">Orders</h1>
         {canAct && (
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Button size="sm" onClick={() => navigate(ROUTES.ORDERS_NEW)}>
             + Order Manual
           </Button>
         )}
@@ -72,7 +73,6 @@ export function OrdersPage() {
         <StatCard label="Penjualan Hari Ini" value={formatRupiah(stats.salesToday)} />
       </div>
       <OrderDetailDialog order={selectedOrder} onClose={() => setSelectedOrder(null)} />
-      <CreateOrderDialog open={createOpen} onOpenChange={setCreateOpen} />
       {isPending ? (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           {columns.map((status) => (

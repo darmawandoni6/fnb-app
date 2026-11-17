@@ -1,5 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom'
 
+import { ROUTES, USER_ROLE, type UserRole } from '@/constants'
+import type { NavGroup } from '@/types'
 import {
   BarChart3,
   Boxes,
@@ -10,9 +12,6 @@ import {
   Users,
   UtensilsCrossed,
 } from 'lucide-react'
-
-import { ROUTES, USER_ROLE, type UserRole } from '@/constants'
-import type { NavGroup } from '@/types'
 
 import { useAuth } from '@/auth/context'
 

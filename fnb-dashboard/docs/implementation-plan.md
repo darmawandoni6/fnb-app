@@ -227,21 +227,20 @@ src/mocks/
 38. Ensure a `BELUM` order cannot move to `COOKING`.
 39. Use a wide layout for kitchen monitors.
 
-### 2.5 Manual Order
+### 2.5 Manual Order (POS & Payment Flow)
 
-40. Create `CreateOrderDialog`.
-41. Display menus grouped by category.
-42. Add quantity controls and item notes.
-43. Show a price summary for display only.
-44. Never treat client-side calculation as the order total source of truth.
-45. Create `manualOrderSchema`:
+See `docs/implementation/phase-2.6-pos.md` for detail.
 
-    - `items` must have at least one item.
-    - `qty` must be at least one.
-    - `note` is optional.
-
-46. Submit the mock `POST /orders/manual`.
-47. Handle `STORE_CLOSED` with a toast and disable the form.
+40. Create dedicated POS page (`NewOrderPage` at `/orders/new`) replacing the simple modal dialog:
+    - Left column: Category tabs, search input, and menu catalog grid with 2-character initials when images are absent.
+    - Right column: Order cart panel with Dine In (mandatory table select) vs Take Away toggle, mandatory customer name, item notes, subtotal, tax calculation, and hold draft (park order to `localStorage`).
+41. Create dedicated Checkout & Payment page (`OrderPaymentPage` at `/orders/:id/payment`):
+    - Order preview & handling cashier info.
+    - Cash payment (amount received, quick nominal buttons, change calculation) and Non-cash payment (QRIS, Debit, Transfer).
+    - Status lifecycle: order starts as `MENUNGGU` & `BELUM`, updates to `LUNAS` upon payment completion, making it available for kitchen cooking (`PENDING` → `COOKING` → `DIPROSES`).
+    - Printable receipt modal with `window.print()` and return navigation.
+42. Submit `createManualOrder` with items, customer name, dining option, and table number.
+43. Handle `STORE_CLOSED` with a toast and disable actions.
 
 ### 2.6 Owner Stub Pages
 

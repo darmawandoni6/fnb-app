@@ -2,6 +2,8 @@ export const ROUTES = {
   LOGIN: '/login',
   DASHBOARD: '/',
   ORDERS: '/orders',
+  ORDERS_NEW: '/orders/new',
+  ORDERS_PAYMENT: '/orders/:id/payment',
   KITCHEN: '/kitchen',
   MENUS: '/menus',
   TABLES: '/tables',

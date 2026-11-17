@@ -7,12 +7,19 @@ import {
   PAYMENT_STATUS,
 } from '@/constants'
 import { db } from '@/mocks/db'
-import type { Order } from '@/types'
+import type { DiningOption, Order } from '@/types'
 
 import { currentUser, delay, fail, isStaff, requireRole } from './shared'
 
 type OrderFilters = { status?: OrderStatus; table_id?: string; date?: string }
 type OrderItemInput = { menu_id: string; qty: number; note: string | null }
+type CreateManualOrderInput = {
+  items: OrderItemInput[]
+  customer_name?: string | null
+  dining_option?: DiningOption
+  table_id?: string | null
+  table_number?: string | null
+}
 
 const findOrder = (id: string): Order => {
   const order = db.orders.find((candidate) => candidate.id === id)
@@ -51,7 +58,7 @@ export const getOrder = async (id: string): Promise<Order> => {
   return structuredClone(findOrder(id))
 }
 
-export const createManualOrder = async (body: { items: OrderItemInput[] }): Promise<Order> => {
+export const createManualOrder = async (body: CreateManualOrderInput): Promise<Order> => {
   await delay()
   requireRole('OWNER', 'CASHIER')
   if (!db.settings.is_open) fail(API_ERROR_CODE.STORE_CLOSED, 'Store is closed')
@@ -85,11 +92,15 @@ export const createManualOrder = async (body: { items: OrderItemInput[] }): Prom
     status: ITEM_STATUS.PENDING,
   }))
   const subtotal = items.reduce((sum, item) => sum + item.qty * item.unit_price, 0)
+  const staff = currentUser()
   const order: Order = {
     id: `order-${Date.now()}`,
     order_type: 'MANUAL',
-    table_id: null,
-    table_number: null,
+    dining_option: body.dining_option ?? 'DINE_IN',
+    customer_name: body.customer_name ?? null,
+    created_by_name: staff?.name ?? 'Kasir',
+    table_id: body.dining_option === 'TAKE_AWAY' ? null : (body.table_id ?? null),
+    table_number: body.dining_option === 'TAKE_AWAY' ? null : (body.table_number ?? null),
     status: ORDER_STATUS.MENUNGGU,
     payment_status: PAYMENT_STATUS.BELUM,
     payment_method: null,

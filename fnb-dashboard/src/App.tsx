@@ -6,6 +6,8 @@ import { DashboardLayout } from '@/pages/DashboardLayout'
 import { KitchenPage } from '@/pages/KitchenPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { MenusPage } from '@/pages/MenusPage'
+import { NewOrderPage } from '@/pages/NewOrderPage'
+import { OrderPaymentPage } from '@/pages/OrderPaymentPage'
 import { OrdersPage } from '@/pages/OrdersPage'
 import { ReportsPage } from '@/pages/ReportsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
@@ -46,6 +48,16 @@ const router = createBrowserRouter([
             path: ROUTES.ORDERS,
             element: <RoleGuard roles={staff} />,
             children: [{ index: true, element: <OrdersPage /> }],
+          },
+          {
+            path: ROUTES.ORDERS_NEW,
+            element: <RoleGuard roles={staff} />,
+            children: [{ index: true, element: <NewOrderPage /> }],
+          },
+          {
+            path: ROUTES.ORDERS_PAYMENT,
+            element: <RoleGuard roles={staff} />,
+            children: [{ index: true, element: <OrderPaymentPage /> }],
           },
           {
             path: ROUTES.KITCHEN,

@@ -5,7 +5,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
-import { PAYMENT_METHOD, PAYMENT_STATUS, type PaymentMethod } from '@/constants'
+import { ITEM_STATUS, PAYMENT_METHOD, PAYMENT_STATUS, type PaymentMethod } from '@/constants'
 import type { Order } from '@/types'
 import {
   ArrowLeft,
@@ -23,6 +23,16 @@ import { formatRupiah, formatTime } from '@/lib/format'
 
 import { useAuth } from '@/auth/context'
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -32,6 +42,7 @@ import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PaymentReceiptDialog } from '@/features/manual-order/PaymentReceiptDialog'
+import { CancelOrderDialog } from '@/features/orders/CancelOrderDialog'
 
 export function OrderPaymentPage() {
   const { id } = useParams<{ id: string }>()
@@ -44,6 +55,7 @@ export function OrderPaymentPage() {
   const [nonCashChannel, setNonCashChannel] = useState<'QRIS' | 'DEBIT' | 'TRANSFER'>('QRIS')
   const [receiptOpen, setReceiptOpen] = useState(false)
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null)
+  const [backConfirmOpen, setBackConfirmOpen] = useState(false)
 
   const { data: order, isLoading } = useQuery<Order>({
     queryKey: ['orders', id],
@@ -90,45 +102,67 @@ export function OrderPaymentPage() {
 
   if (isLoading || !order) {
     return (
-      <div className="mx-auto max-w-4xl space-y-4">
+      <div className="space-y-4">
         <Skeleton className="h-10 w-48" />
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-          <Skeleton className="h-96 w-full" />
-          <Skeleton className="h-96 w-full" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+          <Skeleton className="h-96 lg:col-span-7 xl:col-span-8" />
+          <Skeleton className="h-96 lg:col-span-5 xl:col-span-4" />
         </div>
       </div>
     )
   }
 
   const isAlreadyPaid = order.payment_status === PAYMENT_STATUS.LUNAS
+  const canCancelOrder =
+    !isAlreadyPaid &&
+    order.items.length > 0 &&
+    order.items.every((item) => item.status === ITEM_STATUS.PENDING)
+  const goBackToNewOrder = () => {
+    if (isAlreadyPaid) {
+      navigate(ROUTES.ORDERS_NEW)
+      return
+    }
+    setBackConfirmOpen(true)
+  }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="space-y-4">
       {/* Top Navigation */}
-      <div className="flex items-center justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(ROUTES.ORDERS)}
-          className="text-muted-foreground hover:text-foreground gap-1.5 text-xs"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span>Kembali ke Orders</span>
-        </Button>
-
-        {isAlreadyPaid && (
-          <Badge className="gap-1 bg-emerald-600 text-xs text-white">
-            <CheckCircle2 className="h-3.5 w-3.5" />
-            Pesanan Sudah Lunas
-          </Badge>
-        )}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={goBackToNewOrder}
+            className="text-muted-foreground hover:text-foreground h-8 gap-1.5 px-2 text-xs"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Kembali ke Order Baru</span>
+          </Button>
+          <div className="bg-border h-4 w-px" />
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">Pembayaran Pesanan</h1>
+            <p className="text-muted-foreground text-xs">
+              Periksa ringkasan dan selesaikan pembayaran pelanggan.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {isAlreadyPaid && (
+            <Badge className="gap-1 bg-emerald-600 text-xs text-white">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Pesanan Sudah Lunas
+            </Badge>
+          )}
+          {canCancelOrder && <CancelOrderDialog order={order} />}
+        </div>
       </div>
 
       {/* Main Grid: Order Preview (Left) & Payment Methods (Right) */}
-      <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-12">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
         {/* Left Column: Order Summary Preview */}
-        <div className="space-y-4 md:col-span-5">
+        <div className="space-y-4 lg:col-span-7 xl:col-span-8">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -169,7 +203,7 @@ export function OrderPaymentPage() {
               </div>
 
               {/* Items List */}
-              <div className="max-h-56 space-y-2 overflow-y-auto pr-1">
+              <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
                 {order.items.map((item) => (
                   <div
                     key={item.id}
@@ -219,7 +253,7 @@ export function OrderPaymentPage() {
         </div>
 
         {/* Right Column: Payment Settlement Action */}
-        <div className="space-y-4 md:col-span-7">
+        <div className="space-y-4 lg:sticky lg:top-4 lg:col-span-5 xl:col-span-4">
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-bold">Pilih Pembayaran</CardTitle>
@@ -228,7 +262,15 @@ export function OrderPaymentPage() {
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="space-y-4">
+            <CardContent
+              className="space-y-4"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  handleSettlePayment()
+                }
+              }}
+            >
               <Tabs
                 defaultValue={PAYMENT_METHOD.CASH}
                 onValueChange={(val) => setPaymentMethod(val as PaymentMethod)}
@@ -253,6 +295,7 @@ export function OrderPaymentPage() {
                     </Label>
                     <Input
                       id="cash-input"
+                      autoFocus
                       type="text"
                       inputMode="numeric"
                       placeholder="Masukkan nominal uang yang diterima..."
@@ -406,6 +449,24 @@ export function OrderPaymentPage() {
           </Card>
         </div>
       </div>
+
+      <AlertDialog open={backConfirmOpen} onOpenChange={setBackConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tinggalkan pembayaran?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Pesanan #{order.id} belum dibayar. Pesanan tetap tercatat dan bisa dibayar dari Order
+              Board.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Tetap di Sini</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate(ROUTES.ORDERS_NEW)}>
+              Ya, ke Order Baru
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Printable Receipt Modal */}
       <PaymentReceiptDialog

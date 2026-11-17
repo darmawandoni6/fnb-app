@@ -19,6 +19,13 @@ const throwsCode = async (callback: () => Promise<unknown>, code: string) => {
 
 export const runMockSelfCheck = async () => {
   db.currentUserId = 'user-1'
+  const created = await api.createManualOrder({
+    items: [{ menu_id: 'menu-1', qty: 1, note: null }],
+  })
+  const cancelled = await api.cancelOrder(created.id)
+  assert(cancelled.status === 'DIBATALKAN', 'cancelOrder sets DIBATALKAN')
+  await throwsCode(() => api.cancelOrder(created.id), 'INVALID_TRANSITION')
+
   await throwsCode(
     () => api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.COOKING),
     'PAYMENT_REQUIRED',

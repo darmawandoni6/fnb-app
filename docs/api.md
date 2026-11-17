@@ -102,6 +102,7 @@ All endpoints below use JWT and role middleware.
 | `GET` | `/orders/:id` | All roles | Order and item details |
 | `POST` | `/orders/manual` | `CASHIER`, `OWNER` | Create a walk-in order |
 | `PATCH` | `/orders/:id/payment` | `CASHIER`, `OWNER` | Mark payment as `LUNAS` |
+| `POST` | `/orders/:id/cancel` | `CASHIER`, `OWNER` | Cancel unpaid order when all items are `PENDING`; restore reserved stock |
 
 The kitchen only sees `LUNAS` orders in the list. Reading an unpaid order by id returns `404 NOT_FOUND` to the kitchen.
 
@@ -126,6 +127,14 @@ Payment:
 ```
 
 `payment_method` is required and is `CASH` or `NON_CASH`. Only `BELUM → LUNAS` is allowed in M1; repeating it returns `409 INVALID_TRANSITION`.
+
+Cancel order:
+
+```http
+POST /orders/:id/cancel
+```
+
+Only `BELUM` orders whose items are all `PENDING` can be cancelled. The server marks all items `CANCELLED`, derives order status as `DIBATALKAN`, and restores reserved recipe stock. Repeating cancellation, cancelling a paid order, or cancelling after any item transition returns `409 INVALID_TRANSITION`. Stock restoration records an `IN` movement with cancellation reason.
 
 ## Internal — kitchen items
 

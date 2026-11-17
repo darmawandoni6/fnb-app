@@ -239,8 +239,12 @@ See `docs/implementation/phase-2.6-pos.md` for detail.
     - Cash payment (amount received, quick nominal buttons, change calculation) and Non-cash payment (QRIS, Debit, Transfer).
     - Status lifecycle: order starts as `MENUNGGU` & `BELUM`, updates to `LUNAS` upon payment completion, making it available for kitchen cooking (`PENDING` → `COOKING` → `DIPROSES`).
     - Printable receipt modal with `window.print()` and return navigation.
+    - Back returns to `/orders/new`; unpaid orders require confirmation before leaving.
+    - Unpaid orders with all items `PENDING` can be cancelled after confirmation; cancellation restores mock stock.
+    - Order-board payment actions use this checkout page instead of the legacy payment modal.
 42. Submit `createManualOrder` with items, customer name, dining option, and table number.
 43. Handle `STORE_CLOSED` with a toast and disable actions.
+44. Add mock/API contract `POST /orders/:id/cancel` for unpaid orders whose items are all `PENDING`, including stock restoration.
 
 ### 2.6 Owner Stub Pages
 

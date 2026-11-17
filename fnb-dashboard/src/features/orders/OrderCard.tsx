@@ -1,3 +1,5 @@
+import { useNavigate } from 'react-router-dom'
+
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
@@ -5,6 +7,7 @@ import { ITEM_STATUS, ORDER_TYPE, PAYMENT_STATUS } from '@/constants'
 import type { Order, OrderItem } from '@/types'
 import { toast } from 'sonner'
 
+import { ROUTES } from '@/constants/routes'
 import { formatRupiah, formatTime } from '@/lib/format'
 
 import { Badge } from '@/components/ui/badge'
@@ -12,7 +15,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 import { CancelItemDialog } from './CancelItemDialog'
-import { PaymentDialog } from './PaymentDialog'
 
 const onError = (error: unknown) =>
   toast.error((error as { message?: string }).message ?? 'Terjadi kesalahan')
@@ -26,6 +28,7 @@ export function OrderCard({
   showCashierActions: boolean
   onClick?: () => void
 }) {
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['orders'] })
 
@@ -71,9 +74,14 @@ export function OrderCard({
         )}
       </CardContent>
       {showCashierActions && (
-        <CardFooter className="gap-2">
+        <CardFooter className="gap-2" onClick={(e) => e.stopPropagation()}>
           {order.payment_status === PAYMENT_STATUS.BELUM && (
-            <PaymentDialog order={order} onSuccess={invalidate} />
+            <Button
+              size="sm"
+              onClick={() => navigate(ROUTES.ORDERS_PAYMENT.replace(':id', order.id))}
+            >
+              Bayar (LUNAS)
+            </Button>
           )}
           {deliveredItem(order) && (
             <Button size="sm" disabled={deliver.isPending} onClick={() => deliver.mutate()}>

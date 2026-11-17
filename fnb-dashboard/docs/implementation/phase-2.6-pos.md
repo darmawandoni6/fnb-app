@@ -22,6 +22,10 @@ Plan for refactoring the manual order feature from a simple dialog into a dedica
     - **Non-Cash (NON_CASH)**: Channel selection (QRIS, Debit, Transfer).
   - "Selesaikan Pembayaran": Calls `api.updatePayment` -> moves payment to `LUNAS`. Order is now ready for Kitchen processing (`PENDING` -> `COOKING` -> `DIPROSES`).
   - Printable Receipt Modal: Print button (`window.print()`), "Buat Pesanan Baru", and "Ke Board Orders".
+  - Back navigation returns to `/orders/new`; unpaid orders require confirmation before leaving.
+  - Layout uses a wide order summary on the left and sticky payment panel on the right.
+  - Unpaid orders with all items `PENDING` can be cancelled after confirmation; cancellation restores mock stock and returns to `/orders/new`.
+  - Order-board payment actions open this full payment page instead of the legacy payment modal.
 
 ## Step 1 — Types & Routes
 

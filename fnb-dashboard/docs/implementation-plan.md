@@ -154,11 +154,16 @@ src/mocks/
 
 18. Create `ProtectedRoute`, `RoleGuard`, and `AuthContext`.
 19. In mock mode, login allows role selection so all three roles can be sliced.
-20. Create the dashboard layout with a role-based sidebar menu:
+20. Create the dashboard layout with a role-based sidebar menu (with groups and Lucide icons):
 
-    - `OWNER`: Orders, Menus, Tables, Stock, Users, Settings, Reports.
-    - `CASHIER`: Orders.
-    - `KITCHEN`: Kitchen Board.
+    - `OWNER`:
+      - Operasional: Orders
+      - Katalog & Meja: Menus, Tables, Stock
+      - Bisnis & Sistem: Reports, Users, Settings
+    - `CASHIER`:
+      - Operasional: Orders
+    - `KITCHEN`:
+      - Dapur: Kitchen Board
 
 21. Menu items outside Phase 1 render as `Coming soon` stubs.
 
@@ -265,6 +270,7 @@ See `docs/implementation/phase-3.5-reports.md` for detail.
 ### 2.7 Reports Slicing (Mock)
 
 See `docs/implementation/phase-3.5-reports.md` for detail.
+
 - Slicing Tabbed View for `/reports` (`OWNER` role).
 - Global Preset Filter (`today`, `last_7_days`, `last_30_days`, `this_month`).
 - Tab 1: Ringkasan Sales Overview KPI Cards + Sales Trend Chart (Recharts).

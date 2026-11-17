@@ -1,6 +1,18 @@
 import { Navigate, Outlet } from 'react-router-dom'
 
+import {
+  BarChart3,
+  Boxes,
+  ChefHat,
+  LayoutGrid,
+  Settings,
+  ShoppingBag,
+  Users,
+  UtensilsCrossed,
+} from 'lucide-react'
+
 import { ROUTES, USER_ROLE, type UserRole } from '@/constants'
+import type { NavGroup } from '@/types'
 
 import { useAuth } from '@/auth/context'
 
@@ -26,20 +38,45 @@ export function RoleGuard({ roles }: { roles: UserRole[] }) {
   )
 }
 
-type DashboardLink = { to: string; label: string }
-
-export const dashboardLinks = (role: UserRole): DashboardLink[] => {
+export const dashboardNavGroups = (role: UserRole): NavGroup[] => {
   if (role === USER_ROLE.OWNER) {
     return [
-      { to: ROUTES.ORDERS, label: 'Orders' },
-      { to: ROUTES.MENUS, label: 'Menus' },
-      { to: ROUTES.TABLES, label: 'Tables' },
-      { to: ROUTES.STOCK, label: 'Stock' },
-      { to: ROUTES.USERS, label: 'Users' },
-      { to: ROUTES.SETTINGS, label: 'Settings' },
-      { to: ROUTES.REPORTS, label: 'Reports' },
+      {
+        title: 'Operasional',
+        items: [{ to: ROUTES.ORDERS, label: 'Orders', icon: ShoppingBag }],
+      },
+      {
+        title: 'Katalog & Meja',
+        items: [
+          { to: ROUTES.MENUS, label: 'Menus', icon: UtensilsCrossed },
+          { to: ROUTES.TABLES, label: 'Tables', icon: LayoutGrid },
+          { to: ROUTES.STOCK, label: 'Stock', icon: Boxes },
+        ],
+      },
+      {
+        title: 'Bisnis & Sistem',
+        items: [
+          { to: ROUTES.REPORTS, label: 'Reports', icon: BarChart3 },
+          { to: ROUTES.USERS, label: 'Users', icon: Users },
+          { to: ROUTES.SETTINGS, label: 'Settings', icon: Settings },
+        ],
+      },
     ]
   }
-  if (role === USER_ROLE.CASHIER) return [{ to: ROUTES.ORDERS, label: 'Orders' }]
-  return [{ to: ROUTES.KITCHEN, label: 'Kitchen Board' }]
+
+  if (role === USER_ROLE.CASHIER) {
+    return [
+      {
+        title: 'Operasional',
+        items: [{ to: ROUTES.ORDERS, label: 'Orders', icon: ShoppingBag }],
+      },
+    ]
+  }
+
+  return [
+    {
+      title: 'Dapur',
+      items: [{ to: ROUTES.KITCHEN, label: 'Kitchen Board', icon: ChefHat }],
+    },
+  ]
 }

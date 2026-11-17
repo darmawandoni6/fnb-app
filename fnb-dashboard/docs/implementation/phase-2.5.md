@@ -79,9 +79,31 @@ Feature coverage from Phase 2 already: active orders (kanban), unpaid badge per 
    npm run lint && npm run format:check && npm run build
    ```
 
-## Out of scope (deferred to PRD Phase 3 Insights)
+## Part C — Sidebar Menu Groups & Icons
 
-- Charts, transaction history table, downloadable reports.
+Goal: organize the sidebar navigation with logical group headers and intuitive `lucide-react` icons for each role.
+
+### Structure & Icons
+
+1. **Role `OWNER`**:
+   - **Operasional**: Orders (`ShoppingBag`)
+   - **Katalog & Meja**: Menus (`UtensilsCrossed`), Tables (`LayoutGrid`), Stock (`Boxes`)
+   - **Bisnis & Sistem**: Reports (`BarChart3`), Users (`Users`), Settings (`Settings`)
+2. **Role `CASHIER`**:
+   - **Operasional**: Orders (`ShoppingBag`)
+3. **Role `KITCHEN`**:
+   - **Dapur**: Kitchen Board (`ChefHat`)
+
+### Steps
+
+10. **`src/types/navigation.ts`**:
+    - `NavItem`: `{ to: string; label: string; icon: LucideIcon }`
+    - `NavGroup`: `{ title: string; items: NavItem[] }`
+11. **`src/auth/guards.tsx`**:
+    - Update `dashboardNavGroups(role): NavGroup[]` as single source of truth for navigation structure and icons.
+12. **`src/components/nav-main.tsx`**:
+    - Render groups via `<SidebarGroup>` and `<SidebarGroupLabel>`.
+    - Render items with icon (`<item.icon className="h-4 w-4" />`), text label, and tooltip when collapsed.
 
 ## Definition of Done
 
@@ -90,4 +112,5 @@ Feature coverage from Phase 2 already: active orders (kanban), unpaid badge per 
 - [ ] 4 stat cards render live data; sales figure uses server amounts only.
 - [ ] Board filter modes: all / unpaid / done.
 - [ ] Order detail dialog shows items, totals, payment, item status timeline.
+- [ ] Sidebar menu structured with role-based groups and Lucide icons.
 - [ ] lint, format:check, build all pass.

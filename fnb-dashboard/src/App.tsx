@@ -7,9 +7,9 @@ import { KitchenPage } from '@/pages/KitchenPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { MenusPage } from '@/pages/MenusPage'
 import { OrdersPage } from '@/pages/OrdersPage'
+import { ReportsPage } from '@/pages/ReportsPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { StockPage } from '@/pages/StockPage'
-import { StubPage } from '@/pages/StubPage'
 import { TablesPage } from '@/pages/TablesPage'
 import { UsersPage } from '@/pages/UsersPage'
 import { Toaster } from 'sonner'
@@ -80,7 +80,7 @@ const router = createBrowserRouter([
           {
             path: ROUTES.REPORTS,
             element: <RoleGuard roles={owner} />,
-            children: [{ index: true, element: <StubPage title="Reports" /> }],
+            children: [{ index: true, element: <ReportsPage /> }],
           },
         ],
       },

@@ -84,15 +84,15 @@ fnb-dashboard/
 
 ## Role Feature Access
 
-| Feature | OWNER | CASHIER | KITCHEN |
-|---|---|---|---|
-| Orders | Full | Full according to permissions | Production queue |
-| Payments | Full | Full | None |
-| Menus | Full | View according to permissions | None |
-| Tables and QR | Full | View according to permissions | None |
-| Stock | Full | View according to permissions | None |
-| Reports | Full | None | None |
-| Staff and settings | Full | None | None |
+| Feature            | OWNER | CASHIER                       | KITCHEN          |
+| ------------------ | ----- | ----------------------------- | ---------------- |
+| Orders             | Full  | Full according to permissions | Production queue |
+| Payments           | Full  | Full                          | None             |
+| Menus              | Full  | View according to permissions | None             |
+| Tables and QR      | Full  | View according to permissions | None             |
+| Stock              | Full  | View according to permissions | None             |
+| Reports            | Full  | None                          | None             |
+| Staff and settings | Full  | None                          | None             |
 
 ## Runtime Rules
 

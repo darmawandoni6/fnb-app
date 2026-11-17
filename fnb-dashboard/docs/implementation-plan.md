@@ -251,6 +251,27 @@ src/mocks/
 
 49. Use the `Empty` component for features not yet in Phase 1.
 
+### 2.7 Reports Slicing (Mock)
+
+See `docs/implementation/phase-3.5-reports.md` for detail.
+
+- Slicing Tabbed View for `/reports` (`OWNER` role).
+- Global Preset Filter (`today`, `last_7_days`, `last_30_days`, `this_month`).
+- Tab 1: Ringkasan Sales Overview KPI Cards + Sales Trend Chart (Recharts).
+- Tab 2: Menu & Category Performance Charts (Top 10 Menus + Category Share).
+- Tab 3: Transaction History Table + Client-side CSV Export.
+- Mock contracts and 30-day realistic historical generator in `src/mocks/`.
+
+### 2.7 Reports Slicing (Mock)
+
+See `docs/implementation/phase-3.5-reports.md` for detail.
+- Slicing Tabbed View for `/reports` (`OWNER` role).
+- Global Preset Filter (`today`, `last_7_days`, `last_30_days`, `this_month`).
+- Tab 1: Ringkasan Sales Overview KPI Cards + Sales Trend Chart (Recharts).
+- Tab 2: Menu & Category Performance Charts (Top 10 Menus + Category Share).
+- Tab 3: Transaction History Table + Client-side CSV Export.
+- Mock contracts and 30-day realistic historical generator in `src/mocks/`.
+
 ## Phase 3 — API Integration
 
 Prerequisite: `fnb-server` running at `http://localhost:8081`.

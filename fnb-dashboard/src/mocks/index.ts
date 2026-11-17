@@ -1,6 +1,7 @@
 import { ingredients, recipeItems } from './data/ingredients'
 import { categories, menus } from './data/menus'
 import { orders } from './data/orders'
+import { generateHistoricalOrders } from './data/reports'
 import { settings } from './data/settings'
 import { stockMovements } from './data/stockMovements'
 import { tables } from './data/tables'
@@ -10,7 +11,7 @@ import { db } from './db'
 export * from './handlers'
 
 const seed = () => {
-  db.orders = structuredClone(orders)
+  db.orders = [...structuredClone(orders), ...generateHistoricalOrders()]
   db.menus = structuredClone(menus)
   db.categories = structuredClone(categories)
   db.tables = structuredClone(tables)

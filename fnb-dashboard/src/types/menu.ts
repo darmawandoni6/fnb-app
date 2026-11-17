@@ -9,5 +9,6 @@ export type Menu = {
 export type Category = {
   id: string
   name: string
+  sort_order: number
   menus: Menu[]
 }

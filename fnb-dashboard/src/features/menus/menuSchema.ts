@@ -11,6 +11,7 @@ export type MenuValues = z.infer<typeof menuSchema>
 
 export const categorySchema = z.object({
   name: z.string().min(1, 'Nama kategori wajib diisi'),
+  sort_order: z.number().int().min(1, 'Urutan minimal 1').optional(),
 })
 
 export type CategoryValues = z.infer<typeof categorySchema>

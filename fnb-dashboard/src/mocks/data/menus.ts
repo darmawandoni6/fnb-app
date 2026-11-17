@@ -10,7 +10,7 @@ export const menus: Menu[] = [
 ]
 
 export const categories: Category[] = [
-  { id: 'category-1', name: 'Coffee', menus: menus.slice(0, 2) },
-  { id: 'category-2', name: 'Non-Coffee', menus: menus.slice(2, 4) },
-  { id: 'category-3', name: 'Food', menus: menus.slice(4) },
+  { id: 'category-1', name: 'Coffee', sort_order: 1, menus: menus.slice(0, 2) },
+  { id: 'category-2', name: 'Non-Coffee', sort_order: 2, menus: menus.slice(2, 4) },
+  { id: 'category-3', name: 'Food', sort_order: 3, menus: menus.slice(4) },
 ]

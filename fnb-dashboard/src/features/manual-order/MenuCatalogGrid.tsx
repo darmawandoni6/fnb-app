@@ -4,13 +4,12 @@ import type { Category, Menu } from '@/types'
 import { Search, UtensilsCrossed } from 'lucide-react'
 
 import { formatRupiah } from '@/lib/format'
+import { getMenuColorClass, getMenuInitials } from '@/lib/menu'
 
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
-
-import { getMenuColorClass, getMenuInitials } from './manualOrderUtils'
 
 type MenuCatalogGridProps = {
   categories?: Category[]

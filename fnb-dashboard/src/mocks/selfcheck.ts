@@ -19,6 +19,29 @@ const throwsCode = async (callback: () => Promise<unknown>, code: string) => {
 
 export const runMockSelfCheck = async () => {
   db.currentUserId = 'user-1'
+
+  // Menus: category move, soft delete, category ordering.
+  const moved = await api.updateMenu('menu-1', { category_id: 'category-3' })
+  assert(moved.id === 'menu-1', 'updateMenu moves category')
+  const foodCategory = db.categories.find(({ id }) => id === 'category-3')
+  assert(
+    foodCategory?.menus.some(({ id }) => id === 'menu-1') === true,
+    'menu lands in the target category',
+  )
+  const ordered = await api.getMenuCategories()
+  assert(
+    ordered.every(
+      (category, index) => index === 0 || category.sort_order >= ordered[index - 1].sort_order,
+    ),
+    'categories are sorted by sort_order',
+  )
+  await api.deleteMenu('menu-2')
+  assert(
+    db.menus.find(({ id }) => id === 'menu-2')?.is_available === false,
+    'deleteMenu soft deletes',
+  )
+  await api.updateMenu('menu-1', { category_id: 'category-1' })
+
   const created = await api.createManualOrder({
     items: [{ menu_id: 'menu-1', qty: 1, note: null }],
   })

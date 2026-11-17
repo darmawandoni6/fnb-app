@@ -91,40 +91,43 @@ Out of scope:
 
 ## Step 3 — Menus page (`src/pages/MenusPage.tsx`)
 
-9. Categories left (create/edit/delete), menus grouped by category right (Card grid).
-10. `menuSchema`: `name` min 1, `price` integer ≥ 0, `category_id` required.
-11. Menu card: name, price (`formatRupiah`), availability `Badge` + toggle `Switch` (`updateMenu` `is_available`), Edit/Delete.
-12. Optional image URL field (`Input`), rendered as thumbnail when set. ponytail: real upload lands with the API phase.
-13. Delete menu is soft (`is_available: false`) with `ConfirmDialog`.
+9. Categories with `sort_order` (auto-assigned at end + editable number input), menus grouped by category right (Card grid). Category header shows Edit/Delete; delete disabled when category has menus.
+10. `menuSchema`: `name` min 1, `price` integer ≥ 0, `category_id` required, `image_url` optional, `is_available` boolean. `category_id` is editable in form (moves menu between categories).
+11. Menu card: image (`object-cover`, h-28) dimmed (`opacity-60 grayscale`) when unavailable, fallback to 2-char initials in pastel color block (shared `src/lib/menu.ts`), name, price (`formatRupiah`). Card footer: availability `Switch` (`Tersedia`/`Habis`) + `Edit` button.
+12. Card footer switch toggles `is_available` via `updateMenu`; no dropdown, **no Delete button on menu card** — PRD Phase 2 specifies "Mark menus unavailable" only; soft delete remains in mock handler for API parity.
+13. Menu form (`sm:max-w-lg`): live image preview, 2-column grid on `sm` with required markers. Price input masked as `type="text" inputMode="numeric"` rendered with `toLocaleString('id-ID')` and `Rp` prefix (same pattern as `OrderPaymentPage` "Uang Diterima"); value sent to API stays integer rupiah. All fields keep the component default height (`h-8`) — the price input only adds the `Rp` prefix and mono font, never a height override. Image accepts a URL; upload via multipart deferred to API phase (PRD §7 "Upload menu photos locally through the backend and static files").
+14. `Category` type gains `sort_order: number` (PRD §9). `getMenuCategories` returns categories sorted by `sort_order` asc. `createCategory` auto-assigns `sort_order = count + 1`. `updateCategory` accepts `sort_order`.
+15. `updateMenu` mock handler accepts `category_id?` and moves the menu between category arrays in `db.categories`.
+16. Mock seed in `src/mocks/index.ts` fixed: `category.menus` references same objects as `db.menus` so toggling availability in UI reflects immediately.
 
 ## Step 4 — Tables page (`src/pages/TablesPage.tsx`)
 
-14. List: number, `is_active` badge, `qr_token` (truncated, copy via `navigator.clipboard`), Edit, Deactivate.
-15. `tableSchema`: `number` min 1.
-16. Mock `createTable` generates `qr_token` — same shape the backend will return. ponytail: QR image rendering deferred; show token + copy, add `qrcode` package when the QR Menu needs scannable images.
+17. List: number, `is_active` badge, `qr_token` (truncated, copy via `navigator.clipboard`), Edit, Deactivate.
+18. `tableSchema`: `number` min 1.
+19. Mock `createTable` generates `qr_token` — same shape the backend will return. ponytail: QR image rendering deferred; show token + copy, add `qrcode` package when the QR Menu needs scannable images.
 
 ## Step 5 — Stock page (`src/pages/StockPage.tsx`)
 
-17. Tabs: `Ingredients` | `Recipes` | `Movements`.
-18. Ingredients: name, unit, stock (`Badge` variant `destructive` when stock < `LOW_STOCK_THRESHOLD` — new constant in `src/constants/stock.ts`, default 10), restock button (dialog: qty integer ≥ 1), create/edit.
-19. Recipes: rows menu → ingredient → qty; create dialog with `Select` for menu and ingredient; edit qty; delete.
-20. Movements: simple list table (`IN`/`OUT` badge, qty, date, ingredient name).
+20. Tabs: `Ingredients` | `Recipes` | `Movements`.
+21. Ingredients: name, unit, stock (`Badge` variant `destructive` when stock < `LOW_STOCK_THRESHOLD` — new constant in `src/constants/stock.ts`, default 10), restock button (dialog: qty integer ≥ 1), create/edit.
+22. Recipes: rows menu → ingredient → qty; create dialog with `Select` for menu and ingredient; edit qty; delete.
+23. Movements: simple list table (`IN`/`OUT`/`RESTORE` badge, qty, date, ingredient name).
 
 ## Step 6 — Users page (`src/pages/UsersPage.tsx`)
 
-21. List: name, email, role `Badge`, `is_active` badge, toggle activate/deactivate (`ConfirmDialog`), Edit name.
-22. Create dialog: name, email, role `Select` (`CASHIER`/`KITCHEN` only).
-23. Deactivating own account is blocked in the handler and disabled in the UI.
+24. List: name, email, role `Badge`, `is_active` badge, toggle activate/deactivate (`ConfirmDialog`), Edit name.
+25. Create dialog: name, email, role `Select` (`CASHIER`/`KITCHEN` only).
+26. Deactivating own account is blocked in the handler and disabled in the UI.
 
 ## Step 7 — Settings page (`src/pages/SettingsPage.tsx`)
 
-24. Form: `cafe_name` (Input), `tax_percent` (number Input, 0–100), `is_open` (`Switch` with description "Toko tutup menolak order baru").
-25. `settingsSchema` (Zod); save via `updateSettings`; invalidate `['settings']` (the manual-order dialog reads it).
-26. Turning the store off shows an inline warning.
+27. Form: `cafe_name` (Input), `tax_percent` (number Input, 0–100), `is_open` (`Switch` with description "Toko tutup menolak order baru").
+28. `settingsSchema` (Zod); save via `updateSettings`; invalidate `['settings']` (the manual-order dialog reads it).
+29. Turning the store off shows an inline warning.
 
 ## Step 8 — Wire routes
 
-27. `src/App.tsx`: replace `StubPage` entries with the real pages (`MENUS`, `TABLES`, `STOCK`, `USERS`, `SETTINGS`). Keep `Reports` as `StubPage` (PRD Phase 3 Insights).
+30. `src/App.tsx`: replace `StubPage` entries with the real pages (`MENUS`, `TABLES`, `STOCK`, `USERS`, `SETTINGS`). Keep `Reports` as `StubPage` (PRD Phase 3 Insights).
 
 ## Step 9 — Verify
 

@@ -6,22 +6,28 @@ import { delay, fail, findOrThrow, requireRole } from './shared'
 
 export const getMenuCategories = async (): Promise<Category[]> => {
   await delay()
-  return db.categories.map((category) => ({
-    ...category,
-    menus: category.menus.map((menu) => ({ ...menu })),
-  }))
+  return [...db.categories]
+    .sort((a, b) => a.sort_order - b.sort_order)
+    .map((category) => ({
+      ...category,
+      menus: category.menus.map((menu) => ({ ...menu })),
+    }))
 }
 
 export const createCategory = async ({ name }: { name: string }): Promise<Category> => {
   await delay()
   requireRole(USER_ROLE.OWNER)
   if (!name.trim()) fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nama kategori wajib diisi')
-  const category = { id: `category-${Date.now()}`, name, menus: [] }
+  const sort_order = Math.max(0, ...db.categories.map((c) => c.sort_order)) + 1
+  const category: Category = { id: `category-${Date.now()}`, name, sort_order, menus: [] }
   db.categories.push(category)
   return { ...category, menus: [] }
 }
 
-export const updateCategory = async (id: string, { name }: { name: string }): Promise<Category> => {
+export const updateCategory = async (
+  id: string,
+  { name, sort_order }: { name: string; sort_order?: number },
+): Promise<Category> => {
   await delay()
   requireRole(USER_ROLE.OWNER)
   if (!name.trim()) fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nama kategori wajib diisi')
@@ -31,6 +37,11 @@ export const updateCategory = async (id: string, { name }: { name: string }): Pr
     'Kategori tidak ditemukan',
   )
   category.name = name
+  if (sort_order !== undefined) {
+    if (!Number.isInteger(sort_order) || sort_order < 1)
+      fail(API_ERROR_CODE.VALIDATION_ERROR, 'Urutan tidak valid')
+    category.sort_order = sort_order
+  }
   return { ...category, menus: category.menus.map((menu) => ({ ...menu })) }
 }
 
@@ -76,7 +87,13 @@ export const createMenu = async ({
 
 export const updateMenu = async (
   id: string,
-  body: { name?: string; price?: number; is_available?: boolean; image_url?: string | null },
+  body: {
+    name?: string
+    price?: number
+    is_available?: boolean
+    image_url?: string | null
+    category_id?: string
+  },
 ): Promise<Menu> => {
   await delay()
   requireRole(USER_ROLE.OWNER)
@@ -96,6 +113,20 @@ export const updateMenu = async (
   }
   if (body.is_available !== undefined) menu.is_available = body.is_available
   if (body.image_url !== undefined) menu.image_url = body.image_url
+  if (body.category_id !== undefined) {
+    const targetCategory = findOrThrow(
+      db.categories.find((candidate) => candidate.id === body.category_id),
+      API_ERROR_CODE.NOT_FOUND,
+      'Kategori tidak ditemukan',
+    )
+    const alreadyThere = targetCategory.menus.some((candidate) => candidate.id === id)
+    if (!alreadyThere) {
+      db.categories.forEach((category) => {
+        category.menus = category.menus.filter((candidate) => candidate.id !== id)
+      })
+      targetCategory.menus.push(menu)
+    }
+  }
   return { ...menu }
 }
 

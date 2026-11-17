@@ -13,7 +13,12 @@ export * from './handlers'
 const seed = () => {
   db.orders = [...structuredClone(orders), ...generateHistoricalOrders()]
   db.menus = structuredClone(menus)
-  db.categories = structuredClone(categories)
+  // Build categories referencing the same menu objects from db.menus
+  const menuById = new Map(db.menus.map((m) => [m.id, m]))
+  db.categories = structuredClone(categories).map((cat) => ({
+    ...cat,
+    menus: cat.menus.map((m) => menuById.get(m.id)!).filter(Boolean),
+  }))
   db.tables = structuredClone(tables)
   db.users = structuredClone(users)
   db.ingredients = structuredClone(ingredients)

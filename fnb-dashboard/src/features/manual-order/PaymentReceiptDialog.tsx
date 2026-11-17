@@ -53,10 +53,7 @@ export function PaymentReceiptDialog({
         </DialogHeader>
 
         {/* Printable Struk Card */}
-        <div
-          id="receipt-print-area"
-          className="bg-muted/30 rounded-lg border p-4 font-mono text-xs"
-        >
+        <div data-print-area className="bg-muted/30 rounded-lg border p-4 font-mono text-xs">
           <div className="text-center">
             <h4 className="text-sm font-bold">FNB CAFE & RESTO</h4>
             <p className="text-muted-foreground text-[11px]">Struk Pembayaran Kasir</p>

@@ -270,16 +270,17 @@ See `docs/implementation/phase-3.5-reports.md` for detail.
 - Tab 3: Transaction History Table + Client-side CSV Export.
 - Mock contracts and 30-day realistic historical generator in `src/mocks/`.
 
-### 2.7 Reports Slicing (Mock)
+### 2.8 Tables Grid & QR Printing (Mock)
 
-See `docs/implementation/phase-3.5-reports.md` for detail.
+See `docs/implementation/phase-3-crud.md` Step 4 for detail.
 
-- Slicing Tabbed View for `/reports` (`OWNER` role).
-- Global Preset Filter (`today`, `last_7_days`, `last_30_days`, `this_month`).
-- Tab 1: Ringkasan Sales Overview KPI Cards + Sales Trend Chart (Recharts).
-- Tab 2: Menu & Category Performance Charts (Top 10 Menus + Category Share).
-- Tab 3: Transaction History Table + Client-side CSV Export.
-- Mock contracts and 30-day realistic historical generator in `src/mocks/`.
+- `/tables` becomes a card grid: number, QR thumbnail, status badge, availability switch, preview action.
+- QR preview dialog: 224px `QRCodeSVG`, token + copy, print, open QR Menu in a new tab.
+- Bulk print dialog: 2×2 A4 preview of active tables, then `window.print()`.
+- Shared `TableQrCard` (cafe name from settings, "Scan untuk lihat menu", QR, table number) so preview equals the printed sheet.
+- Ownership of `VITE_QR_MENU_URL`; QR encodes `${VITE_QR_MENU_URL}/?meja=<qr_token>`.
+- `@media print` rules in `src/index.css` shared with the payment receipt.
+- No QR regeneration in M1: token is immutable, endpoint deferred.
 
 ## Phase 3 — API Integration
 
@@ -327,10 +328,15 @@ Prerequisite: `fnb-server` running at `http://localhost:8081`.
     - `PATCH /orders/:id/items/:item_id/status`.
     - `POST /orders/:id/items/:item_id/cancel`.
 
-55b. Mock alignment with PRD §9 & flow.md (separate commit): - `cancelItem` restores recipe stock, writes `StockMovement` with type `RESTORE` and `order_item_id`. - `StockMovement` type extended: `IN` | `OUT` | `RESTORE` | `ADJUSTMENT` + optional `order_item_id`. - When all items become `CANCELLED`, set `subtotal_amount = tax_amount = total_amount = 0` and order status `DIBATALKAN`. - Remove full-order cancel endpoint `POST /orders/:id/cancel` (not in PRD §10). Payment page cancels all `PENDING` items by iterating `cancelItem`. - Note: refund calculation for `LUNAS` orders (PRD §9 baris 375-395) recorded as gap; no `Refund` type in mock yet.
+55b. Mock alignment with PRD §9 & flow.md (separate commit):
 
-56. Verify live API polling with two dashboard sessions.
-57. Verify error codes end-to-end:
+    - `cancelItem` restores recipe stock, writes `StockMovement` with type `RESTORE` and `order_item_id`.
+    - `StockMovement` type extended: `IN` | `OUT` | `RESTORE` | `ADJUSTMENT` + optional `order_item_id`.
+    - When all items become `CANCELLED`, set `subtotal_amount = tax_amount = total_amount = 0` and order status `DIBATALKAN`.
+    - Remove full-order cancel endpoint `POST /orders/:id/cancel` (not in PRD §10). Payment page cancels all `PENDING` items by iterating `cancelItem`.
+    - Refund calculation for `LUNAS` orders (PRD §9) recorded as a gap; no `Refund` type in the mock yet.
+
+56. Verify live API polling with two dashboard sessions. 57. Verify error codes end-to-end:
 
     - `PAYMENT_REQUIRED`.
     - `INVALID_TRANSITION`.

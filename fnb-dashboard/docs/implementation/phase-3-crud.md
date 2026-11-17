@@ -9,7 +9,7 @@ Goal: replace all owner stub pages with working CRUD screens. Signatures follow 
 ## Scope
 
 - Menu & category CRUD + mark unavailable.
-- Table CRUD + QR token display.
+- Table creation, QR grid, QR preview, and bulk QR printing.
 - Stock: ingredient CRUD, restock, recipe items, low-stock warning, stock movements.
 - Users CRUD (create `CASHIER`/`KITCHEN`, activate/deactivate).
 - Settings (`cafe_name`, `tax_percent`, `is_open`).
@@ -17,6 +17,8 @@ Goal: replace all owner stub pages with working CRUD screens. Signatures follow 
 Out of scope:
 
 - Menu photo upload (needs backend static files; UI ships an `image_url` field, upload lands with API phase).
+- Table QR token rotation (needs `POST /tables/:id/rotate-qr`; existing labels would have to be reprinted).
+- Editing an existing table number (create-only; wrong numbers are deactivated and recreated).
 - Charts/reports (PRD Phase 3 Insights — Reports stays a stub).
 - Recipe-edit restriction while `is_open` (server-side rule, enforced when real API lands).
 
@@ -28,10 +30,11 @@ Out of scope:
    export type StockMovement = {
      id: string
      ingredient_id: string
-     type: 'IN' | 'OUT'
+     type: 'IN' | 'OUT' | 'RESTORE' | 'ADJUSTMENT'
      qty: number
      created_at: string
      note?: string
+     order_item_id?: string | null
    }
    ```
 
@@ -102,9 +105,13 @@ Out of scope:
 
 ## Step 4 — Tables page (`src/pages/TablesPage.tsx`)
 
-17. List: number, `is_active` badge, `qr_token` (truncated, copy via `navigator.clipboard`), Edit, Deactivate.
-18. `tableSchema`: `number` min 1.
-19. Mock `createTable` generates `qr_token` — same shape the backend will return. ponytail: QR image rendering deferred; show token + copy, add `qrcode` package when the QR Menu needs scannable images.
+17. Grid of table cards (`sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`). Each card: `Meja {number}`, QR thumbnail (`QRCodeSVG`, size 96, `marginSize={2}`, level `M`, dimmed when inactive), status badge, availability `Switch` (two-way, `updateTable` `is_active`), and a `Preview QR` button. No edit action — table numbers are create-only in this slice.
+18. `tableSchema`: `number` min 1. `+ Meja` dialog creates a table; mock `createTable` generates `qr_token`.
+19. `getTables` sorts by `table_number` numerically (fallback `localeCompare`), and `updateTable` rejects a duplicate number with `VALIDATION_ERROR` — same rule as `createTable`.
+20. `TableQrDialog`: large QR (`size={224}`, `marginSize={4}`, level `M`), `qr_token` in mono with copy, `Cetak` (`window.print()`), and `Buka QR Menu` (`window.open(getTableQrUrl(token), '_blank', 'noopener,noreferrer')`). Token + copy exist so the public endpoints can be tested without scanning.
+21. No "generate ulang" action: `qr_token` is immutable in M1, so re-rendering only redraws the same image. Recorded gap — add the button when `POST /tables/:id/rotate-qr` exists (old QR stops working, labels must be reprinted).
+22. `PrintAllTablesDialog`: header button opens a 2×2 A4 preview of active tables only, then `Cetak`. Cards come from `TableQrCard` (same component as the preview dialog): `settings.cafe_name` header, "Scan untuk lihat menu" caption, QR, then a small `Meja` label with the number in large type. Printing relies on the print-only container in `src/index.css`, which also fixes `PaymentReceiptDialog` printing the whole dashboard.
+23. `src/lib/qr.ts` exposes `QR_MENU_URL` and `getTableQrUrl(token)` = `${VITE_QR_MENU_URL}/?meja=<qr_token>`. No default: when the env is empty the QR dialog warns and `Buka QR Menu` is disabled. Contract documented in `docs/api.md`.
 
 ## Step 5 — Stock page (`src/pages/StockPage.tsx`)
 
@@ -142,6 +149,9 @@ Manual checklist:
 - Owner: all 6 pages CRUD works; CASHIER/KITCHEN blocked by `RoleGuard`.
 - Low-stock badge appears under threshold; restock increases stock and writes a movement.
 - Toggling a menu unavailable shows it disabled in the manual-order dialog.
+- Tables grid shows QR thumbnails; switch deactivates/activates a table; duplicate numbers are rejected.
+- `Cetak Semua QR` prints only active tables, 2×2 per A4, without dashboard chrome.
+- With `VITE_QR_MENU_URL` empty, `Buka QR Menu` is disabled and the QR dialog warns; with it set, the button opens `${VITE_QR_MENU_URL}/?meja=<qr_token>` in a new tab.
 - Settings `is_open` off disables `CreateOrderDialog` (existing behavior re-verified).
 - Deactivated user cannot login (mock `login` already checks `is_active`).
 

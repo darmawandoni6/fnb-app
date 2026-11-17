@@ -123,3 +123,67 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print: only the element marked with `data-print-area` reaches paper.
+   Used by the payment receipt and the table QR sheets. */
+@media print {
+  /* Drop the dashboard itself; keep only the portal that carries the printable area. */
+  body > *:not(:has([data-print-area])) {
+    display: none !important;
+  }
+  [data-slot='dialog-overlay'] {
+    display: none !important;
+  }
+  [data-slot='dialog-content'] {
+    position: static !important;
+    max-height: none !important;
+    max-width: none !important;
+    overflow: visible !important;
+    /* Tailwind v4 moves dialogs with the `translate` property, not `transform`. */
+    --tw-translate-x: 0 !important;
+    --tw-translate-y: 0 !important;
+    translate: none !important;
+    transform: none !important;
+    border: 0 !important;
+    background: white !important;
+    color: black !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+  /* Dialog chrome (title, token row, buttons) must not push blank pages. */
+  [data-slot='dialog-content'] > *:not([data-print-area]) {
+    display: none !important;
+  }
+  [data-print-area] {
+    position: static !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: white !important;
+    color: black !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  [data-print-area] * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  [data-print-single] {
+    max-width: 100mm !important;
+    margin: 0 auto !important;
+  }
+  [data-print-area] .no-print {
+    display: none !important;
+  }
+  [data-print-grid] > * {
+    break-inside: avoid;
+  }
+  [data-print-grid] > *:nth-child(4n) {
+    break-after: page;
+  }
+  @page {
+    size: A4;
+    margin: 10mm;
+  }
+}

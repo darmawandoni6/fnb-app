@@ -6,19 +6,27 @@ import { delay, fail, findOrThrow, requireRole } from './shared'
 
 export const getTables = async (): Promise<Table[]> => {
   await delay()
-  return db.tables.map((table) => ({ ...table }))
+  return [...db.tables]
+    .sort((a, b) => {
+      const left = Number(a.number)
+      const right = Number(b.number)
+      if (Number.isFinite(left) && Number.isFinite(right) && left !== right) return left - right
+      return a.number.localeCompare(b.number, 'id', { numeric: true })
+    })
+    .map((table) => ({ ...table }))
 }
 
 export const createTable = async ({ number }: { number: string }): Promise<Table> => {
   await delay()
   requireRole(USER_ROLE.OWNER)
-  if (!number.trim()) fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nomor meja wajib diisi')
-  if (db.tables.some((table) => table.number === number)) {
+  const trimmed = number.trim()
+  if (!trimmed) fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nomor meja wajib diisi')
+  if (db.tables.some((table) => table.number.trim() === trimmed)) {
     fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nomor meja sudah ada')
   }
   const table: Table = {
     id: `table-${Date.now()}`,
-    number,
+    number: trimmed,
     qr_token: `qr-${crypto.randomUUID()}`,
     is_active: true,
   }
@@ -39,8 +47,11 @@ export const updateTable = async (
   )
   const targetTable = table!
   if (body.number !== undefined) {
-    if (!body.number.trim()) fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nomor meja wajib diisi')
-    targetTable.number = body.number
+    const trimmed = body.number.trim()
+    if (!trimmed) fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nomor meja wajib diisi')
+    if (db.tables.some((candidate) => candidate.id !== id && candidate.number.trim() === trimmed))
+      fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nomor meja sudah ada')
+    targetTable.number = trimmed
   }
   if (body.is_active !== undefined) targetTable.is_active = body.is_active
   return { ...targetTable }

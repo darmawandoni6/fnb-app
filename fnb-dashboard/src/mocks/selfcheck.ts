@@ -94,5 +94,23 @@ export const runMockSelfCheck = async () => {
     'STORE_CLOSED',
   )
   db.settings.is_open = true
+
+  // Tables: token generated, numbers stay unique, deactivate keeps the token.
+  const tableA = await api.createTable({ number: '9' })
+  assert(tableA.qr_token.length > 0, 'createTable generates a qr_token')
+  assert(tableA.is_active === true, 'createTable starts active')
+  const tableB = await api.createTable({ number: '10' })
+  await throwsCode(() => api.createTable({ number: '9' }), 'VALIDATION_ERROR')
+  await throwsCode(() => api.updateTable(tableB.id, { number: '9' }), 'VALIDATION_ERROR')
+  const listed = await api.getTables()
+  assert(
+    listed.findIndex(({ id }) => id === tableA.id) < listed.findIndex(({ id }) => id === tableB.id),
+    'tables sort numerically (9 before 10)',
+  )
+  await api.deleteTable(tableA.id)
+  const afterDelete = (await api.getTables()).find(({ id }) => id === tableA.id)
+  assert(afterDelete?.is_active === false, 'deleteTable deactivates the table')
+  assert(afterDelete?.qr_token === tableA.qr_token, 'deactivate keeps the qr_token')
+
   console.warn('Mock self-check passed')
 }

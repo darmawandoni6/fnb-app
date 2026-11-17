@@ -26,6 +26,7 @@
 ## Runtime
 
 - Local API base URL: `http://localhost:8081` via `VITE_API_URL`.
+- QR Menu base URL via `VITE_QR_MENU_URL` (no default). Table QR codes encode `${VITE_QR_MENU_URL}/?meja=<qr_token>`; when the var is empty the "Buka QR Menu" action is disabled and the QR dialog shows a warning.
 - All responses follow the `{success, data}` / `{success, error{code, message}}` envelope.
 - MVP updates: polling every 5 seconds with TanStack Query; no WebSocket or SSE.
 - Polling runs while the tab is active; default TanStack behavior pauses when the tab is hidden.

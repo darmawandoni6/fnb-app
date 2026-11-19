@@ -5,10 +5,12 @@ import {
   ORDER_STATUS,
   type OrderStatus,
   PAYMENT_STATUS,
+  USER_ROLE,
 } from '@/constants'
 import { db } from '@/mocks/db'
 import type { DiningOption, Order } from '@/types'
 
+import { deriveOrderStatus } from './deriveStatus'
 import { currentUser, delay, fail, isStaff, requireRole } from './shared'
 
 type OrderFilters = { status?: OrderStatus; table_id?: string; date?: string }
@@ -31,21 +33,12 @@ const findMenu = (id: string) => {
   return menu ?? fail(API_ERROR_CODE.VALIDATION_ERROR, 'Menu is unavailable')
 }
 
-const deriveStatus = (order: Order): OrderStatus => {
-  const active = order.items.filter(({ status }) => status !== ITEM_STATUS.CANCELLED)
-  if (active.length === 0) return ORDER_STATUS.DIBATALKAN
-  if (order.payment_status === PAYMENT_STATUS.BELUM) return ORDER_STATUS.MENUNGGU
-  if (active.some(({ status }) => status === ITEM_STATUS.PENDING || status === ITEM_STATUS.COOKING))
-    return ORDER_STATUS.DIPROSES
-  if (active.every(({ status }) => status === ITEM_STATUS.DELIVERED)) return ORDER_STATUS.SELESAI
-  if (active.some(({ status }) => status === ITEM_STATUS.DELIVERED)) return ORDER_STATUS.DIANTAR
-  return ORDER_STATUS.SIAP
-}
-
 export const getOrders = async (filters?: OrderFilters): Promise<Order[]> => {
   await delay()
+  const paidOnly = currentUser().role === USER_ROLE.KITCHEN
   const orders = db.orders.filter(
     (order) =>
+      (!paidOnly || order.payment_status === PAYMENT_STATUS.LUNAS) &&
       (!filters?.status || order.status === filters.status) &&
       (!filters?.table_id || order.table_id === filters.table_id) &&
       (!filters?.date || order.created_at.startsWith(filters.date)),
@@ -55,7 +48,10 @@ export const getOrders = async (filters?: OrderFilters): Promise<Order[]> => {
 
 export const getOrder = async (id: string): Promise<Order> => {
   await delay()
-  return structuredClone(findOrder(id))
+  const order = findOrder(id)
+  if (currentUser().role === USER_ROLE.KITCHEN && order.payment_status !== PAYMENT_STATUS.LUNAS)
+    fail(API_ERROR_CODE.NOT_FOUND, 'Order not found')
+  return structuredClone(order)
 }
 
 export const createManualOrder = async (body: CreateManualOrderInput): Promise<Order> => {
@@ -152,7 +148,7 @@ export const updateItemStatus = async (
   if (status === ITEM_STATUS.DELIVERED && !isStaff(user.role))
     fail(API_ERROR_CODE.FORBIDDEN, 'Role is not authorized')
   orderItem.status = status
-  order.status = deriveStatus(order)
+  order.status = deriveOrderStatus(order)
   return structuredClone(order)
 }
 
@@ -186,7 +182,7 @@ export const cancelItem = async (orderId: string, itemId: string): Promise<Order
     })
 
   orderItem.status = ITEM_STATUS.CANCELLED
-  order.status = deriveStatus(order)
+  order.status = deriveOrderStatus(order)
   if (order.items.every(({ status }) => status === ITEM_STATUS.CANCELLED)) {
     order.subtotal_amount = 0
     order.tax_amount = 0

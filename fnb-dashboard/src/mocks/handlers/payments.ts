@@ -2,6 +2,7 @@ import { API_ERROR_CODE, PAYMENT_METHOD, PAYMENT_STATUS, type PaymentMethod } fr
 import { db } from '@/mocks/db'
 import type { Order } from '@/types'
 
+import { deriveOrderStatus } from './deriveStatus'
 import { delay, fail, requireRole } from './shared'
 
 export const updatePayment = async (
@@ -30,5 +31,6 @@ export const updatePayment = async (
     body.payment_method === PAYMENT_METHOD.CASH ? body.amount_received : null
   targetOrder.change_amount =
     body.payment_method === PAYMENT_METHOD.CASH ? body.change_amount : null
+  targetOrder.status = deriveOrderStatus(targetOrder)
   return targetOrder
 }

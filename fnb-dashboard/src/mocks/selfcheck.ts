@@ -1,7 +1,16 @@
 import { api } from '@/api'
-import { ITEM_STATUS, PAYMENT_METHOD, PAYMENT_STATUS } from '@/constants'
+import {
+  ITEM_STATUS,
+  type ItemStatus,
+  ORDER_STATUS,
+  PAYMENT_METHOD,
+  PAYMENT_STATUS,
+  type PaymentStatus,
+} from '@/constants'
+import type { Order } from '@/types'
 
 import { db } from './db'
+import { deriveOrderStatus } from './handlers/deriveStatus'
 
 const assert = (condition: boolean, message: string) => {
   if (!condition) throw new Error(`Mock self-check failed: ${message}`)
@@ -150,9 +159,67 @@ export const runMockSelfCheck = async () => {
   assert(paid.payment_status === PAYMENT_STATUS.LUNAS, 'payment succeeds')
   assert(paid.amount_received === 50000, 'payment stores amount received')
   assert(paid.change_amount === 17000, 'payment stores change amount')
-  await api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.COOKING)
+  assert(paid.status === ORDER_STATUS.MENUNGGU, 'paid unstarted order stays MENUNGGU')
+  const cooking = await api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.COOKING)
+  assert(cooking.status === ORDER_STATUS.DIPROSES, 'first COOKING moves order to DIPROSES')
   await api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.READY)
   await api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.DELIVERED)
+
+  db.currentUserId = 'user-3'
+  const kitchenOrders = await api.getOrders()
+  assert(
+    kitchenOrders.every(({ payment_status }) => payment_status === PAYMENT_STATUS.LUNAS),
+    'kitchen list is paid only',
+  )
+  await throwsCode(() => api.getOrder('order-8'), 'NOT_FOUND')
+  db.currentUserId = 'user-1'
+
+  const orderWith = (statuses: ItemStatus[], payment: PaymentStatus): Order => ({
+    id: 'check',
+    order_type: 'MANUAL',
+    table_id: null,
+    table_number: null,
+    status: ORDER_STATUS.MENUNGGU,
+    payment_status: payment,
+    payment_method: null,
+    subtotal_amount: 0,
+    tax_amount: 0,
+    tax_percent: 0,
+    total_amount: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    items: statuses.map((status, index) => ({
+      id: `check-item-${index}`,
+      menu_id: 'menu-1',
+      menu_name: 'Kopi Susu',
+      qty: 1,
+      unit_price: 0,
+      note: null,
+      status,
+    })),
+  })
+  assert(
+    deriveOrderStatus(
+      orderWith([ITEM_STATUS.DELIVERED, ITEM_STATUS.COOKING], PAYMENT_STATUS.LUNAS),
+    ) === ORDER_STATUS.DIANTAR,
+    'delivered + cooking aggregates to DIANTAR',
+  )
+  assert(
+    deriveOrderStatus(orderWith([ITEM_STATUS.PENDING, ITEM_STATUS.READY], PAYMENT_STATUS.LUNAS)) ===
+      ORDER_STATUS.DIPROSES,
+    'pending + ready aggregates to DIPROSES',
+  )
+  assert(
+    deriveOrderStatus(
+      orderWith([ITEM_STATUS.DELIVERED, ITEM_STATUS.DELIVERED], PAYMENT_STATUS.BELUM),
+    ) === ORDER_STATUS.DIANTAR,
+    'all delivered while unpaid aggregates to DIANTAR',
+  )
+  assert(
+    deriveOrderStatus(
+      orderWith([ITEM_STATUS.DELIVERED, ITEM_STATUS.DELIVERED], PAYMENT_STATUS.LUNAS),
+    ) === ORDER_STATUS.SELESAI,
+    'all delivered while paid aggregates to SELESAI',
+  )
   await throwsCode(
     () =>
       api.updatePayment('order-1', {

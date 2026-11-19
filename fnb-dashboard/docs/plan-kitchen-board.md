@@ -2,7 +2,7 @@
 
 Plan for aligning the dashboard kitchen board (`/kitchen`) with `../docs/PRD.md` §3, §5, §6.1, `../docs/flow.md`, `../docs/api.md` §Internal — orders, and the real backend behavior in `../../fnb-server/internal/domain/order_status.go`.
 
-Status: **draft round 2 — decisions settled through grilling, awaiting review before implementation**.
+Status: **implemented — steps 1-7 done; verification gate passing**.
 
 ## Scope
 

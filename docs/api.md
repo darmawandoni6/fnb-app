@@ -103,7 +103,7 @@ All endpoints below use JWT and role middleware.
 | `POST` | `/orders/manual` | `CASHIER`, `OWNER` | Create a walk-in order |
 | `PATCH` | `/orders/:id/payment` | `CASHIER`, `OWNER` | Mark payment as `LUNAS` |
 
-The kitchen only sees `LUNAS` orders in the list. Reading an unpaid order by id returns `404 NOT_FOUND` to the kitchen.
+The kitchen only sees `LUNAS` orders in the list. Reading an unpaid order by id returns `404 NOT_FOUND` to the kitchen. The kitchen board combines `MENUNGGU`, `DIPROSES`, and `DIANTAR` orders that still have active `PENDING` or `COOKING` items, because a paid order stays `MENUNGGU` until the first item becomes `COOKING`.
 
 There is no order status endpoint. `status` is derived from item statuses and payment according to PRD §5.1. `GET /orders` returns at most 200 rows, newest first; `date` is a UTC day (`YYYY-MM-DD`).
 
@@ -136,7 +136,7 @@ Payment:
 
 Transitions are forward only: `PENDING → COOKING → READY → DELIVERED`. `COOKING` is rejected with `409 PAYMENT_REQUIRED` while the order is `BELUM`. `DELIVERED` moves the order to `DIANTAR`; the last active item plus `LUNAS` moves it to `SELESAI`.
 
-All actors may cancel `PENDING` items according to the PRD. After `COOKING`, items cannot be cancelled in M1. A staff cancellation on a `LUNAS` order writes a refund with `actor_id` set to the staff user and reason `staff cancelled item`; a `BELUM` cancellation writes no refund.
+The customer who owns the order, `CASHIER`, and `OWNER` may cancel `PENDING` items according to the PRD. After `COOKING`, items cannot be cancelled in M1. A staff cancellation on a `LUNAS` order writes a refund with `actor_id` set to the staff user and reason `staff cancelled item`; a `BELUM` cancellation writes no refund.
 
 Item status and payment responses return the full order with its items, so the dashboard can read the new aggregate `status` without a second call.
 

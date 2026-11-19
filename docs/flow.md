@@ -53,6 +53,7 @@ sequenceDiagram
     Note over K: unpaid order appears for collection
     K->>API: PATCH /orders/:id/payment
     API->>DB: update payment_status = LUNAS
+    API->>DB: recompute aggregate order status (PRD §5.1)
 
     Note over D: kitchen only sees paid orders<br/>COOKING is rejected with PAYMENT_REQUIRED while BELUM
     D->>API: PATCH /orders/:id/items/:item_id/status COOKING
@@ -188,7 +189,7 @@ sequenceDiagram
 graph TD
     subgraph Dashboard
         P1[poll GET /orders<br/>3–5 detik, JWT]
-        P2[poll GET /orders?status=DIPROSES<br/>kitchen board]
+        P2[poll GET /orders<br/>kitchen board: paid only,<br/>MENUNGGU + DIPROSES + DIANTAR with active items]
     end
     subgraph QR Menu
         P3[poll GET /public/orders/:tracking_token<br/>5 detik]

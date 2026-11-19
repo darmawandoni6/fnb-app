@@ -111,7 +111,7 @@ PENDING → COOKING → READY → DELIVERED
     └────────────────────→ CANCELLED
 ```
 
-Item status can only move forward. The kitchen changes `COOKING` and `READY`; the cashier changes `DELIVERED`. All actors can cancel an item only while it is `PENDING`.
+Item status can only move forward. The kitchen changes `COOKING` and `READY`; the cashier changes `DELIVERED`. The customer who owns the order, `CASHIER`, and `OWNER` can cancel an item only while it is `PENDING`.
 
 Order status is the aggregate production and delivery status:
 
@@ -128,7 +128,9 @@ MENUNGGU → DIPROSES → SIAP → DIANTAR → SELESAI
 | At least one item `COOKING` and not all `READY` | `DIPROSES` |
 | All active items `READY` | `SIAP` |
 | At least one item `DELIVERED` and not all active items are delivered | `DIANTAR` |
-| All items are complete and payment is `LUNAS` | `SELESAI` |
+| All active items `DELIVERED` and payment is `BELUM` | `DIANTAR` |
+| All active items `DELIVERED` and payment is `LUNAS` | `SELESAI` |
+| Mix of `PENDING` and `READY` items without `COOKING` | `DIPROSES` |
 | All items are cancelled | `DIBATALKAN` |
 
 Statuses `MENUNGGU`, `DIPROSES`, `SIAP`, `DIANTAR`, and `SELESAI` are calculated automatically from item statuses and payment.
@@ -150,7 +152,7 @@ Cancelled items are excluded from active item calculations. If all items are can
 |---|---|---|
 | first item `DELIVERED` | `DIANTAR` | `CASHIER`, `OWNER` |
 | all active items `DELIVERED` | `SELESAI` | `CASHIER`, `OWNER`, with payment `LUNAS` |
-| before `SELESAI` | cancel item | any actor, only while item is `PENDING` |
+| before `SELESAI` | cancel item | The customer who owns the order, `CASHIER`, `OWNER`, only while item is `PENDING` |
 | all valid transitions | as needed | `OWNER` |
 
 Payment remains at order level. New orders start as `BELUM`. Cashier/owner marks an order `LUNAS` before the kitchen may start `COOKING`. `payment_status` and `order.status` are separate fields, but the order must be `LUNAS` before `SELESAI`. Cancelling an item restores that item's stock atomically. Completed orders or items cannot be cancelled.

@@ -13,7 +13,7 @@ export function StockPage() {
         <div className="lg:col-span-2">
           <IngredientsPanel />
         </div>
-        <div className="lg:col-span-1 lg:h-[calc(100vh-8rem)]">
+        <div className="lg:sticky lg:top-4 lg:col-span-1 lg:h-[calc(100vh-8rem)]">
           <MovementsPanel />
         </div>
       </div>

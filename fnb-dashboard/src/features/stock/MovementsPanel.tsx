@@ -43,7 +43,7 @@ const formatGroup = (iso: string) => {
   return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
 }
 
-export function MovementsPanel() {
+export function MovementsPanel({ className }: { className?: string } = {}) {
   const [filter, setFilter] = useState<MovementFilter>('all')
   const { data: ingredients = [] } = useQuery({
     queryKey: ['ingredients'],
@@ -76,8 +76,10 @@ export function MovementsPanel() {
   ]
 
   return (
-    <Card className="h-full">
-      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+    <Card
+      className={cn('flex h-full max-h-[calc(100dvh-8rem)] flex-col overflow-hidden', className)}
+    >
+      <CardHeader className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b pb-3">
         <CardTitle>Pergerakan stok</CardTitle>
         <div className="flex gap-1">
           {chips.map((chip) => (
@@ -94,7 +96,7 @@ export function MovementsPanel() {
           ))}
         </div>
       </CardHeader>
-      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto max-lg:max-h-96">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pt-3">
         {groups.map((group) => (
           <section key={group.label} className="flex flex-col gap-1">
             <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">

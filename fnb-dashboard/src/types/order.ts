@@ -23,6 +23,8 @@ export type Order = {
   status: OrderStatus
   payment_status: PaymentStatus
   payment_method: PaymentMethod | null
+  amount_received?: number | null
+  change_amount?: number | null
   subtotal_amount: number
   tax_amount: number
   tax_percent: number

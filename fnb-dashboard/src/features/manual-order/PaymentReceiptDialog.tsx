@@ -1,3 +1,6 @@
+import { useQuery } from '@tanstack/react-query'
+
+import { api } from '@/api'
 import type { Order } from '@/types'
 import { CheckCircle2, Printer, RotateCcw, ShoppingBag } from 'lucide-react'
 
@@ -17,23 +20,24 @@ import { Separator } from '@/components/ui/separator'
 type PaymentReceiptDialogProps = {
   order: Order | null
   open: boolean
-  amountReceived?: number
-  changeAmount?: number
   onClose: () => void
-  onNewOrder: () => void
-  onBackToOrders: () => void
+  onNewOrder?: () => void
+  onBackToOrders?: () => void
 }
 
 export function PaymentReceiptDialog({
   order,
   open,
-  amountReceived,
-  changeAmount,
   onClose,
   onNewOrder,
   onBackToOrders,
 }: PaymentReceiptDialogProps) {
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: api.getSettings })
+
   if (!order) return null
+
+  const amountReceived = order.amount_received
+  const changeAmount = order.change_amount
 
   const handlePrint = () => {
     window.print()
@@ -55,7 +59,7 @@ export function PaymentReceiptDialog({
         {/* Printable Struk Card */}
         <div data-print-area className="bg-muted/30 rounded-lg border p-4 font-mono text-xs">
           <div className="text-center">
-            <h4 className="text-sm font-bold">FNB CAFE & RESTO</h4>
+            <h4 className="text-sm font-bold">{settings?.cafe_name ?? 'Kafe'}</h4>
             <p className="text-muted-foreground text-[11px]">Struk Pembayaran Kasir</p>
           </div>
 
@@ -140,7 +144,7 @@ export function PaymentReceiptDialog({
                 {order.payment_method === 'CASH' ? 'TUNAI (CASH)' : 'NON-TUNAI'}
               </span>
             </div>
-            {order.payment_method === 'CASH' && amountReceived !== undefined && (
+            {order.payment_method === 'CASH' && amountReceived != null && (
               <>
                 <div className="text-muted-foreground flex justify-between">
                   <span>Uang Diterima:</span>
@@ -170,22 +174,27 @@ export function PaymentReceiptDialog({
             Cetak Struk
           </Button>
 
-          <div className="grid w-full grid-cols-2 gap-2">
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full gap-1.5 text-xs"
-              onClick={onNewOrder}
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Pesanan Baru
+          {onNewOrder && onBackToOrders ? (
+            <div className="grid w-full grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full gap-1.5 text-xs"
+                onClick={onNewOrder}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Pesanan Baru
+              </Button>
+              <Button type="button" className="w-full gap-1.5 text-xs" onClick={onBackToOrders}>
+                <ShoppingBag className="h-3.5 w-3.5" />
+                Ke Order Board
+              </Button>
+            </div>
+          ) : (
+            <Button type="button" className="w-full text-xs" onClick={onClose}>
+              Selesai
             </Button>
-
-            <Button type="button" className="w-full gap-1.5 text-xs" onClick={onBackToOrders}>
-              <ShoppingBag className="h-3.5 w-3.5" />
-              Ke Order Board
-            </Button>
-          </div>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

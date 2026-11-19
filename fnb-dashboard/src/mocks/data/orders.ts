@@ -22,21 +22,27 @@ const order = (
   payment: Order['payment_status'],
   status: Order['status'],
   items: OrderItem[],
-): Order => ({
-  id,
-  order_type: type,
-  table_id: type === ORDER_TYPE.QR ? 'table-1' : null,
-  table_number: type === ORDER_TYPE.QR ? '1' : null,
-  status,
-  payment_status: payment,
-  payment_method: payment === PAYMENT_STATUS.LUNAS ? PAYMENT_METHOD.CASH : null,
-  subtotal_amount: items.reduce((sum, current) => sum + current.qty * current.unit_price, 0),
-  tax_amount: 0,
-  tax_percent: 10,
-  total_amount: items.reduce((sum, current) => sum + current.qty * current.unit_price, 0),
-  created_at: '2026-01-01T10:00:00.000Z',
-  items,
-})
+): Order => {
+  const total = items.reduce((sum, current) => sum + current.qty * current.unit_price, 0)
+  const isPaid = payment === PAYMENT_STATUS.LUNAS
+  return {
+    id,
+    order_type: type,
+    table_id: type === ORDER_TYPE.QR ? 'table-1' : null,
+    table_number: type === ORDER_TYPE.QR ? '1' : null,
+    status,
+    payment_status: payment,
+    payment_method: isPaid ? PAYMENT_METHOD.CASH : null,
+    amount_received: isPaid ? total : null,
+    change_amount: isPaid ? 0 : null,
+    subtotal_amount: total,
+    tax_amount: 0,
+    tax_percent: 10,
+    total_amount: total,
+    created_at: '2026-01-01T10:00:00.000Z',
+    items,
+  }
+}
 
 export const orders: Order[] = [
   order('order-1', ORDER_TYPE.QR, PAYMENT_STATUS.BELUM, ORDER_STATUS.MENUNGGU, [

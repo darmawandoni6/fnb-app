@@ -135,8 +135,12 @@ export const runMockSelfCheck = async () => {
   const paid = await api.updatePayment('order-1', {
     payment_status: PAYMENT_STATUS.LUNAS,
     payment_method: PAYMENT_METHOD.CASH,
+    amount_received: 50000,
+    change_amount: 50000 - 33000,
   })
   assert(paid.payment_status === PAYMENT_STATUS.LUNAS, 'payment succeeds')
+  assert(paid.amount_received === 50000, 'payment stores amount received')
+  assert(paid.change_amount === 17000, 'payment stores change amount')
   await api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.COOKING)
   await api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.READY)
   await api.updateItemStatus('order-1', 'item-1', ITEM_STATUS.DELIVERED)

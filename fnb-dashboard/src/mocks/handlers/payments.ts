@@ -6,7 +6,12 @@ import { delay, fail, requireRole } from './shared'
 
 export const updatePayment = async (
   orderId: string,
-  body: { payment_status: 'LUNAS'; payment_method: PaymentMethod },
+  body: {
+    payment_status: 'LUNAS'
+    payment_method: PaymentMethod
+    amount_received?: number | null
+    change_amount?: number | null
+  },
 ): Promise<Order> => {
   await delay()
   requireRole('OWNER', 'CASHIER')
@@ -21,5 +26,9 @@ export const updatePayment = async (
   }
   targetOrder.payment_status = PAYMENT_STATUS.LUNAS
   targetOrder.payment_method = body.payment_method
+  targetOrder.amount_received =
+    body.payment_method === PAYMENT_METHOD.CASH ? body.amount_received : null
+  targetOrder.change_amount =
+    body.payment_method === PAYMENT_METHOD.CASH ? body.change_amount : null
   return targetOrder
 }

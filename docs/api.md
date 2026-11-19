@@ -122,10 +122,10 @@ Manual orders have `order_type = MANUAL`, `created_by` set from the JWT, and `ta
 Payment:
 
 ```json
-{ "payment_status": "LUNAS", "payment_method": "CASH" }
+{ "payment_status": "LUNAS", "payment_method": "CASH", "amount_received": 50000, "change_amount": 17000 }
 ```
 
-`payment_method` is required and is `CASH` or `NON_CASH`. Only `BELUM → LUNAS` is allowed in M1; repeating it returns `409 INVALID_TRANSITION`.
+`payment_method` is required and is `CASH` or `NON_CASH`. Only `BELUM → LUNAS` is allowed in M1; repeating it returns `409 INVALID_TRANSITION`. `amount_received` and `change_amount` are optional cash tendering fields, stored on the order when `payment_method` is `CASH` and returned as `null` otherwise, so a receipt can be reprinted with the same figures.
 
 ## Internal — kitchen items
 

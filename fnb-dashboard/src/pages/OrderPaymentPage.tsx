@@ -12,6 +12,7 @@ import {
   Banknote,
   CheckCircle2,
   CreditCard,
+  Printer,
   QrCode,
   Receipt,
   UserCheck,
@@ -69,8 +70,12 @@ export function OrderPaymentPage() {
   const isCashInsufficient = paymentMethod === PAYMENT_METHOD.CASH && cashReceived < totalAmount
 
   const updatePaymentMutation = useMutation({
-    mutationFn: (body: { payment_status: 'LUNAS'; payment_method: PaymentMethod }) =>
-      api.updatePayment(id!, body),
+    mutationFn: (body: {
+      payment_status: 'LUNAS'
+      payment_method: PaymentMethod
+      amount_received?: number | null
+      change_amount?: number | null
+    }) => api.updatePayment(id!, body),
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['orders', id] })
@@ -94,9 +99,12 @@ export function OrderPaymentPage() {
       return
     }
 
+    const isCash = paymentMethod === PAYMENT_METHOD.CASH
     updatePaymentMutation.mutate({
       payment_status: PAYMENT_STATUS.LUNAS,
       payment_method: paymentMethod,
+      amount_received: isCash ? cashReceived : null,
+      change_amount: isCash ? changeAmount : null,
     })
   }
 
@@ -154,6 +162,18 @@ export function OrderPaymentPage() {
               <CheckCircle2 className="h-3.5 w-3.5" />
               Pesanan Sudah Lunas
             </Badge>
+          )}
+          {isAlreadyPaid && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={() => setReceiptOpen(true)}
+            >
+              <Printer className="h-3.5 w-3.5" />
+              Cetak Ulang Struk
+            </Button>
           )}
           {canCancelOrder && <CancelOrderButton order={order} />}
         </div>
@@ -472,8 +492,6 @@ export function OrderPaymentPage() {
       <PaymentReceiptDialog
         order={completedOrder ?? (isAlreadyPaid ? order : null)}
         open={receiptOpen}
-        amountReceived={paymentMethod === PAYMENT_METHOD.CASH ? cashReceived : undefined}
-        changeAmount={paymentMethod === PAYMENT_METHOD.CASH ? changeAmount : undefined}
         onClose={() => setReceiptOpen(false)}
         onNewOrder={() => navigate(ROUTES.ORDERS_NEW)}
         onBackToOrders={() => navigate(ROUTES.ORDERS)}

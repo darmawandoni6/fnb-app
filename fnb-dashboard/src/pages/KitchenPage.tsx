@@ -1,7 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
-import { ITEM_STATUS, type ItemStatus } from '@/constants'
+import { ITEM_STATUS, type ItemStatus, ORDER_STATUS, PAYMENT_STATUS } from '@/constants'
+import type { Order, OrderItem } from '@/types'
 import { toast } from 'sonner'
 
 import { Badge } from '@/components/ui/badge'
@@ -12,13 +13,26 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { useOrders } from '@/features/orders/useOrders'
 
 const columns: ItemStatus[] = [ITEM_STATUS.PENDING, ITEM_STATUS.COOKING, ITEM_STATUS.READY]
+
+const BOARD_STATUSES: Order['status'][] = [
+  ORDER_STATUS.MENUNGGU,
+  ORDER_STATUS.DIPROSES,
+  ORDER_STATUS.DIANTAR,
+]
+
+const isBoardOrder = (order: Order) =>
+  order.payment_status === PAYMENT_STATUS.LUNAS &&
+  BOARD_STATUSES.includes(order.status) &&
+  order.items.some(({ status }) => status === ITEM_STATUS.PENDING || status === ITEM_STATUS.COOKING)
+
 const onError = (error: unknown) =>
   toast.error((error as { message?: string }).message ?? 'Terjadi kesalahan')
 
 export function KitchenPage() {
-  const { data: orders, isPending } = useOrders({ status: 'DIPROSES' })
+  const { data: orders, isPending } = useOrders()
   const queryClient = useQueryClient()
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['orders'] })
+  const boardOrders = (orders ?? []).filter(isBoardOrder)
 
   return (
     <div className="min-w-full">
@@ -32,20 +46,19 @@ export function KitchenPage() {
             </div>
           ))}
         </div>
-      ) : orders && orders.length > 0 ? (
+      ) : boardOrders.length > 0 ? (
         <div className="grid grid-cols-3 gap-4">
           {columns.map((status) => (
             <div key={status} className="flex min-w-0 flex-col gap-3">
               <h2 className="text-sm font-semibold">{status}</h2>
-              {orders.flatMap((order) =>
+              {boardOrders.flatMap((order) =>
                 order.items
                   .filter((item) => item.status === status)
                   .map((item) => (
                     <KitchenItemCard
                       key={item.id}
                       orderId={order.id}
-                      itemId={item.id}
-                      label={item.menu_name}
+                      item={item}
                       tableNumber={order.table_number}
                       onAdvance={invalidate}
                     />
@@ -58,8 +71,10 @@ export function KitchenPage() {
         <Empty className="border">
           <EmptyHeader>
             <EmptyMedia variant="icon">👨‍🍳</EmptyMedia>
-            <EmptyTitle>Tidak ada item diproses</EmptyTitle>
-            <EmptyDescription>Order DIPROSES akan muncul di sini.</EmptyDescription>
+            <EmptyTitle>Belum ada order lunas yang menunggu</EmptyTitle>
+            <EmptyDescription>
+              Order lunas berstatus MENUNGGU atau DIPROSES akan muncul di sini.
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}
@@ -69,19 +84,17 @@ export function KitchenPage() {
 
 function KitchenItemCard({
   orderId,
-  itemId,
-  label,
+  item,
   tableNumber,
   onAdvance,
 }: {
   orderId: string
-  itemId: string
-  label: string
+  item: OrderItem
   tableNumber: string | null
   onAdvance: () => void
 }) {
   const advance = useMutation({
-    mutationFn: (next: ItemStatus) => api.updateItemStatus(orderId, itemId, next),
+    mutationFn: (next: ItemStatus) => api.updateItemStatus(orderId, item.id, next),
     onSuccess: onAdvance,
     onError,
   })
@@ -91,25 +104,38 @@ function KitchenItemCard({
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
           {tableNumber && <Badge variant="secondary">Meja {tableNumber}</Badge>}
-          {label}
+          {item.menu_name}
         </CardTitle>
+        <p className="text-muted-foreground text-xs">
+          #{orderId} · {item.qty}x
+        </p>
       </CardHeader>
-      <CardContent className="flex gap-2">
-        <Button
-          size="sm"
-          disabled={advance.isPending}
-          onClick={() => advance.mutate(ITEM_STATUS.COOKING)}
-        >
-          Mulai masak
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={advance.isPending}
-          onClick={() => advance.mutate(ITEM_STATUS.READY)}
-        >
-          Siap
-        </Button>
+      <CardContent className="flex flex-col gap-2">
+        {item.note && <p className="text-muted-foreground text-xs italic">Catatan: {item.note}</p>}
+        {item.status === ITEM_STATUS.PENDING && (
+          <Button
+            size="sm"
+            disabled={advance.isPending}
+            onClick={() => advance.mutate(ITEM_STATUS.COOKING)}
+          >
+            Mulai masak
+          </Button>
+        )}
+        {item.status === ITEM_STATUS.COOKING && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={advance.isPending}
+            onClick={() => advance.mutate(ITEM_STATUS.READY)}
+          >
+            Siap
+          </Button>
+        )}
+        {item.status === ITEM_STATUS.READY && (
+          <Badge variant="secondary" className="w-fit">
+            Menunggu kasir
+          </Badge>
+        )}
       </CardContent>
     </Card>
   )

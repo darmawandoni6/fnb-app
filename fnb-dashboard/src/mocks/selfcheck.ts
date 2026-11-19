@@ -42,6 +42,15 @@ export const runMockSelfCheck = async () => {
   )
   await api.updateMenu('menu-1', { category_id: 'category-1' })
 
+  // Menus: cashier may only toggle availability.
+  db.currentUserId = 'user-2'
+  const hidden = await api.updateMenu('menu-3', { is_available: false })
+  assert(hidden.is_available === false, 'cashier can toggle menu availability')
+  await throwsCode(() => api.updateMenu('menu-3', { price: 1000 }), 'FORBIDDEN')
+  await throwsCode(() => api.updateMenu('menu-3', { name: 'Matcha' }), 'FORBIDDEN')
+  db.currentUserId = 'user-1'
+  await api.updateMenu('menu-3', { is_available: true })
+
   // Stock: order creation writes a negative OUT, cancel restores, min_stock persists, opname writes ADJUSTMENT.
   const created = await api.createManualOrder({
     items: [{ menu_id: 'menu-1', qty: 1, note: null }],

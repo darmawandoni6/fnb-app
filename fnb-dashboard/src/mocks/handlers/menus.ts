@@ -96,7 +96,14 @@ export const updateMenu = async (
   },
 ): Promise<Menu> => {
   await delay()
-  requireRole(USER_ROLE.OWNER)
+  const actor = requireRole(USER_ROLE.OWNER, USER_ROLE.CASHIER)
+  if (actor.role !== USER_ROLE.OWNER) {
+    const forbiddenFields = (['name', 'price', 'image_url', 'category_id'] as const).filter(
+      (key) => body[key] !== undefined,
+    )
+    if (forbiddenFields.length > 0)
+      fail(API_ERROR_CODE.FORBIDDEN, 'Kasir hanya boleh mengubah status ketersediaan menu')
+  }
   const menu = findOrThrow(
     db.menus.find((candidate) => candidate.id === id),
     API_ERROR_CODE.NOT_FOUND,

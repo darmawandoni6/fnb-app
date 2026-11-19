@@ -159,6 +159,8 @@ Role: `OWNER`.
 | `PATCH` | `/tables/:id` | Update table; `table_number` stays unique |
 | `DELETE` | `/tables/:id` | Deactivate table |
 
+Exception: `PATCH /menus/:id` is also allowed for `CASHIER`, but only the `is_available` field. Sending `name`, `price`, `image_url`, or `category_id` as a cashier returns `403 FORBIDDEN`.
+
 Table QR content:
 
 ```text

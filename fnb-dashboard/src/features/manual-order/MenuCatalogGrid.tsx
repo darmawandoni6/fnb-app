@@ -1,12 +1,21 @@
 import { useMemo, useState } from 'react'
 
-import type { Category, Menu } from '@/types'
-import { Search, UtensilsCrossed } from 'lucide-react'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
+import { api } from '@/api'
+import { USER_ROLE } from '@/constants'
+import type { Category, Menu } from '@/types'
+import { Ban, Search, Undo2, UtensilsCrossed } from 'lucide-react'
+import { toast } from 'sonner'
+
+import { toastApiError } from '@/lib/errors'
 import { formatRupiah } from '@/lib/format'
 import { getMenuColorClass, getMenuInitials } from '@/lib/menu'
 
+import { useAuth } from '@/auth/context'
+
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -28,6 +37,19 @@ export function MenuCatalogGrid({
 }: MenuCatalogGridProps) {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('ALL')
   const [searchQuery, setSearchQuery] = useState<string>('')
+
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
+  const canToggleAvailability = user?.role === USER_ROLE.OWNER || user?.role === USER_ROLE.CASHIER
+
+  const toggleAvailability = useMutation({
+    mutationFn: (menu: Menu) => api.updateMenu(menu.id, { is_available: !menu.is_available }),
+    onSuccess: (_updated, menu) => {
+      toast.success(`Menu ${menu.name} ditandai ${menu.is_available ? 'habis' : 'tersedia'}`)
+      queryClient.invalidateQueries({ queryKey: ['menu-categories'] })
+    },
+    onError: toastApiError,
+  })
 
   const allMenus = useMemo(() => {
     if (!categories) return []
@@ -146,6 +168,30 @@ export function MenuCatalogGrid({
                     : 'hover:border-primary cursor-pointer hover:shadow-sm active:scale-[0.98]'
                 }`}
               >
+                {/* Availability Toggle (owner & cashier) */}
+                {canToggleAvailability && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon-sm"
+                    aria-label={
+                      isAvailable ? `Tandai ${menu.name} habis` : `Aktifkan ${menu.name} kembali`
+                    }
+                    className="absolute top-2 left-2 z-10"
+                    disabled={toggleAvailability.isPending}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      toggleAvailability.mutate(menu)
+                    }}
+                  >
+                    {isAvailable ? (
+                      <Ban className="h-3.5 w-3.5" />
+                    ) : (
+                      <Undo2 className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                )}
+
                 {/* Active in Cart Badge */}
                 {qtyInCart > 0 && (
                   <Badge className="absolute top-2 right-2 z-10 h-6 min-w-6 px-1.5 text-center font-bold shadow-md">

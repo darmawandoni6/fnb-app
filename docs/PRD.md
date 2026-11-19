@@ -63,7 +63,7 @@ Vite SPA + TypeScript, lightweight for mobile browsers:
 | Role      | Main access                                                                                |
 | --------- | ------------------------------------------------------------------------------------------ |
 | `OWNER`   | All features, staff accounts, menus, tables/QR, stock, reports, settings, and all order transitions       |
-| `CASHIER` | QR/manual orders, payments, item `READY` → `DELIVERED`, cancellations, and stock viewing |
+| `CASHIER` | QR/manual orders, payments, item `READY` → `DELIVERED`, cancellations, stock viewing, and marking menu availability |
 | `KITCHEN` | Production queue, item `PENDING` → `COOKING` → `READY`                                          |
 
 The first owner is created through an environment seed:

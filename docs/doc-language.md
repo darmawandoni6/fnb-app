@@ -2,7 +2,7 @@
 
 ## Scope
 
-Language standard for all `.md` documentation files in the `fnb-app` monorepo (`docs/`, `fnb-server/docs/`, and `fnb-dashboard/docs/`). Complements `doc-naming.md`.
+Language standard for all `.md` documentation files in the `fnb-app` monorepo (`docs/`, `fnb-server/docs/`, `fnb-dashboard/docs/`, and `fnb-qr-menu/docs/`). Complements `doc-naming.md`.
 
 ## Rules
 

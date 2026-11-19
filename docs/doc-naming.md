@@ -7,6 +7,7 @@ Naming standard for all `.md` documentation files in the `fnb-app` monorepo:
 - `docs/` (root)
 - `fnb-server/docs/`
 - `fnb-dashboard/docs/`
+- `fnb-qr-menu/docs/`
 
 ## File Naming
 
@@ -33,6 +34,7 @@ Place documents according to their scope:
 | `docs/` (root) | cross-application | `PRD.md`, `flow.md`, `api.md`, `api-response.md`, `git.md` |
 | `fnb-server/docs/` | backend only | `tech-stack.md`, `structure.md`, `rules.md` |
 | `fnb-dashboard/docs/` | dashboard only | `tech-stack.md`, `ai-rules.md`, `conventions.md` |
+| `fnb-qr-menu/docs/` | QR Menu only | `tech-stack.md`, `ai-rules.md`, `conventions.md`, `qr-menu-structure.md` |
 
 One topic, one application, one file. Do not duplicate content across locations; use relative links such as `../docs/api.md`.
 
@@ -87,6 +89,22 @@ fnb-dashboard/docs/
 ├── implementation-plan.md
 └── implementation/
     ├── phase-0.md
+    └── phase-N.md
+
+fnb-qr-menu/docs/
+├── ai-rules.md
+├── conventions.md
+├── tech-stack.md
+├── qr-menu-structure.md
+├── implementation-plan.md
+└── implementation/
+    ├── phase-0.md
+    ├── phase-1.md
+    ├── phase-2.md
+    ├── phase-2.5.md
+    ├── phase-2.6.md
+    ├── phase-3.md
+    ├── phase-4.md
     └── phase-N.md
 ```
 

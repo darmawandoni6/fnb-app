@@ -69,6 +69,10 @@ export const dashboardNavGroups = (role: UserRole): NavGroup[] => {
         title: 'Operasional',
         items: [{ to: ROUTES.ORDERS, label: 'Orders', icon: ShoppingBag }],
       },
+      {
+        title: 'Persediaan',
+        items: [{ to: ROUTES.STOCK, label: 'Stock', icon: Boxes }],
+      },
     ]
   }
 

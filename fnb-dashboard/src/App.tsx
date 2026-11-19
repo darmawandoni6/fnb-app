@@ -76,7 +76,7 @@ const router = createBrowserRouter([
           },
           {
             path: ROUTES.STOCK,
-            element: <RoleGuard roles={owner} />,
+            element: <RoleGuard roles={staff} />,
             children: [{ index: true, element: <StockPage /> }],
           },
           {

@@ -3,12 +3,15 @@ import { type ReactNode, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import { api } from '@/api'
+import { USER_ROLE } from '@/constants'
 import type { Ingredient } from '@/types'
 import { cn } from 'cn'
 import { ArrowDown, ArrowUp, ArrowUpDown, Ellipsis } from 'lucide-react'
 
 import { formatNumber } from '@/lib/format'
 import { type StockStatus, getStockStatus } from '@/lib/stock'
+
+import { useAuth } from '@/auth/context'
 
 import { DataTable, type DataTableColumn, type DataTableInstance } from '@/components/data-table'
 import { Badge } from '@/components/ui/badge'
@@ -246,6 +249,8 @@ function SortHeader({
 type ActionDialog = 'restock' | 'adjust' | 'edit' | 'usage'
 
 function IngredientActions({ ingredient }: { ingredient: Ingredient }) {
+  const { user } = useAuth()
+  const isOwner = user?.role === USER_ROLE.OWNER
   const [dialog, setDialog] = useState<ActionDialog | null>(null)
   const onOpenChange = (open: boolean) => setDialog(open ? dialog : null)
 
@@ -258,28 +263,38 @@ function IngredientActions({ ingredient }: { ingredient: Ingredient }) {
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuItem onSelect={() => setDialog('restock')}>Restock</DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => setDialog('adjust')}>Sesuaikan stok</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setDialog('edit')}>Edit bahan</DropdownMenuItem>
+          {isOwner && (
+            <>
+              <DropdownMenuItem onSelect={() => setDialog('restock')}>Restock</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setDialog('adjust')}>
+                Sesuaikan stok
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={() => setDialog('edit')}>Edit bahan</DropdownMenuItem>
+            </>
+          )}
           <DropdownMenuItem onSelect={() => setDialog('usage')}>Lihat pemakaian</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <RestockDialog
-        ingredient={ingredient}
-        open={dialog === 'restock'}
-        onOpenChange={(open) => onOpenChange(open)}
-      />
-      <AdjustStockDialog
-        ingredient={ingredient}
-        open={dialog === 'adjust'}
-        onOpenChange={(open) => onOpenChange(open)}
-      />
-      <IngredientFormDialog
-        editing={ingredient}
-        open={dialog === 'edit'}
-        onOpenChange={(open) => onOpenChange(open)}
-      />
+      {isOwner && (
+        <>
+          <RestockDialog
+            ingredient={ingredient}
+            open={dialog === 'restock'}
+            onOpenChange={(open) => onOpenChange(open)}
+          />
+          <AdjustStockDialog
+            ingredient={ingredient}
+            open={dialog === 'adjust'}
+            onOpenChange={(open) => onOpenChange(open)}
+          />
+          <IngredientFormDialog
+            editing={ingredient}
+            open={dialog === 'edit'}
+            onOpenChange={(open) => onOpenChange(open)}
+          />
+        </>
+      )}
       <IngredientUsageDialog
         ingredient={ingredient}
         open={dialog === 'usage'}

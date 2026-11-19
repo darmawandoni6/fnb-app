@@ -137,9 +137,11 @@ Recipe editing lives on the menu card, not `/stock`: `src/features/menus/RecipeD
 
 ## Step 7 — Settings page (`src/pages/SettingsPage.tsx`)
 
-33. Form: `cafe_name` (Input), `tax_percent` (number Input, 0–100), `is_open` (`Switch` with description "Toko tutup menolak order baru").
-34. `settingsSchema` (Zod); save via `updateSettings`; invalidate `['settings']` (the manual-order dialog reads it).
-35. Turning the store off shows an inline warning.
+33. Modular stacked 2-card layout (`max-w-2xl`):
+    - **Card 1: Status Operasional Toko**: `Switch` `is_open`, badge status aktif/tutup, dialog konfirmasi saat menutup toko (`ConfirmDialog`), callout edukasi aturan bisnis (order QR/POS dan penguncian resep per PRD §8).
+    - **Card 2: Profil Kafe & Pajak**: `cafe_name` (Input), `tax_percent` (Input number 0–100 dengan addon `%` dan preset button chips 0%, 10%, 11%).
+34. Skeleton loader saat data pertama kali dimuat (`isPending`).
+35. `settingsSchema` (Zod); save via `updateSettings`; invalidate `['settings']` (manual-order dan POS membaca settings).
 
 ## Step 8 — Wire routes
 

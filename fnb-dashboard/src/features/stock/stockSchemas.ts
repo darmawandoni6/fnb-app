@@ -3,11 +3,14 @@ import { z } from 'zod'
 export const ingredientSchema = z.object({
   name: z.string().min(1, 'Nama bahan wajib diisi'),
   unit: z.string().min(1, 'Satuan wajib diisi'),
-  stock_qty: z.number().int().min(0, 'Stok tidak valid'),
+  stock_qty: z
+    .number({ message: 'Stok awal wajib diisi' })
+    .int('Stok awal harus berupa bilangan bulat')
+    .min(0, 'Stok awal tidak boleh lebih kecil dari 0'),
   min_stock: z
     .number({ message: 'Batas minimum wajib diisi' })
-    .int()
-    .min(0, 'Batas minimum tidak valid'),
+    .int('Batas minimum harus berupa bilangan bulat')
+    .min(0, 'Batas minimum tidak boleh lebih kecil dari 0'),
 })
 
 export type IngredientValues = z.infer<typeof ingredientSchema>

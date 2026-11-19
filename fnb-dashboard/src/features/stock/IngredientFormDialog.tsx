@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -38,6 +38,14 @@ export function IngredientFormDialog({
   const open = openProp ?? openState
   const setOpen = (next: boolean) => (onOpenChange ? onOpenChange(next) : setOpenState(next))
   const queryClient = useQueryClient()
+
+  const [stockInput, setStockInput] = useState(() =>
+    editing?.stock_qty !== undefined ? String(editing.stock_qty) : '0',
+  )
+  const [minStockInput, setMinStockInput] = useState(() =>
+    editing?.min_stock !== undefined ? String(editing.min_stock) : '0',
+  )
+
   const form = useForm<IngredientValues>({
     resolver: zodResolver(ingredientSchema),
     defaultValues: {
@@ -47,6 +55,20 @@ export function IngredientFormDialog({
       min_stock: editing?.min_stock ?? 0,
     },
   })
+
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        name: editing?.name ?? '',
+        unit: editing?.unit ?? '',
+        stock_qty: editing?.stock_qty ?? 0,
+        min_stock: editing?.min_stock ?? 0,
+      })
+      setStockInput(editing?.stock_qty !== undefined ? String(editing.stock_qty) : '0')
+      setMinStockInput(editing?.min_stock !== undefined ? String(editing.min_stock) : '0')
+    }
+  }, [open, editing, form])
+
   const mutation = useMutation({
     mutationFn: (values: IngredientValues) =>
       editing
@@ -62,6 +84,8 @@ export function IngredientFormDialog({
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
       setOpen(false)
       form.reset()
+      setStockInput('0')
+      setMinStockInput('0')
     },
     onError: toastApiError,
   })
@@ -92,7 +116,11 @@ export function IngredientFormDialog({
           </div>
           <div className="flex flex-col gap-1">
             <Label htmlFor="ingredient-unit">Satuan</Label>
-            <Input id="ingredient-unit" {...form.register('unit')} />
+            <Input
+              id="ingredient-unit"
+              placeholder="Contoh: gram, ml, pcs"
+              {...form.register('unit')}
+            />
             {form.formState.errors.unit && (
               <p className="text-destructive text-sm">{form.formState.errors.unit.message}</p>
             )}
@@ -102,8 +130,17 @@ export function IngredientFormDialog({
               <Label htmlFor="ingredient-stock">Stok awal</Label>
               <Input
                 id="ingredient-stock"
-                type="number"
-                {...form.register('stock_qty', { valueAsNumber: true })}
+                type="text"
+                inputMode="numeric"
+                placeholder="0"
+                value={stockInput !== '' ? Number(stockInput).toLocaleString('id-ID') : ''}
+                onChange={(event) => {
+                  const raw = event.target.value.replace(/\D/g, '')
+                  setStockInput(raw)
+                  form.setValue('stock_qty', raw === '' ? ('' as unknown as number) : Number(raw), {
+                    shouldValidate: true,
+                  })
+                }}
               />
               {form.formState.errors.stock_qty && (
                 <p className="text-destructive text-sm">
@@ -116,8 +153,17 @@ export function IngredientFormDialog({
             <Label htmlFor="ingredient-min">Batas minimum stok</Label>
             <Input
               id="ingredient-min"
-              type="number"
-              {...form.register('min_stock', { valueAsNumber: true })}
+              type="text"
+              inputMode="numeric"
+              placeholder="0"
+              value={minStockInput !== '' ? Number(minStockInput).toLocaleString('id-ID') : ''}
+              onChange={(event) => {
+                const raw = event.target.value.replace(/\D/g, '')
+                setMinStockInput(raw)
+                form.setValue('min_stock', raw === '' ? ('' as unknown as number) : Number(raw), {
+                  shouldValidate: true,
+                })
+              }}
             />
             <p className="text-muted-foreground text-xs">
               Bahan dianggap menipis saat stok di bawah atau sama dengan angka ini.

@@ -13,10 +13,12 @@ export const createUser = async ({
   name,
   email,
   role,
+  password: _password,
 }: {
   name: string
   email: string
   role: UserRole
+  password?: string
 }): Promise<User> => {
   await delay()
   requireRole(USER_ROLE.OWNER)
@@ -34,7 +36,7 @@ export const createUser = async ({
 
 export const updateUser = async (
   id: string,
-  body: { name?: string; is_active?: boolean },
+  body: { name?: string; role?: UserRole; password?: string; is_active?: boolean },
 ): Promise<User> => {
   await delay()
   requireRole(USER_ROLE.OWNER)
@@ -47,6 +49,15 @@ export const updateUser = async (
   if (body.name !== undefined) {
     if (!body.name.trim()) fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nama wajib diisi')
     targetUser.name = body.name
+  }
+  if (body.role !== undefined) {
+    if (body.role !== USER_ROLE.CASHIER && body.role !== USER_ROLE.KITCHEN) {
+      fail(API_ERROR_CODE.VALIDATION_ERROR, 'Role harus CASHIER atau KITCHEN')
+    }
+    if (targetUser.role === USER_ROLE.OWNER) {
+      fail(API_ERROR_CODE.VALIDATION_ERROR, 'Role OWNER tidak bisa diubah')
+    }
+    targetUser.role = body.role
   }
   if (body.is_active === false) {
     if (targetUser.id === db.currentUserId)

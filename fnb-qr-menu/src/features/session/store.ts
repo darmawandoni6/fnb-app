@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from 'react'
+import { useCallback, useSyncExternalStore } from 'react'
 
 import { SESSION_STORAGE_KEY, SESSION_VERSION } from '@/constants/storage'
 import type { OrderStatusResponse } from '@/types/order'
@@ -25,7 +25,7 @@ export type CustomerSession = {
   updatedAt: string
 }
 
-const EMPTY_SESSION: CustomerSession = {
+export const EMPTY_SESSION: CustomerSession = {
   v: SESSION_VERSION,
   qr: '',
   cart: [],
@@ -35,7 +35,22 @@ const EMPTY_SESSION: CustomerSession = {
   updatedAt: '',
 }
 
-let cached: CustomerSession | null = null
+let flashMessage: string | null = null
+
+export function setFlash(message: string) {
+  flashMessage = message
+}
+
+export function takeFlash(): string | null {
+  const message = flashMessage
+  flashMessage = null
+  return message
+}
+
+export const setNotice = setFlash
+export const takeNotice = takeFlash
+
+let cache: { raw: string | null; value: CustomerSession } | null = null
 const listeners = new Set<() => void>()
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -75,33 +90,61 @@ function isCustomerSession(value: unknown): value is CustomerSession {
   )
 }
 
-function load(): CustomerSession {
-  try {
-    const raw = localStorage.getItem(SESSION_STORAGE_KEY)
-    const parsed: unknown = raw ? JSON.parse(raw) : null
-    if (isCustomerSession(parsed)) return parsed
-  } catch {
-    // Storage unavailable or corrupt: fall back to an empty in-memory session.
-  }
-  return EMPTY_SESSION
-}
-
 function read(): CustomerSession {
-  cached ??= load()
-  return cached
+  let raw: string | null = null
+  try {
+    raw = localStorage.getItem(SESSION_STORAGE_KEY)
+  } catch {
+    // Storage blocked or unavailable: fall back to memory
+  }
+
+  if (cache && cache.raw === raw) {
+    return cache.value
+  }
+
+  let value = EMPTY_SESSION
+  try {
+    const parsed: unknown = raw ? JSON.parse(raw) : null
+    if (isCustomerSession(parsed)) {
+      value = parsed
+    }
+  } catch {
+    // Corrupt JSON or invalid: starts empty
+  }
+
+  cache = { raw, value }
+  return value
 }
 
 function write(next: CustomerSession) {
-  cached = { ...next, updatedAt: new Date().toISOString() }
-  try {
-    localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(cached))
-  } catch {
-    // Private mode or quota: the in-memory cache keeps the app working.
+  const current = read()
+  let valueToWrite = next
+
+  // Reset semantics: a different qr than the stored one clears cart and orders
+  if (current.qr !== '' && next.qr !== current.qr) {
+    valueToWrite = {
+      ...next,
+      cart: [],
+      orders: [],
+      browseOnly: false,
+    }
+    setFlash('Sesi pesanan baru dimulai')
   }
+
+  const value = { ...valueToWrite, updatedAt: new Date().toISOString() }
+  let raw: string | null = null
+  try {
+    raw = JSON.stringify(value)
+    localStorage.setItem(SESSION_STORAGE_KEY, raw)
+  } catch {
+    // Storage blocked or quota exceeded: keep in memory
+  }
+
+  cache = { raw, value }
   listeners.forEach((listener) => listener())
 }
 
-export function getSession() {
+export function getSession(): CustomerSession {
   return read()
 }
 
@@ -114,7 +157,7 @@ function subscribe(listener: () => void) {
 
   function handleStorage(event: StorageEvent) {
     if (event.key !== SESSION_STORAGE_KEY) return
-    cached = load()
+    cache = null
     listener()
   }
 
@@ -127,5 +170,8 @@ function subscribe(listener: () => void) {
 
 export function useCustomerSession() {
   const session = useSyncExternalStore(subscribe, read, () => EMPTY_SESSION)
-  return [session, updateSession] as const
+  const update = useCallback((updater: (prev: CustomerSession) => CustomerSession) => {
+    updateSession(updater)
+  }, [])
+  return [session, update] as const
 }

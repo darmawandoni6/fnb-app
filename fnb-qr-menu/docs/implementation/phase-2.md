@@ -217,21 +217,21 @@ Verify: clearing `localStorage` and opening `/` lands on `/tidak-valid`.
 
 ## Phase Checklist
 
-- [ ] Routes all resolve; `*` redirects to `/`.
-- [ ] `?meja` applies to the session then disappears from the URL.
-- [ ] Two tabs share the session through the `storage` event.
-- [ ] A new `qr` clears cart and orders.
-- [ ] Category tabs and search filter the grid.
-- [ ] Quick add merges into one line with clamped qty.
-- [ ] Menu detail add and `?edit` save both work, including the merge case.
-- [ ] Loading, empty, and error states render.
-- [ ] `npm run lint && npm run format:check && npm run build` pass.
+- [x] Routes all resolve; `*` redirects to `/`.
+- [x] `?meja` applies to the session then disappears from the URL.
+- [x] Two tabs share the session through the `storage` event.
+- [x] A new `qr` clears cart and orders.
+- [x] Category tabs and search filter the grid.
+- [x] Quick add merges into one line with clamped qty.
+- [x] Menu detail add and `?edit` save both work, including the merge case.
+- [x] Loading, empty, and error states render.
+- [x] `npm run lint && npm run format:check && npm run build` pass.
 
 ## Exit Criteria
 
-- [ ] Browsing and cart editing work end-to-end on mock data.
-- [ ] No money aggregate is computed anywhere.
-- [ ] Phase 2.5 can build the cart page on top of `cartLines` and `session.cart`.
+- [x] Browsing and cart editing work end-to-end on mock data.
+- [x] No money aggregate is computed anywhere.
+- [x] Phase 2.5 can build the cart page on top of `cartLines` and `session.cart`.
 
 ## Gotchas
 

@@ -1,24 +1,41 @@
-import { Button } from '@/components/ui/button'
-import { useCustomerSession } from '@/features/session/store'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+
+import { ROUTES } from '@/constants/routes'
+
+import { Toaster } from '@/components/ui/sonner'
+import { MenuDetailPage } from '@/features/browse/pages/MenuDetailPage'
+import { MenuHomePage } from '@/features/browse/pages/MenuHomePage'
+import { CartPage } from '@/features/checkout/pages/CartPage'
+import { ClosedPage } from '@/features/checkout/pages/ClosedPage'
+import { InvalidTablePage } from '@/features/checkout/pages/InvalidTablePage'
+import { StatusPage } from '@/features/orders/pages/StatusPage'
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      retry: 1,
+    },
+  },
+})
 
 export default function App() {
-  const [session, update] = useCustomerSession()
-
-  function handleAdd() {
-    update((prev) => ({
-      ...prev,
-      cart: [...prev.cart, { menuId: `demo-${prev.cart.length + 1}`, qty: 1, note: '' }],
-    }))
-  }
-
   return (
-    <main className="bg-canvas font-ui text-text min-h-dvh">
-      <div className="mx-auto flex max-w-md flex-col gap-4 p-6">
-        <h1 className="font-editorial text-2xl">QR Menu</h1>
-        <p className="text-text-muted">Foundation shell — screens land in Phase 1.</p>
-        <p className="text-sm">Cart lines: {session.cart.length}</p>
-        <Button onClick={handleAdd}>Tambah baris uji</Button>
-      </div>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <Routes>
+          <Route path={ROUTES.HOME} element={<MenuHomePage />} />
+          <Route path={ROUTES.MENU} element={<MenuDetailPage />} />
+          <Route path={ROUTES.CART} element={<CartPage />} />
+          <Route path={ROUTES.STATUS} element={<StatusPage />} />
+          <Route path={ROUTES.INVALID} element={<InvalidTablePage />} />
+          <Route path={ROUTES.CLOSED} element={<ClosedPage />} />
+          <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
+        </Routes>
+      </BrowserRouter>
+      <Toaster />
+    </QueryClientProvider>
   )
 }

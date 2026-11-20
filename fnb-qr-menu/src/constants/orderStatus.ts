@@ -8,3 +8,14 @@ export const ORDER_STATUS = {
 } as const
 
 export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS]
+
+export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
+  MENUNGGU: 'Menunggu',
+  DIPROSES: 'Diproses',
+  SIAP: 'Siap',
+  DIANTAR: 'Diantar',
+  SELESAI: 'Selesai',
+  DIBATALKAN: 'Dibatalkan',
+}
+
+export const POLL_INTERVAL_MS = 5_000

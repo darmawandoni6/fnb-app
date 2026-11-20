@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 
 import { Clock } from 'lucide-react'
 
@@ -6,11 +6,17 @@ import { ROUTES } from '@/constants/routes'
 
 import { AppShell } from '@/components/AppShell'
 import { Button } from '@/components/ui/button'
+import { usePublicMenu } from '@/features/catalog/hooks'
 import { useCustomerSession } from '@/features/session/store'
 
 export function ClosedPage() {
-  const [, updateSession] = useCustomerSession()
+  const [session, updateSession] = useCustomerSession()
+  const { data: menuData } = usePublicMenu(session.qr)
   const navigate = useNavigate()
+
+  if (menuData?.isOpen) {
+    return <Navigate to={ROUTES.HOME} replace />
+  }
 
   function handleBrowseOnly() {
     updateSession((prev) => ({ ...prev, browseOnly: true }))

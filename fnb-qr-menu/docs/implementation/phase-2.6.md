@@ -143,25 +143,25 @@ Verify: `demo-invalid` and an unknown token both land here.
 
 ## Phase Checklist
 
-- [ ] `/status` with no orders redirects to `/`.
-- [ ] Cards render newest first with exactly one open.
-- [ ] Only the open card polls; collapsed cards render from `snapshot`.
-- [ ] Polling stops on `SELESAI` and `DIBATALKAN`.
-- [ ] Stepper derives from the aggregate status only.
-- [ ] `CANCELLED` items stay visible, crossed out.
-- [ ] Payment badge and server totals render as returned.
-- [ ] Cancel works on `PENDING`; a `LUNAS` order warns about the refund.
-- [ ] A bad tracking token shows the invalid-order state without breaking other cards.
-- [ ] `429` backs off and keeps the last snapshot.
-- [ ] "Tambah pesanan" returns to `/` with orders preserved.
-- [ ] `/tutup` and `/tidak-valid` behave per their guards.
-- [ ] `npm run lint && npm run format:check && npm run build` pass.
+- [x] `/status` with no orders redirects to `/`.
+- [x] Cards render newest first with exactly one open.
+- [x] Only the open card polls; collapsed cards render from `snapshot`.
+- [x] Polling stops on `SELESAI` and `DIBATALKAN`.
+- [x] Stepper derives from the aggregate status only.
+- [x] `CANCELLED` items stay visible, crossed out.
+- [x] Payment badge and server totals render as returned.
+- [x] Cancel works on `PENDING`; a `LUNAS` order warns about the refund.
+- [x] A bad tracking token shows the invalid-order state without breaking other cards.
+- [x] `429` backs off and keeps the last snapshot.
+- [x] "Tambah pesanan" returns to `/` with orders preserved.
+- [x] `/tutup` and `/tidak-valid` behave per their guards.
+- [x] `npm run lint && npm run format:check && npm run build` pass.
 
 ## Exit Criteria
 
-- [ ] The full mock flow works: scan → browse → cart → order → track → cancel.
-- [ ] No screen computes order status or money.
-- [ ] Phase 3 needs no component change.
+- [x] The full mock flow works: scan → browse → cart → order → track → cancel.
+- [x] No screen computes order status or money.
+- [x] Phase 3 needs no component change.
 
 ## Gotchas
 

@@ -16,15 +16,15 @@ Folder and runtime structure for the public `fnb-qr-menu` application. Based on 
 
 ## Routes
 
-| Route | Search params | Purpose |
-|---|---|---|
-| `/` | `?meja=<qr_token>` | Menu home: cafe name, search, categories, quick add |
-| `/menu/:menuId` | `?edit=<lineKey>` | Menu detail: qty, note, add or save the cart line |
-| `/keranjang` | — | Cart lines, qty, notes, submit |
-| `/status` | — | Order status and item statuses, polling |
-| `/tidak-valid` | — | Table QR is missing, unknown, or inactive |
-| `/tutup` | — | Store is closed (`is_open = false`) |
-| `*` | — | Not found; redirect to `/` |
+| Route           | Search params      | Purpose                                             |
+| --------------- | ------------------ | --------------------------------------------------- |
+| `/`             | `?meja=<qr_token>` | Menu home: cafe name, search, categories, quick add |
+| `/menu/:menuId` | `?edit=<lineKey>`  | Menu detail: qty, note, add or save the cart line   |
+| `/keranjang`    | —                  | Cart lines, qty, notes, submit                      |
+| `/status`       | —                  | Order status and item statuses, polling             |
+| `/tidak-valid`  | —                  | Table QR is missing, unknown, or inactive           |
+| `/tutup`        | —                  | Store is closed (`is_open = false`)                 |
+| `*`             | —                  | Not found; redirect to `/`                          |
 
 Route guards:
 

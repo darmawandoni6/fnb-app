@@ -6,22 +6,22 @@
 
 ## Selected Stack
 
-| Area | Technology | Reason |
-|---|---|---|
-| Build tool | Vite | Fast dev server, native ESM, SPA build |
-| UI framework | React | Component model, large ecosystem |
-| Language | TypeScript (strict) | Static typing across API and UI state |
-| Routing | React Router (`react-router-dom`) | Map, cart, menu detail, tracking, and closed states |
-| Server state | TanStack Query | Polling via `refetchInterval`, `queryOptions`, caching |
-| HTTP client | Axios | Interceptors for the base URL, envelope unwrapping, error mapping |
-| Forms | React Hook Form | Cart note and qty inputs on the menu detail screen |
-| Validation | Zod + `@hookform/resolvers` | Schema is the single source for validation and inferred types |
-| UI components | shadcn/ui | Source-owned accessible components on Radix primitives |
-| Styling | Tailwind CSS v4 | Utility styling; iul design tokens ported into `@theme` |
-| Icons | lucide-react | Default shadcn icon library |
-| Testing | Vitest | Unit tests for cart, session store, and polling predicate |
-| Linting | Oxlint | Fast static checks |
-| Formatting | Prettier + `prettier-plugin-sort-imports` + `prettier-plugin-tailwindcss` | Consistent formatting, sorted imports, sorted Tailwind classes |
+| Area          | Technology                                                                | Reason                                                            |
+| ------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Build tool    | Vite                                                                      | Fast dev server, native ESM, SPA build                            |
+| UI framework  | React                                                                     | Component model, large ecosystem                                  |
+| Language      | TypeScript (strict)                                                       | Static typing across API and UI state                             |
+| Routing       | React Router (`react-router-dom`)                                         | Map, cart, menu detail, tracking, and closed states               |
+| Server state  | TanStack Query                                                            | Polling via `refetchInterval`, `queryOptions`, caching            |
+| HTTP client   | Axios                                                                     | Interceptors for the base URL, envelope unwrapping, error mapping |
+| Forms         | React Hook Form                                                           | Cart note and qty inputs on the menu detail screen                |
+| Validation    | Zod + `@hookform/resolvers`                                               | Schema is the single source for validation and inferred types     |
+| UI components | shadcn/ui                                                                 | Source-owned accessible components on Radix primitives            |
+| Styling       | Tailwind CSS v4                                                           | Utility styling; iul design tokens ported into `@theme`           |
+| Icons         | lucide-react                                                              | Default shadcn icon library                                       |
+| Testing       | Vitest                                                                    | Unit tests for cart, session store, and polling predicate         |
+| Linting       | Oxlint                                                                    | Fast static checks                                                |
+| Formatting    | Prettier + `prettier-plugin-sort-imports` + `prettier-plugin-tailwindcss` | Consistent formatting, sorted imports, sorted Tailwind classes    |
 
 Single Page Application only. No SSR, no `@tanstack/react-router`, no `@tanstack/react-start`, no nitro.
 
@@ -42,14 +42,14 @@ Single Page Application only. No SSR, no `@tanstack/react-router`, no `@tanstack
 
 Adapted from the iul reference; routes and search params are defined in `docs/qr-menu-structure.md`.
 
-| Screen | Route | Source of data |
-|---|---|---|
-| Menu home | `/` | `GET /public/tables/:qr_token/menu` |
-| Menu detail | `/menu/:menuId` | same menu query (cache) |
-| Cart | `/keranjang` | session store + menu query |
-| Order status | `/status` | `GET /public/orders/:tracking_token`, polled for the open card |
-| Invalid QR | `/tidak-valid` | 404 from the menu endpoint |
-| Store closed | `/tutup` | `is_open = false` |
+| Screen       | Route           | Source of data                                                 |
+| ------------ | --------------- | -------------------------------------------------------------- |
+| Menu home    | `/`             | `GET /public/tables/:qr_token/menu`                            |
+| Menu detail  | `/menu/:menuId` | same menu query (cache)                                        |
+| Cart         | `/keranjang`    | session store + menu query                                     |
+| Order status | `/status`       | `GET /public/orders/:tracking_token`, polled for the open card |
+| Invalid QR   | `/tidak-valid`  | 404 from the menu endpoint                                     |
+| Store closed | `/tutup`        | `is_open = false`                                              |
 
 ## Mock Switch
 
@@ -103,12 +103,12 @@ Read with `useSyncExternalStore`; write with `update(draft => ...)`. A different
 
 ## Public API
 
-| Method | Endpoint | Purpose |
-|---|---|---|
-| `GET` | `/public/tables/:qr_token/menu` | Available menus, categories, `is_open`, `cafe_name`, `tax_percent` |
-| `POST` | `/public/tables/:qr_token/orders` | Create one QR order; returns `order_id` and `tracking_token` once |
-| `GET` | `/public/orders/:tracking_token` | Order status and each item status |
-| `POST` | `/public/orders/:tracking_token/cancel` | Cancel one `PENDING` item |
+| Method | Endpoint                                | Purpose                                                            |
+| ------ | --------------------------------------- | ------------------------------------------------------------------ |
+| `GET`  | `/public/tables/:qr_token/menu`         | Available menus, categories, `is_open`, `cafe_name`, `tax_percent` |
+| `POST` | `/public/tables/:qr_token/orders`       | Create one QR order; returns `order_id` and `tracking_token` once  |
+| `GET`  | `/public/orders/:tracking_token`        | Order status and each item status                                  |
+| `POST` | `/public/orders/:tracking_token/cancel` | Cancel one `PENDING` item                                          |
 
 Rate limits: 60/minute menu per `qr_token`, 5/minute order per `qr_token`, 30/minute status per client IP. A `429` response must back off, not retry immediately.
 
@@ -116,18 +116,18 @@ Rate limits: 60/minute menu per `qr_token`, 5/minute order per `qr_token`, 30/mi
 
 The iul reference targets a different backend. These mappings are deliberate; the server is unchanged.
 
-| iul | `fnb-server` today | Adaptation |
-|---|---|---|
-| `GET /public/menu` + `GET /public/tables/:code` | Menu is bound to a table: `GET /public/tables/:qr_token/menu` | One request; 404 means the QR is invalid |
-| `POST /public/orders` | `POST /public/tables/:qr_token/orders` | `qr_token` comes from the session |
-| `GET /public/orders/:id` | `GET /public/orders/:tracking_token` | Lookup by tracking token hash |
-| `order.timeline` | Not returned | Stepper is derived from the aggregate `status` only |
-| `tableNumber` in responses | Not returned | Table label omitted; header shows `cafe_name` only |
-| `cafe.hours` | Only `settings.is_open` | `/tutup` is driven by `is_open` alone |
-| `popularMenuIds`, `tags`, `description` | Not returned | Popular strip and tags dropped |
-| Client `orderTotals()` | Server returns totals | Client displays server figures only |
-| `@starter/shared` workspace package | No shared package | Helpers live in `src/lib/` |
-| Order history in the session | API has no order list endpoint | Client keeps `orders[]` in `localStorage`; only the open card polls |
+| iul                                             | `fnb-server` today                                            | Adaptation                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `GET /public/menu` + `GET /public/tables/:code` | Menu is bound to a table: `GET /public/tables/:qr_token/menu` | One request; 404 means the QR is invalid                            |
+| `POST /public/orders`                           | `POST /public/tables/:qr_token/orders`                        | `qr_token` comes from the session                                   |
+| `GET /public/orders/:id`                        | `GET /public/orders/:tracking_token`                          | Lookup by tracking token hash                                       |
+| `order.timeline`                                | Not returned                                                  | Stepper is derived from the aggregate `status` only                 |
+| `tableNumber` in responses                      | Not returned                                                  | Table label omitted; header shows `cafe_name` only                  |
+| `cafe.hours`                                    | Only `settings.is_open`                                       | `/tutup` is driven by `is_open` alone                               |
+| `popularMenuIds`, `tags`, `description`         | Not returned                                                  | Popular strip and tags dropped                                      |
+| Client `orderTotals()`                          | Server returns totals                                         | Client displays server figures only                                 |
+| `@starter/shared` workspace package             | No shared package                                             | Helpers live in `src/lib/`                                          |
+| Order history in the session                    | API has no order list endpoint                                | Client keeps `orders[]` in `localStorage`; only the open card polls |
 
 ## Polling Rules
 

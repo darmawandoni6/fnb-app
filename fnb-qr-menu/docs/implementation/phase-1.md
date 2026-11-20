@@ -63,13 +63,13 @@ export async function getPublicMenu(qrToken: string): Promise<PublicMenu>
 
 Scenario table:
 
-| `qr_token` | Response |
-|---|---|
-| `demo-meja` | Normal open store |
-| `demo-tutup` | `is_open = false` |
-| `demo-habis` | Normal open store; order creation fails separately |
-| `demo-invalid` | `404 NOT_FOUND` |
-| anything else | `404 NOT_FOUND` |
+| `qr_token`     | Response                                           |
+| -------------- | -------------------------------------------------- |
+| `demo-meja`    | Normal open store                                  |
+| `demo-tutup`   | `is_open = false`                                  |
+| `demo-habis`   | Normal open store; order creation fails separately |
+| `demo-invalid` | `404 NOT_FOUND`                                    |
+| anything else  | `404 NOT_FOUND`                                    |
 
 Categories with no menus are omitted, mirroring the server.
 

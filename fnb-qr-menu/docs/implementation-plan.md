@@ -17,15 +17,15 @@ This file is the index. Each phase has its own file in `docs/implementation/` wi
 
 ## Phase Index
 
-| File | Phase | Tag | Depends on | Steps |
-|---|---|---|---|---|
-| `implementation/phase-0.md` | Scaffold and foundation | — | — | 13 |
-| `implementation/phase-1.md` | Mock layer | `[MOCK]` | phase 0 | 8 |
-| `implementation/phase-2.md` | Shell, session, menu home, menu detail | `[MOCK]` | phase 1 | 18 |
-| `implementation/phase-2.5.md` | Cart and order submit | `[MOCK]` | phase 2 | 8 |
-| `implementation/phase-2.6.md` | Status, closed, invalid | `[MOCK]` | phase 2.5 | 12 |
-| `implementation/phase-3.md` | API integration | `[TODO-API]` | phase 2.6 + `fnb-server` on `:8081` | 9 |
-| `implementation/phase-4.md` | Tests, polish, docs sync | — | phase 3 | 8 |
+| File                          | Phase                                  | Tag          | Depends on                          | Steps |
+| ----------------------------- | -------------------------------------- | ------------ | ----------------------------------- | ----- |
+| `implementation/phase-0.md`   | Scaffold and foundation                | —            | —                                   | 13    |
+| `implementation/phase-1.md`   | Mock layer                             | `[MOCK]`     | phase 0                             | 8     |
+| `implementation/phase-2.md`   | Shell, session, menu home, menu detail | `[MOCK]`     | phase 1                             | 18    |
+| `implementation/phase-2.5.md` | Cart and order submit                  | `[MOCK]`     | phase 2                             | 8     |
+| `implementation/phase-2.6.md` | Status, closed, invalid                | `[MOCK]`     | phase 2.5                           | 12    |
+| `implementation/phase-3.md`   | API integration                        | `[TODO-API]` | phase 2.6 + `fnb-server` on `:8081` | 9     |
+| `implementation/phase-4.md`   | Tests, polish, docs sync               | —            | phase 3                             | 8     |
 
 Run the phases in order. A phase is done only when its `Exit Criteria` pass.
 

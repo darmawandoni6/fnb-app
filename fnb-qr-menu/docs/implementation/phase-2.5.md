@@ -62,8 +62,7 @@ Files: `src/features/checkout/hooks.ts`
 ```ts
 export const useSendOrder = () =>
   useMutation({
-    mutationFn: (input: CreatePublicOrderRequest) =>
-      createPublicOrder(session.qr, input),
+    mutationFn: (input: CreatePublicOrderRequest) => createPublicOrder(session.qr, input),
   })
 ```
 

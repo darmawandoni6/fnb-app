@@ -22,8 +22,7 @@ export const orderQuery = (trackingToken: string) =>
     queryFn: () => getPublicOrder(trackingToken),
   })
 
-const isFinished = (status: OrderStatus) =>
-  status === 'SELESAI' || status === 'DIBATALKAN'
+const isFinished = (status: OrderStatus) => status === 'SELESAI' || status === 'DIBATALKAN'
 ```
 
 Verify: the predicate returns true only for the two terminal statuses.

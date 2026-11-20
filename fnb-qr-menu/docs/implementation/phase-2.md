@@ -25,15 +25,15 @@ Verify: the app renders with no console error.
 
 Files: `src/App.tsx`, `src/constants/routes.ts`
 
-| Route | Component |
-|---|---|
-| `/` | `MenuHomePage` |
-| `/menu/:menuId` | `MenuDetailPage` |
-| `/keranjang` | `CartPage` (Phase 2.5) |
-| `/status` | `StatusPage` (Phase 2.6) |
-| `/tidak-valid` | `InvalidTablePage` (Phase 2.6) |
-| `/tutup` | `ClosedPage` (Phase 2.6) |
-| `*` | `Navigate to="/"` |
+| Route           | Component                      |
+| --------------- | ------------------------------ |
+| `/`             | `MenuHomePage`                 |
+| `/menu/:menuId` | `MenuDetailPage`               |
+| `/keranjang`    | `CartPage` (Phase 2.5)         |
+| `/status`       | `StatusPage` (Phase 2.6)       |
+| `/tidak-valid`  | `InvalidTablePage` (Phase 2.6) |
+| `/tutup`        | `ClosedPage` (Phase 2.6)       |
+| `*`             | `Navigate to="/"`              |
 
 Create placeholder components for the Phase 2.5/2.6 screens so the router compiles.
 
@@ -166,8 +166,7 @@ Verify: throttling the mock latency to 3 s still shows skeletons, not a blank sc
 Files: `src/features/browse/cart.ts`, `src/constants/cart.ts`
 
 ```ts
-export const lineKey = (menuId: string, note: string) =>
-  `${menuId}|${note.trim().toLowerCase()}`
+export const lineKey = (menuId: string, note: string) => `${menuId}|${note.trim().toLowerCase()}`
 ```
 
 - `addToCart(cart, menuId, qty, note)` merges equal keys, clamps to `MAX_QTY`.

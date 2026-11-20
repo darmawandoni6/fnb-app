@@ -1,0 +1,81 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --color-canvas: #fbf5f0;
+  --color-canvas-warm: #fff8f1;
+  --color-surface: #ffffff;
+  --color-surface-muted: #f3ebe4;
+  --color-text: #1d1e1c;
+  --color-text-muted: #6a696a;
+  --color-text-faint: #858585;
+  --color-border: rgb(29 30 28 / 10%);
+  --color-accent: #fa5d00;
+  --color-accent-soft: rgb(250 93 0 / 10%);
+  --color-accent-text: #c1490b;
+  --color-positive: #23a40c;
+  --color-warning: #f18d2a;
+  --color-danger: #cb5c5b;
+  --color-focus-ring: #fa5d00;
+
+  --font-ui: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-editorial: 'IBM Plex Serif', ui-serif, Georgia, serif;
+
+  --radius-compact: 10px;
+  --radius-image: 16px;
+  --radius-card: 20px;
+  --radius-control: 30px;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.2);
+}
+
+:root {
+  --radius: 20px;
+  --background: #fbf5f0;
+  --foreground: #1d1e1c;
+  --card: #ffffff;
+  --card-foreground: #1d1e1c;
+  --popover: #ffffff;
+  --popover-foreground: #1d1e1c;
+  --primary: #fa5d00;
+  --primary-foreground: #ffffff;
+  --secondary: #f3ebe4;
+  --secondary-foreground: #1d1e1c;
+  --muted: #f3ebe4;
+  --muted-foreground: #6a696a;
+  --destructive: #cb5c5b;
+  --border: rgb(29 30 28 / 10%);
+  --input: rgb(29 30 28 / 10%);
+  --ring: #fa5d00;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-canvas font-ui text-text antialiased;
+  }
+}

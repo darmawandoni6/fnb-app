@@ -104,21 +104,21 @@ Verify: double-clicking submit creates exactly one order.
 
 ## Phase Checklist
 
-- [ ] Cart lists lines with unit prices and no aggregate total.
-- [ ] Stepper clamps at 50 and removing the last unit removes the line after confirmation.
-- [ ] Note edits persist to the session.
-- [ ] Hidden lines are excluded from the payload; an all-hidden cart cannot submit.
-- [ ] Submit prepends an order card and clears the cart.
-- [ ] `STORE_CLOSED` toasts and routes to `/tutup`.
-- [ ] `STOCK_NOT_ENOUGH` toasts and refetches.
-- [ ] Pending state blocks double submit.
-- [ ] `npm run lint && npm run format:check && npm run build` pass.
+- [x] Cart lists lines with unit prices and no aggregate total.
+- [x] Stepper clamps at 50 and removing the last unit removes the line after confirmation.
+- [x] Note edits persist to the session.
+- [x] Hidden lines are excluded from the payload; an all-hidden cart cannot submit.
+- [x] Submit prepends an order card and clears the cart.
+- [x] `STORE_CLOSED` toasts and routes to `/tutup`.
+- [x] `STOCK_NOT_ENOUGH` toasts and refetches.
+- [x] Pending state blocks double submit.
+- [x] `npm run lint && npm run format:check && npm run build` pass.
 
 ## Exit Criteria
 
-- [ ] An order can be created end-to-end on mock data and appears as a stored session order.
-- [ ] No client-side money aggregate exists anywhere in the cart flow.
-- [ ] Phase 2.6 can render the stored order on `/status`.
+- [x] An order can be created end-to-end on mock data and appears as a stored session order.
+- [x] No client-side money aggregate exists anywhere in the cart flow.
+- [x] Phase 2.6 can render the stored order on `/status`.
 
 ## Gotchas
 

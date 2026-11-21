@@ -26,6 +26,15 @@ Authorization: Bearer <access_token>
 
 The refresh token uses an httpOnly cookie. The database stores only the token hash in `sessions`. The login identity is `email`; there is no `username`.
 
+Refresh token contract:
+
+- Login returns only `access_token` in the body; the refresh token is delivered as the httpOnly `refresh_token` cookie (`Path=/auth`, `SameSite=Lax`, `Secure` in production) and is never echoed in a response.
+- `POST /auth/refresh` takes **no body**. The cookie is the credential; a missing cookie answers `401 UNAUTHORIZED`. Refresh rotates the session (the old token is revoked), sets a new cookie, and returns `{access_token}`.
+- `POST /auth/logout` revokes the session for that cookie and clears it; a missing cookie still returns `200`.
+- Browsers must send credentials (`credentials: "include"` in `fetch`). Non-browser clients must keep the cookie jar returned by login and reuse it on refresh.
+- In the Bruno collection, `auth/login` stores `accessToken` with `bru.setVar` and `bru.setEnvVar`; select the `Local` environment before running it, or the value stays session-only.
+
+
 ## Public — customer
 
 No login. The customer is identified by a table session token.
@@ -412,14 +421,19 @@ This draft is the source for the Bruno collection:
 ```text
 api-collection/
 ├── collection.bru
+├── health.bru    # GET /health
 ├── environments/local.bru
-├── auth/
-├── public/
-├── orders/
-├── menus/        # categories, menus, tables, table sessions
+├── auth/         # login, refresh, logout
+├── public/       # QR menu, orders, Midtrans callback, WebSocket
+├── orders/       # staff order board and item transitions
+├── menus/        # categories and menus
+├── tables/       # tables and table sessions
 ├── stock/        # ingredients, restock, adjust, movements, recipes
-└── users/        # users, settings, audit log
+├── users/        # users and settings
+└── audit/        # audit log
 ```
+
+Every route registered in `internal/delivery/http/router.go` has a request here.
 
 `order_number` is `DI-YYYYMMDD-SSS` for dine-in and `TA-YYYYMMDD-SSS` for take away; `SSS` is the daily sequence, zero-padded.
 

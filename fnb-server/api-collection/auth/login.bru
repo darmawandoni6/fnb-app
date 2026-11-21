@@ -23,7 +23,8 @@ body:json {
 
 script:post-response {
   if (res.status === 200 && res.body.success === true) {
-    bru.setVar("accessToken", res.body.data.access_token);
+    const token = res.body.data.access_token;
+    bru.setEnvVar("accessToken", token);
   }
 }
 
@@ -32,5 +33,20 @@ tests {
     expect(res.status).to.equal(200);
     expect(res.body.success).to.equal(true);
     expect(res.body.data.access_token).to.be.a("string");
+    expect(res.headers["set-cookie"]).to.include("refresh_token=");
+    expect(bru.getVar("accessToken")).to.be.a("string");
   });
+}
+
+docs {
+  # Login
+
+  Returns the access token in the body and sets the httpOnly `refresh_token`
+  cookie (`Path=/auth`). The client must keep cookies enabled and send them on
+  `POST /auth/refresh`; the refresh token never appears in a response body.
+
+  This request writes `accessToken` to the active environment, so after running
+  it the value is visible in the environment selector and every other request
+  can send `Authorization: Bearer {{accessToken}}`. Pick an environment
+  (`Local`) before running, otherwise the value only lives for this session.
 }

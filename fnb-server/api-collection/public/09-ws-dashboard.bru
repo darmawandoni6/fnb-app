@@ -1,0 +1,35 @@
+meta {
+  name: Subscribe as dashboard
+  type: websocket
+  seq: 9
+}
+
+ws {
+  url: {{wsUrl}}/ws
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "action": "subscribe",
+    "topic": "order:{{orderId}}"
+  }
+}
+
+docs {
+  # Dashboard socket
+
+  Uses the `OWNER`, `CASHIER`, or `KITCHEN` access token. Topic is
+  `order:<id>` for staff roles; `session:<token>` is reserved for the
+  table session socket in `08-ws-subscribe`.
+}
+
+tests {
+  test("receives socket messages", function() {
+    expect(res.status).to.equal(101);
+  });
+}

@@ -14,6 +14,13 @@ headers {
   Authorization: Bearer {{accessToken}}
 }
 
+docs {
+  # Logout
+
+  Sends the `refresh_token` cookie back to the API, which revokes the session
+  and clears the cookie. Safe to call without a cookie.
+}
+
 script:post-response {
   if (res.status === 200) {
     bru.setVar("accessToken", "");

@@ -10,16 +10,28 @@ post {
   auth: none
 }
 
+docs {
+  # Refresh session
+
+  No body. The httpOnly `refresh_token` cookie set by login is the credential;
+  without it the API answers `401 UNAUTHORIZED`. A successful refresh rotates
+  the session (old token revoked), sets a new cookie, and returns a new access
+  token. Run login again if the cookie expired (`REFRESH_TTL`).
+}
+
 script:post-response {
   if (res.status === 200 && res.body.success === true) {
-    bru.setVar("accessToken", res.body.data.access_token);
+    const token = res.body.data.access_token;
+    bru.setVar("accessToken", token);
+    bru.setEnvVar("accessToken", token);
   }
 }
 
 tests {
-  test("returns a refreshed access token", function() {
+  test("returns a new access token", function() {
     expect(res.status).to.equal(200);
     expect(res.body.success).to.equal(true);
     expect(res.body.data.access_token).to.be.a("string");
+    expect(res.headers["set-cookie"]).to.include("refresh_token=");
   });
 }

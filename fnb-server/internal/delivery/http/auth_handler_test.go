@@ -44,9 +44,13 @@ func (m *mockUserRepo) Count(ctx context.Context) (int64, error) {
 
 type mockSessionRepo struct {
 	sessions map[string]*domain.Session
+	users    map[uuid.UUID]*domain.User
 }
 
 func (m *mockSessionRepo) Create(ctx context.Context, session *domain.Session) error {
+	if m.users != nil {
+		session.User = *m.users[session.UserID]
+	}
 	m.sessions[session.TokenHash] = session
 	return nil
 }
@@ -93,7 +97,10 @@ func setupAuthRouter() (*echo.Echo, *usecase.AuthUsecase, *domain.User) {
 	}
 
 	userRepo := &mockUserRepo{users: map[string]*domain.User{testUser.Email: testUser}}
-	sessionRepo := &mockSessionRepo{sessions: make(map[string]*domain.Session)}
+	sessionRepo := &mockSessionRepo{
+		sessions: make(map[string]*domain.Session),
+		users:    map[uuid.UUID]*domain.User{testUser.ID: testUser},
+	}
 	authUsecase := usecase.NewAuthUsecase(userRepo, sessionRepo, "test-secret-key-12345", 15*time.Minute, 24*time.Hour)
 	handler := NewAuthHandler(authUsecase, false)
 
@@ -213,5 +220,53 @@ func TestAuthHandler_ProtectedAndMiddleware(t *testing.T) {
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200 OK, got %d. Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestAuthHandler_Refresh_RequiresCookieAndRotates(t *testing.T) {
+	e, _, _ := setupAuthRouter()
+
+	withoutCookie := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, withoutCookie)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("expected 401 without cookie, got %d", rec.Code)
+	}
+
+	loginBody := `{"email":"owner@test.com","password":"password123"}`
+	loginReq := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewBufferString(loginBody))
+	loginReq.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	loginRec := httptest.NewRecorder()
+	e.ServeHTTP(loginRec, loginReq)
+
+	var loginCookie *http.Cookie
+	for _, c := range loginRec.Result().Cookies() {
+		if c.Name == RefreshCookieName {
+			loginCookie = c
+		}
+	}
+	if loginCookie == nil || loginCookie.Value == "" {
+		t.Fatalf("login did not set the refresh cookie")
+	}
+
+	refreshReq := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
+	refreshReq.AddCookie(loginCookie)
+	refreshRec := httptest.NewRecorder()
+	e.ServeHTTP(refreshRec, refreshReq)
+	if refreshRec.Code != http.StatusOK {
+		t.Fatalf("expected 200 with cookie, got %d. Body: %s", refreshRec.Code, refreshRec.Body.String())
+	}
+
+	var rotated *http.Cookie
+	for _, c := range refreshRec.Result().Cookies() {
+		if c.Name == RefreshCookieName {
+			rotated = c
+		}
+	}
+	if rotated == nil || rotated.Value == "" {
+		t.Fatalf("refresh did not set a new cookie")
+	}
+	if rotated.Value == loginCookie.Value {
+		t.Fatalf("refresh must rotate the token, got the same value")
 	}
 }

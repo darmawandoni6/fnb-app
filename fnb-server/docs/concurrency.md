@@ -30,6 +30,8 @@ One hub: `map[topic]map[*client]struct{}` guarded by a mutex, buffered send chan
 
 One goroutine, one fixed tick. Every job is idempotent and re-selects its candidates each tick. Each job opens its own short transaction per record; one failing record never aborts the tick.
 
+Implementation: `internal/delivery/worker/scheduler.go` ticks once per minute into `usecase.SchedulerUsecase.Tick`, started from `main` with the signal-cancelled context and joined with a `sync.WaitGroup` on shutdown. Thresholds are read from `settings` every tick.
+
 ## Verification
 
 Non-trivial concurrent logic requires focused tests and race detection:

@@ -20,4 +20,6 @@ type OrderQueryRepository interface {
 	List(ctx context.Context, filter OrderFilter) ([]Order, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Order, error)
 	GetByOrderNumber(ctx context.Context, orderNumber string) (*Order, error)
+	ListCashTimeoutIDs(ctx context.Context, q CashTimeoutQuery) ([]uuid.UUID, error)
+	ListItemMoves(ctx context.Context, q ItemMoveQuery) ([]ItemMove, error)
 }

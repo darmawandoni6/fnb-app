@@ -1,6 +1,11 @@
 package domain
 
-import "context"
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type OrderEvent struct {
 	Event string
@@ -16,6 +21,31 @@ type Event struct {
 	Topic string
 	Name  string
 	Data  any
+}
+
+type ItemMove struct {
+	OrderID uuid.UUID
+	ItemID  uuid.UUID
+	From    OrderItemStatus
+	To      OrderItemStatus
+}
+
+type CashTimeoutQuery struct {
+	Cutoff time.Time
+	Limit  int
+}
+
+type ItemMoveQuery struct {
+	From  OrderItemStatus
+	To    OrderItemStatus
+	Since *time.Time
+	Until *time.Time
+	Limit int
+}
+
+type IdleSessionQuery struct {
+	ExcludeStatuses []OrderStatus
+	Limit           int
 }
 
 type OrderEventData struct {

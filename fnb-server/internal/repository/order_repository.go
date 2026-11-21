@@ -293,3 +293,47 @@ func (r *OrderRepository) UpdatePaymentLogStatus(ctx context.Context, id uuid.UU
 }
 
 func clauseLocking() clause.Expression { return clause.Locking{Strength: "UPDATE"} }
+
+func (r *OrderRepository) ListCashTimeoutIDs(ctx context.Context, q domain.CashTimeoutQuery) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	err := r.db.WithContext(ctx).Model(&domain.Order{}).
+		Where("payment_status = ? AND canceled_at IS NULL AND payment_method = ? AND created_at < ?",
+			domain.PaymentStatusUnpaid, domain.PaymentMethodCash, q.Cutoff).
+		Order("created_at").
+		Limit(q.Limit).
+		Pluck("id", &ids).Error
+	if err != nil {
+		return nil, fmt.Errorf("list cash timeout orders: %w", err)
+	}
+	return ids, nil
+}
+
+func (r *OrderRepository) ListItemMoves(ctx context.Context, q domain.ItemMoveQuery) ([]domain.ItemMove, error) {
+	column := "updated_at"
+	if q.From == domain.OrderItemStatusDelivered {
+		column = "delivered_at"
+	}
+
+	query := r.db.WithContext(ctx).Model(&domain.OrderItem{}).Where("status = ?", q.From)
+	if q.Since != nil {
+		query = query.Where(column+" >= ?", *q.Since)
+	}
+	if q.Until != nil {
+		query = query.Where(column+" < ?", *q.Until)
+	}
+
+	var items []domain.OrderItem
+	if err := query.Order(column).Limit(q.Limit).Find(&items).Error; err != nil {
+		return nil, fmt.Errorf("list item moves: %w", err)
+	}
+
+	moves := make([]domain.ItemMove, 0, len(items))
+	for _, it := range items {
+		moves = append(moves, domain.ItemMove{
+			OrderID: it.OrderID,
+			ItemID:  it.ID,
+			From:    it.Status,
+		})
+	}
+	return moves, nil
+}

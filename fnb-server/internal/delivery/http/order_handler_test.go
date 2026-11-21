@@ -34,6 +34,14 @@ func (m *mockOrderQueryRepo) GetByOrderNumber(ctx context.Context, orderNumber s
 	return nil, nil
 }
 
+func (m *mockOrderQueryRepo) ListCashTimeoutIDs(context.Context, domain.CashTimeoutQuery) ([]uuid.UUID, error) {
+	return nil, nil
+}
+
+func (m *mockOrderQueryRepo) ListItemMoves(context.Context, domain.ItemMoveQuery) ([]domain.ItemMove, error) {
+	return nil, nil
+}
+
 type mockOrderMenuRepo struct {
 	menus map[uuid.UUID]domain.Menu
 }

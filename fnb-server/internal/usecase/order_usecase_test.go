@@ -60,6 +60,35 @@ func (m *mockOrderQueryRepo) GetByOrderNumber(ctx context.Context, orderNumber s
 	return nil, nil
 }
 
+func (m *mockOrderQueryRepo) ListCashTimeoutIDs(ctx context.Context, q domain.CashTimeoutQuery) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
+	for _, o := range m.byID {
+		if o.PaymentStatus != domain.PaymentStatusUnpaid || o.CanceledAt != nil {
+			continue
+		}
+		if o.PaymentMethod == nil || *o.PaymentMethod != domain.PaymentMethodCash {
+			continue
+		}
+		if o.CreatedAt.Before(q.Cutoff) {
+			ids = append(ids, o.ID)
+		}
+	}
+	return ids, nil
+}
+
+func (m *mockOrderQueryRepo) ListItemMoves(ctx context.Context, q domain.ItemMoveQuery) ([]domain.ItemMove, error) {
+	var moves []domain.ItemMove
+	for _, o := range m.byID {
+		for _, it := range o.Items {
+			if it.Status != q.From {
+				continue
+			}
+			moves = append(moves, domain.ItemMove{OrderID: o.ID, ItemID: it.ID, From: it.Status})
+		}
+	}
+	return moves, nil
+}
+
 type mockMenuRepo struct {
 	menus map[uuid.UUID]domain.Menu
 }

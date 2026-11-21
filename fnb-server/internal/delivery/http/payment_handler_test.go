@@ -25,6 +25,12 @@ func (r *callbackOrderRepo) List(ctx context.Context, f domain.OrderFilter) ([]d
 func (r *callbackOrderRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.Order, error) {
 	return nil, nil
 }
+func (r *callbackOrderRepo) ListCashTimeoutIDs(context.Context, domain.CashTimeoutQuery) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (r *callbackOrderRepo) ListItemMoves(context.Context, domain.ItemMoveQuery) ([]domain.ItemMove, error) {
+	return nil, nil
+}
 func (r *callbackOrderRepo) GetByOrderNumber(ctx context.Context, n string) (*domain.Order, error) {
 	for i := range r.orders {
 		if r.orders[i].OrderNumber == n {

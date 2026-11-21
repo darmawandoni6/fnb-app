@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -87,4 +88,23 @@ func isUniqueViolation(err error) bool {
 	}
 	msg := strings.ToLower(err.Error())
 	return strings.Contains(msg, "duplicate key") || strings.Contains(msg, "unique constraint")
+}
+
+func (r *TableSessionRepository) ListIdleOpen(ctx context.Context, q domain.IdleSessionQuery) ([]domain.TableSession, error) {
+	busy := r.db.Model(&domain.Order{}).
+		Select("table_session_id").
+		Where("table_session_id IS NOT NULL").
+		Where("status IN ?", q.ExcludeStatuses)
+
+	var sessions []domain.TableSession
+	err := r.db.WithContext(ctx).
+		Where("status = ?", domain.TableSessionStatusOpen).
+		Where("id NOT IN (?)", busy).
+		Order("started_at").
+		Limit(q.Limit).
+		Find(&sessions).Error
+	if err != nil {
+		return nil, fmt.Errorf("list idle table sessions: %w", err)
+	}
+	return sessions, nil
 }

@@ -28,6 +28,13 @@ func (r *wsTestRepo) GetByOrderNumber(context.Context, string) (*domain.Order, e
 	return nil, nil
 }
 
+func (r *wsTestRepo) ListCashTimeoutIDs(context.Context, domain.CashTimeoutQuery) ([]uuid.UUID, error) {
+	return nil, nil
+}
+func (r *wsTestRepo) ListItemMoves(context.Context, domain.ItemMoveQuery) ([]domain.ItemMove, error) {
+	return nil, nil
+}
+
 type wsTestSessionRepo struct {
 	sessions map[string]*domain.TableSession
 }
@@ -41,6 +48,9 @@ func (r *wsTestSessionRepo) GetBySessionToken(_ context.Context, token string) (
 func (r *wsTestSessionRepo) Create(context.Context, *domain.TableSession) error { return nil }
 func (r *wsTestSessionRepo) Close(context.Context, uuid.UUID, *uuid.UUID) error {
 	return nil
+}
+func (r *wsTestSessionRepo) ListIdleOpen(context.Context, domain.IdleSessionQuery) ([]domain.TableSession, error) {
+	return nil, nil
 }
 
 func newWSTestServer(t *testing.T) (*httptest.Server, *usecase.Hub) {

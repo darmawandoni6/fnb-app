@@ -1,5 +1,14 @@
 # Plan 07 — Scheduler
 
+> **Status:** DONE (Completed on 2026-11-21)
+> - `SchedulerUsecase.Tick` runs four jobs (cash timeout, `READY → DELIVERED`, `DELIVERED → COMPLETED`, idle session close) with errors joined and per-job failure counters.
+> - Thresholds read from `settings` every tick; a job failure logs a warning, the second consecutive failure logs an error, and the remaining jobs still run.
+> - Cash timeout reuses the plan 04 cancel helper (`cancelTimeout`), so stock restore and audit follow one path; only unpaid `CASH` orders older than the timeout are cancelled.
+> - `internal/delivery/worker/scheduler.go` ticks once per minute from `main` with the signal-cancelled context, joined by a `sync.WaitGroup`.
+> - Migration `000004_scheduler_indexes` adds the three partial indexes.
+> - Unit tests passing: `scheduler_usecase_test.go` (thresholds, idempotency, failure isolation).
+
+
 One loop, one minute tick, safe to repeat (PRD §12; `flow.md` scheduled jobs).
 
 Depends on: 04, 05, 06.

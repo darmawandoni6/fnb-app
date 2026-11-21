@@ -30,6 +30,18 @@ func newMockTableSessionRepo() *mockTableSessionRepo {
 	}
 }
 
+func (m *mockTableSessionRepo) ListIdleOpen(ctx context.Context, q domain.IdleSessionQuery) ([]domain.TableSession, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var out []domain.TableSession
+	for _, s := range m.sessions {
+		if s.Status == domain.TableSessionStatusOpen {
+			out = append(out, *s)
+		}
+	}
+	return out, nil
+}
+
 func (m *mockTableSessionRepo) GetOpenByTableID(ctx context.Context, tableID uuid.UUID) (*domain.TableSession, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

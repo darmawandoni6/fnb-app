@@ -38,6 +38,10 @@ func (r *testSessionRepo) GetBySessionToken(ctx context.Context, token string) (
 	return nil, nil
 }
 
+func (r *testSessionRepo) ListIdleOpen(context.Context, domain.IdleSessionQuery) ([]domain.TableSession, error) {
+	return nil, nil
+}
+
 func (r *testSessionRepo) Create(ctx context.Context, s *domain.TableSession) error {
 	r.session = s
 	return nil

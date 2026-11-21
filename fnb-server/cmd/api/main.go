@@ -5,10 +5,12 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 
 	"fnb-server/internal/config"
 	"fnb-server/internal/database"
+	"fnb-server/internal/delivery/worker"
 	"fnb-server/internal/repository"
 	"fnb-server/internal/usecase"
 	"fnb-server/pkg/logger"
@@ -42,10 +44,20 @@ func main() {
 	defer stop()
 
 	hub := newHub(ctx)
-	e := newRouter(db, cfg, hub, log)
+	scheduler := newSchedulerUsecase(db, hub, log)
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		worker.RunScheduler(ctx, scheduler, log)
+	}()
+
+	e := newRouter(db, cfg, hub, log)
 	if err := e.Start(":" + cfg.Port); err != nil {
 		log.Error("API server stopped", "error", err)
-		os.Exit(1)
 	}
+
+	stop()
+	wg.Wait()
 }

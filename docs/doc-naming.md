@@ -46,6 +46,7 @@ Use one of these category prefixes or folder structures so the document type is 
 |---|---|---|---|
 | Standards and rules | no prefix | permanent rules that always apply | `conventions.md`, `validation.md`, `logging.md` |
 | Plans | `plan-` prefix | active work plans not yet executed | `plan-stock.md`, `plan-users-settings.md` |
+| Milestone plans | `plans/` folder + `plan-NN-name.md` | multi-milestone work split into ordered files | `plans/plan-01-foundation.md` |
 | Phased implementation | `implementation/` folder + `phase-N.md` | execution breakdown by phase | `implementation/phase-0.md` |
 | API specification | `api-` prefix or `api.md` | endpoint contracts | `api.md`, `api-response.md` |
 | Reference | no prefix | facts and structure, not rules | `structure.md`, `tech-stack.md`, `flow.md` |

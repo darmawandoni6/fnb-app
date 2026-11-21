@@ -18,7 +18,3 @@ type TableRepository interface {
 type SettingRepository interface {
 	GetFirst(ctx context.Context) (*Setting, error)
 }
-
-type OrderRepository interface {
-	GetByTrackingTokenHash(ctx context.Context, hash string) (*Order, error)
-}

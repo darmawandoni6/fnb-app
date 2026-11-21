@@ -4,99 +4,180 @@ import (
 	"testing"
 )
 
-func TestAggregateOrderStatus(t *testing.T) {
-	tests := []struct {
-		name     string
-		items    []OrderItem
-		payment  PaymentStatus
-		expected OrderStatus
+func TestCalcTotals(t *testing.T) {
+	cases := []struct {
+		name        string
+		subtotal    int64
+		serviceRate float64
+		taxRate     float64
+		want        Totals
 	}{
 		{
-			name: "1. All PENDING -> MENUNGGU",
-			items: []OrderItem{
-				{Status: OrderItemStatusPending},
-				{Status: OrderItemStatusPending},
+			name:        "Standard PRD example 50000 with 5% and 10%",
+			subtotal:    50000,
+			serviceRate: 5,
+			taxRate:     10,
+			want: Totals{
+				Subtotal: 50000,
+				Service:  2500,
+				Tax:      5250,
+				Total:    57750,
 			},
-			payment:  PaymentStatusUnpaid,
-			expected: OrderStatusWaiting,
 		},
 		{
-			name: "2. One COOKING -> DIPROSES",
+			name:        "Zero rates",
+			subtotal:    50000,
+			serviceRate: 0,
+			taxRate:     0,
+			want: Totals{
+				Subtotal: 50000,
+				Service:  0,
+				Tax:      0,
+				Total:    50000,
+			},
+		},
+		{
+			name:        "Zero subtotal",
+			subtotal:    0,
+			serviceRate: 5,
+			taxRate:     10,
+			want: Totals{
+				Subtotal: 0,
+				Service:  0,
+				Tax:      0,
+				Total:    0,
+			},
+		},
+		{
+			name:        "1 rupiah subtotal with round half up",
+			subtotal:    1,
+			serviceRate: 50, // 1 * 0.5 = 0.5 -> 1
+			taxRate:     50, // (1 + 1) * 0.5 = 1.0 -> 1
+			want: Totals{
+				Subtotal: 1,
+				Service:  1,
+				Tax:      1,
+				Total:    3,
+			},
+		},
+		{
+			name:        "Round half up check",
+			subtotal:    10,
+			serviceRate: 5,  // 10 * 0.05 = 0.5 -> 1
+			taxRate:     5,  // 11 * 0.05 = 0.55 -> 1
+			want: Totals{
+				Subtotal: 10,
+				Service:  1,
+				Tax:      1,
+				Total:    12,
+			},
+		},
+		{
+			name:        "Large value overflow free",
+			subtotal:    1_000_000_000, // 1 billion
+			serviceRate: 5,
+			taxRate:     10,
+			want: Totals{
+				Subtotal: 1_000_000_000,
+				Service:  50_000_000,
+				Tax:      105_000_000,
+				Total:    1_155_000_000,
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := CalcTotals(tc.subtotal, tc.serviceRate, tc.taxRate)
+			if got != tc.want {
+				t.Errorf("CalcTotals(%d, %v, %v) = %+v, want %+v",
+					tc.subtotal, tc.serviceRate, tc.taxRate, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAggregateOrderStatus(t *testing.T) {
+	tests := []struct {
+		name      string
+		items     []OrderItem
+		payment   PaymentStatus
+		cancelled bool
+		expected  OrderStatus
+	}{
+		{
+			name: "1. Cancelled flag true -> DIBATALKAN",
 			items: []OrderItem{
 				{Status: OrderItemStatusPending},
+			},
+			payment:   PaymentStatusPaid,
+			cancelled: true,
+			expected:  OrderStatusCancelled,
+		},
+		{
+			name: "2. All items cancelled -> DIBATALKAN",
+			items: []OrderItem{
+				{Status: OrderItemStatusCancelled},
+				{Status: OrderItemStatusCancelled},
+			},
+			payment:   PaymentStatusPaid,
+			cancelled: false,
+			expected:  OrderStatusCancelled,
+		},
+		{
+			name: "3. PRD §5.3 Row 1: payment BELUM -> MENUNGGU",
+			items: []OrderItem{
 				{Status: OrderItemStatusCooking},
 			},
-			payment:  PaymentStatusPaid,
-			expected: OrderStatusProcessing,
+			payment:   PaymentStatusUnpaid,
+			cancelled: false,
+			expected:  OrderStatusWaiting,
 		},
 		{
-			name: "3. All READY -> SIAP",
+			name: "4. PRD §5.3 Row 2: payment LUNAS + active items not all completed -> DIPROSES",
 			items: []OrderItem{
-				{Status: OrderItemStatusReady},
-				{Status: OrderItemStatusReady},
-			},
-			payment:  PaymentStatusPaid,
-			expected: OrderStatusReady,
-		},
-		{
-			name: "4. One DELIVERED, others active -> DIANTAR",
-			items: []OrderItem{
-				{Status: OrderItemStatusDelivered},
+				{Status: OrderItemStatusCooking},
 				{Status: OrderItemStatusReady},
 			},
-			payment:  PaymentStatusPaid,
-			expected: OrderStatusDelivering,
+			payment:   PaymentStatusPaid,
+			cancelled: false,
+			expected:  OrderStatusProcessing,
 		},
 		{
-			name: "5. All DELIVERED + LUNAS -> SELESAI",
+			name: "5. PRD §5.3 Row 3: payment LUNAS + some delivered, some cooking -> DIPROSES",
 			items: []OrderItem{
-				{Status: OrderItemStatusDelivered},
+				{Status: OrderItemStatusCooking},
 				{Status: OrderItemStatusDelivered},
 			},
-			payment:  PaymentStatusPaid,
-			expected: OrderStatusCompleted,
+			payment:   PaymentStatusPaid,
+			cancelled: false,
+			expected:  OrderStatusProcessing,
 		},
 		{
-			name: "6. All DELIVERED + BELUM -> DIANTAR",
+			name: "6. PRD §5.3 Row 4: payment LUNAS + all items COMPLETED -> SELESAI",
 			items: []OrderItem{
-				{Status: OrderItemStatusDelivered},
-				{Status: OrderItemStatusDelivered},
+				{Status: OrderItemStatusCompleted},
+				{Status: OrderItemStatusCompleted},
 			},
-			payment:  PaymentStatusUnpaid,
-			expected: OrderStatusDelivering,
+			payment:   PaymentStatusPaid,
+			cancelled: false,
+			expected:  OrderStatusCompleted,
 		},
 		{
-			name: "7. All CANCELLED -> DIBATALKAN",
+			name: "7. All items COMPLETED or CANCELLED (at least one completed) -> SELESAI",
 			items: []OrderItem{
-				{Status: OrderItemStatusCancelled},
+				{Status: OrderItemStatusCompleted},
 				{Status: OrderItemStatusCancelled},
 			},
-			payment:  PaymentStatusUnpaid,
-			expected: OrderStatusCancelled,
-		},
-		{
-			name: "8. PENDING + READY mix -> DIPROSES",
-			items: []OrderItem{
-				{Status: OrderItemStatusPending},
-				{Status: OrderItemStatusReady},
-			},
-			payment:  PaymentStatusPaid,
-			expected: OrderStatusProcessing,
-		},
-		{
-			name: "9. Cancelled items excluded from active count",
-			items: []OrderItem{
-				{Status: OrderItemStatusReady},
-				{Status: OrderItemStatusCancelled},
-			},
-			payment:  PaymentStatusPaid,
-			expected: OrderStatusReady,
+			payment:   PaymentStatusPaid,
+			cancelled: false,
+			expected:  OrderStatusCompleted,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := AggregateOrderStatus(tc.items, tc.payment)
+			got := AggregateOrderStatus(tc.items, tc.payment, tc.cancelled)
 			if got != tc.expected {
 				t.Errorf("AggregateOrderStatus() = %v, want %v", got, tc.expected)
 			}
@@ -105,49 +186,36 @@ func TestAggregateOrderStatus(t *testing.T) {
 }
 
 func TestValidateItemTransition(t *testing.T) {
-	valid := [][2]OrderItemStatus{
-		{OrderItemStatusPending, OrderItemStatusCooking},
-		{OrderItemStatusCooking, OrderItemStatusReady},
-		{OrderItemStatusReady, OrderItemStatusDelivered},
-	}
-	for _, pair := range valid {
-		if err := ValidateItemTransition(pair[0], pair[1]); err != nil {
-			t.Errorf("expected valid transition from %s to %s, got error: %v", pair[0], pair[1], err)
-		}
+	allStatuses := []OrderItemStatus{
+		OrderItemStatusPending,
+		OrderItemStatusCooking,
+		OrderItemStatusReady,
+		OrderItemStatusDelivered,
+		OrderItemStatusCompleted,
+		OrderItemStatusCancelled,
 	}
 
-	invalid := [][2]OrderItemStatus{
-		{OrderItemStatusPending, OrderItemStatusReady},
-		{OrderItemStatusPending, OrderItemStatusDelivered},
-		{OrderItemStatusCooking, OrderItemStatusDelivered},
-		{OrderItemStatusCooking, OrderItemStatusPending},
-		{OrderItemStatusReady, OrderItemStatusCooking},
-		{OrderItemStatusDelivered, OrderItemStatusReady},
-		{OrderItemStatusCancelled, OrderItemStatusCooking},
+	allowed := map[[2]OrderItemStatus]bool{
+		{OrderItemStatusPending, OrderItemStatusCooking}:     true,
+		{OrderItemStatusCooking, OrderItemStatusReady}:       true,
+		{OrderItemStatusReady, OrderItemStatusDelivered}:     true,
+		{OrderItemStatusDelivered, OrderItemStatusCompleted}: true,
 	}
-	for _, pair := range invalid {
-		if err := ValidateItemTransition(pair[0], pair[1]); err == nil {
-			t.Errorf("expected error for invalid transition from %s to %s, got nil", pair[0], pair[1])
-		}
-	}
-}
 
-func TestCalcTax(t *testing.T) {
-	cases := []struct {
-		amount  int64
-		percent float64
-		want    int64
-	}{
-		{25000, 10, 2500},   // exact
-		{33333, 10, 3333},   // rounds down (3333.3)
-		{33335, 10, 3334},   // rounds up (3333.5)
-		{0, 10, 0},          // zero amount
-		{25000, 0, 0},       // zero tax
-		{123456, 8.25, 10185}, // fractional percent (10185.12)
-	}
-	for _, c := range cases {
-		if got := CalcTax(c.amount, c.percent); got != c.want {
-			t.Errorf("CalcTax(%d, %v) = %d, want %d", c.amount, c.percent, got, c.want)
+	// Full 6x6 matrix verification
+	for _, from := range allStatuses {
+		for _, to := range allStatuses {
+			err := ValidateItemTransition(from, to)
+			pair := [2]OrderItemStatus{from, to}
+			if allowed[pair] {
+				if err != nil {
+					t.Errorf("expected transition %s -> %s to be allowed, got error: %v", from, to, err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("expected transition %s -> %s to be rejected, got nil error", from, to)
+				}
+			}
 		}
 	}
 }

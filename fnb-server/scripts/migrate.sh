@@ -2,7 +2,16 @@
 set -eu
 
 DB_URL="${DATABASE_URL:?DATABASE_URL is required}"
-psql_cmd="psql $DB_URL -v ON_ERROR_STOP=1"
+
+if command -v psql >/dev/null 2>&1; then
+  psql_cmd="psql $DB_URL -v ON_ERROR_STOP=1"
+elif podman ps --format '{{.Names}}' 2>/dev/null | grep -q 'fnb-server_db_1'; then
+  psql_cmd="podman exec -i fnb-server_db_1 psql -U postgres -d fnb-app -v ON_ERROR_STOP=1"
+elif [ -n "${COMPOSE:-}" ]; then
+  psql_cmd="$COMPOSE exec -T db psql -U postgres -d fnb-app -v ON_ERROR_STOP=1"
+else
+  psql_cmd="podman-compose exec -T db psql -U postgres -d fnb-app -v ON_ERROR_STOP=1"
+fi
 
 $psql_cmd -c 'CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW())'
 
@@ -16,10 +25,8 @@ for file in migrations/*.up.sql; do
   if $psql_cmd -tAc "SELECT 1 FROM schema_migrations WHERE version = '$version'" | grep -q 1; then
     continue
   fi
-  $psql_cmd <<SQL
-BEGIN;
-\\i $file
-INSERT INTO schema_migrations (version) VALUES ('$version');
-COMMIT;
-SQL
+  {
+    cat "$file"
+    echo "INSERT INTO schema_migrations (version) VALUES ('$version');"
+  } | $psql_cmd
 done

@@ -5,15 +5,13 @@ type OrderStatus string
 const (
 	OrderStatusWaiting    OrderStatus = "MENUNGGU"
 	OrderStatusProcessing OrderStatus = "DIPROSES"
-	OrderStatusReady      OrderStatus = "SIAP"
-	OrderStatusDelivering OrderStatus = "DIANTAR"
 	OrderStatusCompleted  OrderStatus = "SELESAI"
 	OrderStatusCancelled  OrderStatus = "DIBATALKAN"
 )
 
 func (s OrderStatus) Valid() bool {
 	switch s {
-	case OrderStatusWaiting, OrderStatusProcessing, OrderStatusReady, OrderStatusDelivering, OrderStatusCompleted, OrderStatusCancelled:
+	case OrderStatusWaiting, OrderStatusProcessing, OrderStatusCompleted, OrderStatusCancelled:
 		return true
 	default:
 		return false
@@ -27,12 +25,13 @@ const (
 	OrderItemStatusCooking   OrderItemStatus = "COOKING"
 	OrderItemStatusReady     OrderItemStatus = "READY"
 	OrderItemStatusDelivered OrderItemStatus = "DELIVERED"
+	OrderItemStatusCompleted OrderItemStatus = "COMPLETED"
 	OrderItemStatusCancelled OrderItemStatus = "CANCELLED"
 )
 
 func (s OrderItemStatus) Valid() bool {
 	switch s {
-	case OrderItemStatusPending, OrderItemStatusCooking, OrderItemStatusReady, OrderItemStatusDelivered, OrderItemStatusCancelled:
+	case OrderItemStatusPending, OrderItemStatusCooking, OrderItemStatusReady, OrderItemStatusDelivered, OrderItemStatusCompleted, OrderItemStatusCancelled:
 		return true
 	default:
 		return false
@@ -60,11 +59,11 @@ func (s PaymentMethod) Valid() bool { return s == PaymentMethodCash || s == Paym
 type OrderType string
 
 const (
-	OrderTypeQR     OrderType = "QR"
-	OrderTypeManual OrderType = "MANUAL"
+	OrderTypeDineIn   OrderType = "DINE_IN"
+	OrderTypeTakeAway OrderType = "TAKE_AWAY"
 )
 
-func (s OrderType) Valid() bool { return s == OrderTypeQR || s == OrderTypeManual }
+func (s OrderType) Valid() bool { return s == OrderTypeDineIn || s == OrderTypeTakeAway }
 
 type UserRole string
 
@@ -81,12 +80,56 @@ func (s UserRole) Valid() bool {
 type StockMovementType string
 
 const (
-	StockMovementIn         StockMovementType = "IN"
-	StockMovementOut        StockMovementType = "OUT"
-	StockMovementRestore    StockMovementType = "RESTORE"
-	StockMovementAdjustment StockMovementType = "ADJUSTMENT"
+	StockMovementTypeIn         StockMovementType = "IN"
+	StockMovementTypeOut        StockMovementType = "OUT"
+	StockMovementTypeRestore    StockMovementType = "RESTORE"
+	StockMovementTypeAdjustment StockMovementType = "ADJUSTMENT"
 )
 
 func (s StockMovementType) Valid() bool {
-	return s == StockMovementIn || s == StockMovementOut || s == StockMovementRestore || s == StockMovementAdjustment
+	switch s {
+	case StockMovementTypeIn, StockMovementTypeOut, StockMovementTypeRestore, StockMovementTypeAdjustment:
+		return true
+	default:
+		return false
+	}
+}
+
+type TableSessionStatus string
+
+const (
+	TableSessionStatusOpen   TableSessionStatus = "OPEN"
+	TableSessionStatusClosed TableSessionStatus = "CLOSED"
+)
+
+func (s TableSessionStatus) Valid() bool {
+	return s == TableSessionStatusOpen || s == TableSessionStatusClosed
+}
+
+type PaymentGateway string
+
+const (
+	PaymentGatewayMidtrans PaymentGateway = "MIDTRANS"
+)
+
+func (s PaymentGateway) Valid() bool {
+	return s == PaymentGatewayMidtrans
+}
+
+type PaymentLogStatus string
+
+const (
+	PaymentLogStatusPending PaymentLogStatus = "PENDING"
+	PaymentLogStatusSettled PaymentLogStatus = "SETTLED"
+	PaymentLogStatusExpired PaymentLogStatus = "EXPIRED"
+	PaymentLogStatusFailed  PaymentLogStatus = "FAILED"
+)
+
+func (s PaymentLogStatus) Valid() bool {
+	switch s {
+	case PaymentLogStatusPending, PaymentLogStatusSettled, PaymentLogStatusExpired, PaymentLogStatusFailed:
+		return true
+	default:
+		return false
+	}
 }

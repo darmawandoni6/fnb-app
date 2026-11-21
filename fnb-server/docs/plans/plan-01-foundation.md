@@ -1,5 +1,10 @@
 # Plan 01 — Foundation: schema and domain alignment
 
+> **Status:** DONE (Completed on 2026-11-21)
+> - Migration `000003_prd_alignment` applied & verified.
+> - Domain enums, models, repositories, and pure calculation functions implemented.
+> - Unit tests passing: `go test ./internal/domain/...`.
+
 Brings the database and `internal/domain` in line with PRD §5, §6, §10. No HTTP endpoint changes here; every later plan builds on this.
 
 Depends on: nothing.

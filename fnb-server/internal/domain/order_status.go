@@ -2,69 +2,77 @@ package domain
 
 import (
 	"fmt"
+	"math"
 	"net/http"
 )
 
-func AggregateOrderStatus(items []OrderItem, payment PaymentStatus) OrderStatus {
-	var active []OrderItem
-	for _, it := range items {
-		if it.Status != OrderItemStatusCancelled {
-			active = append(active, it)
-		}
-	}
+type Totals struct {
+	Subtotal int64 `json:"subtotal"`
+	Service  int64 `json:"service"`
+	Tax      int64 `json:"tax"`
+	Total    int64 `json:"total"`
+}
 
-	if len(active) == 0 {
+// CalcTotals implements PRD §6: service on subtotal, tax on subtotal+service,
+// round half up per component, integer rupiah.
+func CalcTotals(subtotal int64, serviceRate, taxRate float64) Totals {
+	service := calcComponent(subtotal, serviceRate)
+	tax := calcComponent(subtotal+service, taxRate)
+	return Totals{
+		Subtotal: subtotal,
+		Service:  service,
+		Tax:      tax,
+		Total:    subtotal + service + tax,
+	}
+}
+
+func calcComponent(amount int64, rate float64) int64 {
+	if amount <= 0 || rate <= 0 {
+		return 0
+	}
+	return int64(math.Round(float64(amount) * rate / 100.0))
+}
+
+// CalcTax is kept as a helper for backward compatibility where only tax is calculated.
+func CalcTax(amount int64, percent float64) int64 {
+	return calcComponent(amount, percent)
+}
+
+// AggregateOrderStatus implements PRD §5.3:
+// 1. cancelled == true -> DIBATALKAN.
+// 2. all items CANCELLED -> DIBATALKAN.
+// 3. payment == BELUM -> MENUNGGU.
+// 4. every item COMPLETED or CANCELLED -> SELESAI.
+// 5. otherwise -> DIPROSES.
+func AggregateOrderStatus(items []OrderItem, payment PaymentStatus, cancelled bool) OrderStatus {
+	if cancelled {
 		return OrderStatusCancelled
 	}
 
-	allPending := true
-	for _, it := range active {
-		if it.Status != OrderItemStatusPending {
-			allPending = false
-			break
-		}
-	}
-	if allPending {
+	if len(items) == 0 {
 		return OrderStatusWaiting
 	}
 
-	for _, it := range active {
-		if it.Status == OrderItemStatusCooking {
-			return OrderStatusProcessing
+	allCancelled := true
+	allCompletedOrCancelled := true
+	for _, it := range items {
+		if it.Status != OrderItemStatusCancelled {
+			allCancelled = false
+		}
+		if it.Status != OrderItemStatusCompleted && it.Status != OrderItemStatusCancelled {
+			allCompletedOrCancelled = false
 		}
 	}
 
-	allDelivered := true
-	for _, it := range active {
-		if it.Status != OrderItemStatusDelivered {
-			allDelivered = false
-			break
-		}
+	if allCancelled {
+		return OrderStatusCancelled
 	}
-	if allDelivered {
-		if payment == PaymentStatusPaid {
-			return OrderStatusCompleted
-		}
-		return OrderStatusDelivering
+	if payment == PaymentStatusUnpaid {
+		return OrderStatusWaiting
 	}
-
-	for _, it := range active {
-		if it.Status == OrderItemStatusDelivered {
-			return OrderStatusDelivering
-		}
+	if allCompletedOrCancelled {
+		return OrderStatusCompleted
 	}
-
-	allReady := true
-	for _, it := range active {
-		if it.Status != OrderItemStatusReady {
-			allReady = false
-			break
-		}
-	}
-	if allReady {
-		return OrderStatusReady
-	}
-
 	return OrderStatusProcessing
 }
 
@@ -78,15 +86,8 @@ func ValidateItemTransition(from, to OrderItemStatus) error {
 	if from == OrderItemStatusReady && to == OrderItemStatusDelivered {
 		return nil
 	}
+	if from == OrderItemStatusDelivered && to == OrderItemStatusCompleted {
+		return nil
+	}
 	return NewError(CodeInvalidTransition, fmt.Sprintf("invalid transition from %s to %s", from, to), http.StatusConflict, nil)
-}
-
-// CalcTax computes integer rupiah tax: amount * percent / 100, rounded half away from zero,
-// without float arithmetic (PRD §4.2). percent is stored as numeric; parse it exactly.
-func CalcTax(amount int64, percent float64) int64 {
-	// ponytail: percent arrives as float64 from the numeric column; scale by 1e6 to
-	// capture typical tax precision (e.g. 10, 8.25). Upgrade: parse numeric as string/decimal.
-	scaled := int64(percent*1e6+0.5) * amount
-	tax := (scaled + 50_000_000) / 100_000_000 // /1e6 then /100 with half-up rounding
-	return tax
 }

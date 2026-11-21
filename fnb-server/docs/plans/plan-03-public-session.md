@@ -1,4 +1,13 @@
-# Plan 03 — Public customer session (DONE)
+# Plan 03 — Public customer session
+
+> **Status:** DONE (Completed on 2026-11-21)
+> - Implemented `TableSessionUsecase` with idempotent open and concurrency race recovery.
+> - Implemented `SessionMiddleware` validating `X-Session-Token` header and storing session in context.
+> - Masked `X-Session-Token` in request logger.
+> - Rewrote `PublicUsecase.Menu` and updated DTOs (`service_rate`, `tax_rate`, omit empty categories).
+> - Registered `POST /public/tables/:qr_token/sessions` and `GET /public/menu`.
+> - Unit tests passing: `table_session_usecase_test.go`, `session_middleware_test.go`, `public_handler_test.go`, `request_logger_test.go`.
+> - Updated Bruno API collection in `api-collection/public/` and `environments/local.bru`.
 
 Replaces the `qr_token`-per-request + `tracking_token` model with table sessions and the `X-Session-Token` header (PRD §4.6, §11.2; `api.md` Public).
 

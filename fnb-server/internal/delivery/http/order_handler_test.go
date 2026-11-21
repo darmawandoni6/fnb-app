@@ -3,7 +3,6 @@ package http
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -51,26 +50,34 @@ func (m *mockOrderMenuRepo) ListAvailableByIDs(ctx context.Context, ids []uuid.U
 type mockOrderSettingRepo struct{}
 
 func (m *mockOrderSettingRepo) GetFirst(ctx context.Context) (*domain.Setting, error) {
-	return &domain.Setting{IsOpen: true, TaxRate: 10}, nil
+	return &domain.Setting{IsOpen: true, ServiceRate: 5, TaxRate: 10}, nil
 }
 
 type mockOrderTx struct{}
 
+func (t *mockOrderTx) NextOrderNumber(ctx context.Context, oType domain.OrderType, day time.Time) (string, error) {
+	return domain.FormatOrderNumber(oType, day, 1), nil
+}
 func (t *mockOrderTx) CreateOrder(ctx context.Context, o *domain.Order) error { return nil }
 func (t *mockOrderTx) CreateItems(ctx context.Context, items []domain.OrderItem) error {
 	return nil
 }
-func (t *mockOrderTx) ConsumeStock(ctx context.Context, items []domain.OrderItem) error { return nil }
-func (t *mockOrderTx) PersistCancel(ctx context.Context, o *domain.Order, itemID uuid.UUID, r interface{}) error {
+func (t *mockOrderTx) ConsumeStock(ctx context.Context, order *domain.Order, items []domain.OrderItem) error {
 	return nil
 }
-func (t *mockOrderTx) SetPayment(ctx context.Context, id uuid.UUID, s domain.PaymentStatus, m *domain.PaymentMethod) error {
+func (t *mockOrderTx) RestoreStock(ctx context.Context, order *domain.Order, items []domain.OrderItem) error {
 	return nil
 }
-func (t *mockOrderTx) SetItemStatus(ctx context.Context, orderID, itemID uuid.UUID, from, to domain.OrderItemStatus) error {
+func (t *mockOrderTx) CancelOrder(ctx context.Context, orderID uuid.UUID, reason string, actor *uuid.UUID) error {
+	return nil
+}
+func (t *mockOrderTx) SetItemStatus(ctx context.Context, orderID, itemID uuid.UUID, from, to domain.OrderItemStatus, actor *uuid.UUID) error {
 	return nil
 }
 func (t *mockOrderTx) UpdateAggregate(ctx context.Context, id uuid.UUID, s domain.OrderStatus) error {
+	return nil
+}
+func (t *mockOrderTx) Audit(ctx context.Context, entry *domain.AuditLog) error {
 	return nil
 }
 
@@ -124,25 +131,29 @@ func setupTestOrderApp(t *testing.T) (*echo.Echo, string, string, string, *domai
 	orderID := uuid.New()
 	itemID := uuid.New()
 	order := &domain.Order{
-		ID:             orderID,
-		OrderType:      domain.OrderTypeManual,
-		Status:         domain.OrderStatusWaiting,
-		PaymentStatus:  domain.PaymentStatusUnpaid,
-		SubtotalAmount: 20000,
-		TaxRateSnapshot: 10,
-		TaxAmount:      2000,
-		TotalAmount:    22000,
-		CreatedAt:      time.Now().UTC(),
-		UpdatedAt:      time.Now().UTC(),
+		ID:                  orderID,
+		OrderNumber:         "DI-20261121-001",
+		OrderType:           domain.OrderTypeTakeAway,
+		CustomerName:        "Budi",
+		Status:              domain.OrderStatusWaiting,
+		PaymentStatus:       domain.PaymentStatusUnpaid,
+		SubtotalAmount:      20000,
+		ServiceRateSnapshot: 5,
+		ServiceAmount:       1000,
+		TaxRateSnapshot:     10,
+		TaxAmount:           2100,
+		TotalAmount:         23100,
+		CreatedAt:           time.Now().UTC(),
+		UpdatedAt:           time.Now().UTC(),
 		Items: []domain.OrderItem{
 			{
-				ID:      itemID,
-				OrderID: orderID,
-				MenuID:  menuID,
-				Menu:    domain.Menu{ID: menuID, Name: "Latte"},
-				Qty:     1,
-				Price:   20000,
-				Status:  domain.OrderItemStatusPending,
+				ID:               itemID,
+				OrderID:          orderID,
+				MenuID:           menuID,
+				MenuNameSnapshot: "Latte",
+				Qty:              1,
+				Price:            20000,
+				Status:           domain.OrderItemStatusPending,
 			},
 		},
 	}
@@ -157,7 +168,7 @@ func setupTestOrderApp(t *testing.T) (*echo.Echo, string, string, string, *domai
 		},
 	}
 	settingRepo := &mockOrderSettingRepo{}
-	orderUsecase := usecase.NewOrderUsecase(orderRepo, menuRepo, settingRepo, testOrderTxRunner)
+	orderUsecase := usecase.NewOrderUsecase(orderRepo, menuRepo, settingRepo, testOrderTxRunner, nil, nil)
 	orderHandler := NewOrderHandler(orderUsecase)
 	authHandler := NewAuthHandler(authUsecase, false)
 
@@ -208,7 +219,7 @@ func TestOrderHandler_Get(t *testing.T) {
 func TestOrderHandler_CreateManual_RoleGuardAndSuccess(t *testing.T) {
 	e, ownerToken, _, kitchenToken, _, menuID := setupTestOrderApp(t)
 
-	body := `{"items":[{"menu_id":"` + menuID.String() + `","qty":1}]}`
+	body := `{"customer_name":"Budi","payment_method":"CASH","items":[{"menu_id":"` + menuID.String() + `","qty":1}]}`
 
 	// Kitchen cannot create manual orders (403 Forbidden)
 	req := httptest.NewRequest(http.MethodPost, "/orders/manual", bytes.NewBufferString(body))
@@ -231,41 +242,26 @@ func TestOrderHandler_CreateManual_RoleGuardAndSuccess(t *testing.T) {
 	}
 }
 
-func TestOrderHandler_Payment_Success(t *testing.T) {
-	e, ownerToken, _, _, order, _ := setupTestOrderApp(t)
+func TestOrderHandler_CancelOrder_RoleGuardAndSuccess(t *testing.T) {
+	e, ownerToken, cashierToken, _, order, _ := setupTestOrderApp(t)
 
-	body := `{"payment_status":"LUNAS","payment_method":"CASH"}`
-	req := httptest.NewRequest(http.MethodPatch, "/orders/"+order.ID.String()+"/payment", bytes.NewBufferString(body))
+	body := `{"reason":"Customer left"}`
+
+	// Cashier cannot cancel order (OWNER only) -> 403 Forbidden
+	req := httptest.NewRequest(http.MethodPost, "/orders/"+order.ID.String()+"/cancel", bytes.NewBufferString(body))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set(echo.HeaderAuthorization, "Bearer "+ownerToken)
+	req.Header.Set(echo.HeaderAuthorization, "Bearer "+cashierToken)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d. Body: %s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("expected 403 for cashier, got %d", rec.Code)
 	}
 
-	var res struct {
-		Success bool `json:"success"`
-		Data    struct {
-			PaymentStatus string `json:"payment_status"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &res); err != nil {
-		t.Fatalf("failed to decode response: %v", err)
-	}
-	if !res.Success || res.Data.PaymentStatus != "LUNAS" {
-		t.Errorf("expected payment_status LUNAS, got %+v", res)
-	}
-}
-
-func TestOrderHandler_CancelItem_Success(t *testing.T) {
-	e, ownerToken, _, _, order, _ := setupTestOrderApp(t)
-
-	itemID := order.Items[0].ID
-	req := httptest.NewRequest(http.MethodPost, "/orders/"+order.ID.String()+"/items/"+itemID.String()+"/cancel", nil)
+	// Owner can cancel order -> 200 OK
+	req = httptest.NewRequest(http.MethodPost, "/orders/"+order.ID.String()+"/cancel", bytes.NewBufferString(body))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	req.Header.Set(echo.HeaderAuthorization, "Bearer "+ownerToken)
-	rec := httptest.NewRecorder()
+	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {

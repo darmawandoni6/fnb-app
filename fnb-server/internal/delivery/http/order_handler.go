@@ -37,6 +37,13 @@ func (h *OrderHandler) List(c echo.Context) error {
 		}
 		filter.TableID = &parsed
 	}
+	if ot := c.QueryParam("order_type"); ot != "" {
+		orderType := domain.OrderType(ot)
+		if !orderType.Valid() {
+			return domain.NewError(domain.CodeValidationError, "invalid order_type filter", http.StatusBadRequest, nil)
+		}
+		filter.OrderType = &orderType
+	}
 	if d := c.QueryParam("date"); d != "" {
 		t, err := time.Parse("2006-01-02", d)
 		if err != nil {
@@ -86,7 +93,14 @@ func (h *OrderHandler) CreateManual(c echo.Context) error {
 		})
 	}
 
-	order, err := h.orderUsecase.CreateManual(c.Request().Context(), actorID, items)
+	in := usecase.OrderInput{
+		CustomerName:  req.CustomerName,
+		CustomerPhone: req.CustomerPhone,
+		PaymentMethod: domain.PaymentMethod(req.PaymentMethod),
+		Items:         items,
+	}
+
+	order, err := h.orderUsecase.CreateManual(c.Request().Context(), actorID, in)
 	if err != nil {
 		return err
 	}
@@ -119,6 +133,7 @@ func (h *OrderHandler) UpdatePayment(c echo.Context) error {
 
 func (h *OrderHandler) UpdateItemStatus(c echo.Context) error {
 	role, _ := GetCurrentUserRole(c)
+	actorID, _ := GetCurrentUserID(c)
 	orderID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return domain.NewError(domain.CodeValidationError, "invalid order id", http.StatusBadRequest, nil)
@@ -133,25 +148,27 @@ func (h *OrderHandler) UpdateItemStatus(c echo.Context) error {
 		return err
 	}
 
-	order, err := h.orderUsecase.UpdateItemStatus(c.Request().Context(), orderID, itemID, domain.OrderItemStatus(req.Status), role)
+	order, err := h.orderUsecase.UpdateItemStatus(c.Request().Context(), orderID, itemID, domain.OrderItemStatus(req.Status), actorID, role)
 	if err != nil {
 		return err
 	}
 	return Success(c, http.StatusOK, dto.OrderResponseFrom(order))
 }
 
-func (h *OrderHandler) CancelItem(c echo.Context) error {
+func (h *OrderHandler) CancelOrder(c echo.Context) error {
+	role, _ := GetCurrentUserRole(c)
 	actorID, _ := GetCurrentUserID(c)
 	orderID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return domain.NewError(domain.CodeValidationError, "invalid order id", http.StatusBadRequest, nil)
 	}
-	itemID, err := uuid.Parse(c.Param("item_id"))
-	if err != nil {
-		return domain.NewError(domain.CodeValidationError, "invalid item id", http.StatusBadRequest, nil)
+
+	var req dto.CancelOrderRequest
+	if err := c.Bind(&req); err != nil {
+		return err
 	}
 
-	order, err := h.orderUsecase.CancelItem(c.Request().Context(), orderID, itemID, actorID)
+	order, err := h.orderUsecase.CancelOrder(c.Request().Context(), orderID, req.Reason, &actorID, &role)
 	if err != nil {
 		return err
 	}

@@ -1,11 +1,13 @@
 package http
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"fnb-server/internal/delivery/http/dto"
 	"fnb-server/internal/domain"
@@ -16,6 +18,7 @@ import (
 
 type mockPublicMenuRepo struct {
 	categories []domain.MenuCategory
+	menus      map[uuid.UUID]domain.Menu
 }
 
 func (m *mockPublicMenuRepo) ListAvailableGroupedByCategory(ctx context.Context) ([]domain.MenuCategory, error) {
@@ -23,7 +26,13 @@ func (m *mockPublicMenuRepo) ListAvailableGroupedByCategory(ctx context.Context)
 }
 
 func (m *mockPublicMenuRepo) ListAvailableByIDs(ctx context.Context, ids []uuid.UUID) ([]domain.Menu, error) {
-	return nil, nil
+	var res []domain.Menu
+	for _, id := range ids {
+		if menu, ok := m.menus[id]; ok {
+			res = append(res, menu)
+		}
+	}
+	return res, nil
 }
 
 type mockPublicSettingRepo struct {
@@ -87,7 +96,7 @@ func TestPublicHandler_Menu_ResponseShapeAndEmptyCategoryOmitted(t *testing.T) {
 	sessionRepo := &testSessionRepo{session: session}
 
 	sessionUsecase := usecase.NewTableSessionUsecase(sessionRepo, tableRepo, nil)
-	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo)
+	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, nil, nil, nil, nil)
 	handler := NewPublicHandler(publicUsecase, sessionUsecase)
 
 	e.GET("/public/menu", handler.Menu, SessionMiddleware(sessionUsecase))
@@ -154,7 +163,7 @@ func TestPublicHandler_OpenSession_Success(t *testing.T) {
 	sessionRepo := &testSessionRepo{}
 
 	sessionUsecase := usecase.NewTableSessionUsecase(sessionRepo, tableRepo, nil)
-	publicUsecase := usecase.NewPublicUsecase(tableRepo, nil, nil)
+	publicUsecase := usecase.NewPublicUsecase(tableRepo, nil, nil, nil, nil, nil, nil)
 	handler := NewPublicHandler(publicUsecase, sessionUsecase)
 
 	e.POST("/public/tables/:qr_token/sessions", handler.OpenSession)
@@ -185,5 +194,125 @@ func TestPublicHandler_OpenSession_Success(t *testing.T) {
 	}
 	if res.Data.Status != "OPEN" {
 		t.Errorf("expected status OPEN, got %s", res.Data.Status)
+	}
+}
+
+func TestPublicHandler_Orders_FullFlow(t *testing.T) {
+	e := echo.New()
+	e.Binder = NewBinder()
+	e.HTTPErrorHandler = ErrorHandler(true, nil)
+
+	table := &domain.Table{ID: uuid.New(), TableNumber: "C1", IsActive: true}
+	session := &domain.TableSession{
+		ID:           uuid.New(),
+		TableID:      table.ID,
+		Table:        *table,
+		SessionToken: "session-c1",
+		Status:       domain.TableSessionStatusOpen,
+	}
+
+	tableRepo := &testTableRepo{table: table}
+	sessionRepo := &testSessionRepo{session: session}
+	sessionUsecase := usecase.NewTableSessionUsecase(sessionRepo, tableRepo, nil)
+
+	menuID := uuid.New()
+	menuRepo := &mockPublicMenuRepo{
+		menus: map[uuid.UUID]domain.Menu{
+			menuID: {ID: menuID, Name: "Americano", Price: 30000, IsAvailable: true},
+		},
+	}
+	settingRepo := &mockPublicSettingRepo{
+		setting: &domain.Setting{IsOpen: true, ServiceRate: 5, TaxRate: 10},
+	}
+
+	orderRepo := &mockOrderQueryRepo{
+		orders: []domain.Order{},
+		byID:   map[uuid.UUID]*domain.Order{},
+	}
+	tx := &mockOrderTx{}
+	txRunner := func(ctx context.Context, fn func(usecase.OrderTx) error) error {
+		return fn(tx)
+	}
+
+	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, orderRepo, txRunner, nil, nil)
+	handler := NewPublicHandler(publicUsecase, sessionUsecase)
+
+	sg := e.Group("/public", SessionMiddleware(sessionUsecase))
+	sg.POST("/orders", handler.CreateOrder)
+	sg.GET("/orders", handler.ListOrders)
+	sg.GET("/orders/:id", handler.GetOrder)
+	sg.POST("/orders/:id/cancel", handler.CancelOrder)
+
+	// 1. Create order
+	body := `{"customer_name":"Dewi","payment_method":"CASH","items":[{"menu_id":"` + menuID.String() + `","qty":2}]}`
+	req := httptest.NewRequest(http.MethodPost, "/public/orders", bytes.NewBufferString(body))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("X-Session-Token", "session-c1")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("expected 201 on create order, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	var createRes struct {
+		Success bool                  `json:"success"`
+		Data    dto.PublicOrderResponse `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &createRes); err != nil {
+		t.Fatalf("failed to decode response: %v", err)
+	}
+	createdID, err := uuid.Parse(createRes.Data.ID)
+	if err != nil {
+		t.Fatalf("invalid created order id: %v", err)
+	}
+
+	// Add to mock repo so list/get/cancel can see it
+	storedOrder := domain.Order{
+		ID:             createdID,
+		OrderNumber:    createRes.Data.OrderNumber,
+		TableSessionID: &session.ID,
+		TableID:        &table.ID,
+		Table:          table,
+		CustomerName:   "Dewi",
+		Status:         domain.OrderStatusWaiting,
+		PaymentStatus:  domain.PaymentStatusUnpaid,
+		SubtotalAmount: createRes.Data.SubtotalAmount,
+		TotalAmount:    createRes.Data.TotalAmount,
+		CreatedAt:      time.Now().UTC(),
+	}
+	orderRepo.orders = append(orderRepo.orders, storedOrder)
+	orderRepo.byID[createdID] = &storedOrder
+
+	// 2. List orders
+	req = httptest.NewRequest(http.MethodGet, "/public/orders", nil)
+	req.Header.Set("X-Session-Token", "session-c1")
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on list orders, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// 3. Get order
+	req = httptest.NewRequest(http.MethodGet, "/public/orders/"+createdID.String(), nil)
+	req.Header.Set("X-Session-Token", "session-c1")
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on get order, got %d: %s", rec.Code, rec.Body.String())
+	}
+
+	// 4. Cancel order
+	cancelBody := `{"reason":"Customer changed mind"}`
+	req = httptest.NewRequest(http.MethodPost, "/public/orders/"+createdID.String()+"/cancel", bytes.NewBufferString(cancelBody))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("X-Session-Token", "session-c1")
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 on cancel order, got %d: %s", rec.Code, rec.Body.String())
 	}
 }

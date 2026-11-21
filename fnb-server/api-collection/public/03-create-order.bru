@@ -1,0 +1,47 @@
+meta {
+  name: Create public order
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/public/orders
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+  X-Session-Token: {{sessionToken}}
+}
+
+body:json {
+  {
+    "customer_name": "Budi",
+    "customer_phone": null,
+    "payment_method": "CASH",
+    "items": [
+      {
+        "menu_id": "{{menuId}}",
+        "qty": 2,
+        "note": "less sugar"
+      }
+    ]
+  }
+}
+
+script:post-response {
+  if (res.status === 201 && res.body.success === true) {
+    bru.setVar("orderId", res.body.data.id);
+  }
+}
+
+tests {
+  test("creates public order", function() {
+    expect(res.status).to.equal(201);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data.order_type).to.equal("DINE_IN");
+    expect(res.body.data.status).to.equal("MENUNGGU");
+    expect(res.body.data.items).to.be.an("array");
+  });
+}

@@ -73,6 +73,10 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 
 	sessionGroup := e.Group("/public", SessionMiddleware(sessionUsecase))
 	sessionGroup.GET("/menu", h.Public.Menu, sessionRateLimit(60, 60))
+	sessionGroup.POST("/orders", h.Public.CreateOrder, sessionRateLimit(5, 5))
+	sessionGroup.GET("/orders", h.Public.ListOrders, sessionRateLimit(30, 30))
+	sessionGroup.GET("/orders/:id", h.Public.GetOrder, sessionRateLimit(30, 30))
+	sessionGroup.POST("/orders/:id/cancel", h.Public.CancelOrder, sessionRateLimit(30, 30))
 
 	orders := e.Group("/orders", JWTMiddleware(authUsecase))
 	orders.GET("", h.Order.List, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier, domain.UserRoleKitchen))
@@ -80,7 +84,7 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	orders.POST("/manual", h.Order.CreateManual, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
 	orders.PATCH("/:id/payment", h.Order.UpdatePayment, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
 	orders.PATCH("/:id/items/:item_id/status", h.Order.UpdateItemStatus, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier, domain.UserRoleKitchen))
-	orders.POST("/:id/items/:item_id/cancel", h.Order.CancelItem, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
+	orders.POST("/:id/cancel", h.Order.CancelOrder, RequireRoles(domain.UserRoleOwner))
 
 	return e
 }

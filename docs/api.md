@@ -113,7 +113,7 @@ Response:
 ```json
 {
   "id": "uuid",
-  "order_number": "DI-001",
+  "order_number": "DI-20261121-001",
   "status": "MENUNGGU",
   "payment_status": "BELUM",
   "subtotal_amount": 50000,
@@ -130,7 +130,7 @@ Response:
 ```json
 {
   "id": "uuid",
-  "order_number": "DI-001",
+  "order_number": "DI-20261121-001",
   "status": "DIPROSES",
   "payment_status": "LUNAS",
   "order_type": "DINE_IN",

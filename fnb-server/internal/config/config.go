@@ -24,6 +24,7 @@ type Config struct {
 	UploadDir         string
 	SeedOwnerEmail    string
 	SeedOwnerPassword string
+	OutletTimezone    string
 }
 
 func LoadConfig() *Config {
@@ -38,7 +39,16 @@ func LoadConfig() *Config {
 		UploadDir:         getEnv("UPLOAD_DIR", "./uploads"),
 		SeedOwnerEmail:    getEnv("SEED_OWNER_EMAIL", ""),
 		SeedOwnerPassword: getEnv("SEED_OWNER_PASSWORD", ""),
+		OutletTimezone:    getEnv("OUTLET_TIMEZONE", "Asia/Jakarta"),
 	}
+}
+
+func (c *Config) Location() *time.Location {
+	loc, err := time.LoadLocation(c.OutletTimezone)
+	if err != nil {
+		return time.FixedZone("WIB", 7*3600)
+	}
+	return loc
 }
 
 func (c *Config) Validate(log *slog.Logger) error {

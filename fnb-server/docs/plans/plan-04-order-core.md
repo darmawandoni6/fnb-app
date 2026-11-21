@@ -1,5 +1,15 @@
 # Plan 04 — Order core
 
+> **Status:** DONE (Completed on 2026-11-21)
+> - Unified order builder with service and tax calculation snapshot (`domain.CalcTotals`).
+> - Daily order sequence generation (`FormatOrderNumber`, `OrderSequenceRepository.NextSeq`).
+> - Item transitions enforced with PRD role matrix and first-write-wins idempotence (no-op on same status).
+> - Order-level cancellation with stock restoration and audit logging.
+> - Registered public order endpoints (`POST /public/orders`, `GET /public/orders`, `GET /public/orders/:id`, `POST /public/orders/:id/cancel`) with session isolation.
+> - Registered internal order endpoints (`GET /orders`, `GET /orders/:id`, `POST /orders/manual`, `PATCH /orders/:id/items/:item_id/status`, `POST /orders/:id/cancel`).
+> - Unit tests passing: `order_usecase_test.go`, `order_handler_test.go`, `public_handler_test.go`.
+> - Updated Bruno API collection in `api-collection/orders/` and `api-collection/public/`.
+
 The heaviest slice: create order (QR and manual), totals, order number, item transitions, order-level cancel, list/detail. Implements PRD §4.1, §4.2, §4.7, §5, §6, §8.
 
 Depends on: 01, 03.

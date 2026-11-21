@@ -12,6 +12,7 @@ type Order struct {
 	TableID             *uuid.UUID     `gorm:"type:uuid;index" json:"table_id,omitempty"`
 	Table               *Table         `gorm:"foreignKey:TableID" json:"table,omitempty"`
 	TableSessionID      *uuid.UUID     `gorm:"type:uuid;index" json:"table_session_id,omitempty"`
+	TableSession        *TableSession  `gorm:"foreignKey:TableSessionID" json:"table_session,omitempty"`
 	CustomerName        string         `gorm:"type:text;not null" json:"customer_name"`
 	CustomerPhone       *string        `gorm:"type:text" json:"customer_phone,omitempty"`
 	CreatedBy           *uuid.UUID     `gorm:"type:uuid;index" json:"created_by,omitempty"`

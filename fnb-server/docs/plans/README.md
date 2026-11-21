@@ -71,7 +71,7 @@ graph LR
 | 01 | `plan-01-foundation.md` | Migration `000003` aligns schema with PRD §10; domain enums and pure functions ready | DONE |
 | 02 | `plan-02-auth-rbac.md` | Login, refresh, role guard, owner seed verified against PRD §3/§9 | DONE |
 | 03 | `plan-03-public-session.md` | Table session open, `X-Session-Token`, public menu | DONE |
-| 04 | `plan-04-order-core.md` | Create order (QR + manual), totals, order number, item transitions, order-level cancel | Pending |
+| 04 | `plan-04-order-core.md` | Create order (QR + manual), totals, order number, item transitions, order-level cancel | DONE |
 | 05 | `plan-05-payment.md` | Cash confirmation, `payment_log`, Midtrans Snap and callback | Pending |
 | 06 | `plan-06-realtime.md` | WebSocket hub, topics, publish after commit | Pending |
 | 07 | `plan-07-scheduler.md` | Auto-cancel, auto-deliver, auto-complete, session close | Pending |

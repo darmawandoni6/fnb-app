@@ -1,0 +1,23 @@
+meta {
+  name: Get public order
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/public/orders/{{orderId}}
+  body: none
+  auth: none
+}
+
+headers {
+  X-Session-Token: {{sessionToken}}
+}
+
+tests {
+  test("gets public order details", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data.id).to.equal(bru.getVar("orderId"));
+  });
+}

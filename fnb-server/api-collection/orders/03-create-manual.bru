@@ -20,6 +20,9 @@ auth:bearer {
 
 body:json {
   {
+    "customer_name": "Budi",
+    "customer_phone": null,
+    "payment_method": "CASH",
     "items": [
       {
         "menu_id": "{{menuId}}",
@@ -41,7 +44,7 @@ tests {
   test("creates manual order", function() {
     expect(res.status).to.equal(201);
     expect(res.body.success).to.equal(true);
-    expect(res.body.data.order_type).to.equal("MANUAL");
+    expect(res.body.data.order_type).to.equal("TAKE_AWAY");
     expect(res.body.data.status).to.equal("MENUNGGU");
     expect(res.body.data.payment_status).to.equal("BELUM");
     expect(res.body.data.items).to.be.an("array");

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"time"
 )
 
 type Totals struct {
@@ -36,6 +37,15 @@ func calcComponent(amount int64, rate float64) int64 {
 // CalcTax is kept as a helper for backward compatibility where only tax is calculated.
 func CalcTax(amount int64, percent float64) int64 {
 	return calcComponent(amount, percent)
+}
+
+// FormatOrderNumber builds the public identifier: PREFIX-YYYYMMDD-SSS.
+func FormatOrderNumber(t OrderType, day time.Time, seq int) string {
+	prefix := "DI"
+	if t == OrderTypeTakeAway {
+		prefix = "TA"
+	}
+	return fmt.Sprintf("%s-%s-%03d", prefix, day.Format("20060102"), seq)
 }
 
 // AggregateOrderStatus implements PRD §5.3:

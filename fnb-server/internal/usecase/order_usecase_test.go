@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"testing"
+	"time"
 
 	"fnb-server/internal/domain"
 	"github.com/google/uuid"
@@ -25,6 +26,12 @@ func (m *mockOrderQueryRepo) List(ctx context.Context, filter domain.OrderFilter
 			continue
 		}
 		if filter.TableID != nil && (o.TableID == nil || *o.TableID != *filter.TableID) {
+			continue
+		}
+		if filter.SessionID != nil && (o.TableSessionID == nil || *o.TableSessionID != *filter.SessionID) {
+			continue
+		}
+		if filter.OrderType != nil && o.OrderType != *filter.OrderType {
 			continue
 		}
 		result = append(result, o)
@@ -68,47 +75,67 @@ func (m *mockSettingRepo) GetFirst(ctx context.Context) (*domain.Setting, error)
 type mockTx struct {
 	createdOrder     *domain.Order
 	createdItems     []domain.OrderItem
-	persistedRefund  *Refund
-	updatedPayment   domain.PaymentStatus
-	updatedMethod    *domain.PaymentMethod
+	stockConsumed    bool
+	stockRestored    bool
+	cancelledOrder   uuid.UUID
+	cancelReason     string
 	updatedStatus    domain.OrderStatus
 	updatedItemOrder uuid.UUID
 	updatedItemID    uuid.UUID
 	updatedItemFrom  domain.OrderItemStatus
 	updatedItemTo    domain.OrderItemStatus
+	lastSeq          int
+	failStock        bool
+}
+
+func (t *mockTx) NextOrderNumber(ctx context.Context, oType domain.OrderType, day time.Time) (string, error) {
+	t.lastSeq++
+	return domain.FormatOrderNumber(oType, day, t.lastSeq), nil
 }
 
 func (t *mockTx) CreateOrder(ctx context.Context, o *domain.Order) error {
 	t.createdOrder = o
 	return nil
 }
+
 func (t *mockTx) CreateItems(ctx context.Context, items []domain.OrderItem) error {
 	t.createdItems = items
 	return nil
 }
-func (t *mockTx) ConsumeStock(ctx context.Context, items []domain.OrderItem) error {
-	return nil
-}
-func (t *mockTx) PersistCancel(ctx context.Context, o *domain.Order, itemID uuid.UUID, r interface{}) error {
-	if ref, ok := r.(*Refund); ok {
-		t.persistedRefund = ref
+
+func (t *mockTx) ConsumeStock(ctx context.Context, order *domain.Order, items []domain.OrderItem) error {
+	if t.failStock {
+		return domain.NewError(domain.CodeStockNotEnough, "insufficient stock", http.StatusConflict, nil)
 	}
+	t.stockConsumed = true
 	return nil
 }
-func (t *mockTx) SetPayment(ctx context.Context, id uuid.UUID, s domain.PaymentStatus, m *domain.PaymentMethod) error {
-	t.updatedPayment = s
-	t.updatedMethod = m
+
+func (t *mockTx) RestoreStock(ctx context.Context, order *domain.Order, items []domain.OrderItem) error {
+	t.stockRestored = true
 	return nil
 }
-func (t *mockTx) SetItemStatus(ctx context.Context, orderID, itemID uuid.UUID, from, to domain.OrderItemStatus) error {
+
+func (t *mockTx) SetItemStatus(ctx context.Context, orderID, itemID uuid.UUID, from, to domain.OrderItemStatus, actor *uuid.UUID) error {
 	t.updatedItemOrder = orderID
 	t.updatedItemID = itemID
 	t.updatedItemFrom = from
 	t.updatedItemTo = to
 	return nil
 }
+
+func (t *mockTx) CancelOrder(ctx context.Context, orderID uuid.UUID, reason string, actor *uuid.UUID) error {
+	t.cancelledOrder = orderID
+	t.cancelReason = reason
+	return nil
+}
+
 func (t *mockTx) UpdateAggregate(ctx context.Context, id uuid.UUID, s domain.OrderStatus) error {
 	t.updatedStatus = s
+	return nil
+}
+
+func (t *mockTx) Audit(ctx context.Context, entry *domain.AuditLog) error {
 	return nil
 }
 
@@ -125,7 +152,7 @@ func TestOrderUsecase_List_ForcesPaidOnlyForKitchen(t *testing.T) {
 	repo := &mockOrderQueryRepo{
 		orders: []domain.Order{unpaid, paid},
 	}
-	u := NewOrderUsecase(repo, nil, nil, nil)
+	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil)
 
 	// Kitchen role
 	res, err := u.List(context.Background(), domain.OrderFilter{}, domain.UserRoleKitchen)
@@ -155,7 +182,7 @@ func TestOrderUsecase_Get_KitchenUnpaidReturnsNotFound(t *testing.T) {
 			paidID:   {ID: paidID, PaymentStatus: domain.PaymentStatusPaid},
 		},
 	}
-	u := NewOrderUsecase(repo, nil, nil, nil)
+	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil)
 
 	_, err := u.Get(context.Background(), unpaidID, domain.UserRoleKitchen)
 	if err == nil {
@@ -174,9 +201,14 @@ func TestOrderUsecase_Get_KitchenUnpaidReturnsNotFound(t *testing.T) {
 
 func TestOrderUsecase_CreateManual_StoreClosed(t *testing.T) {
 	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: false}}
-	u := NewOrderUsecase(nil, nil, settingRepo, nil)
+	u := NewOrderUsecase(nil, nil, settingRepo, nil, nil, nil)
 
-	_, err := u.CreateManual(context.Background(), uuid.New(), []CreateOrderItem{{MenuID: uuid.New(), Qty: 1}})
+	in := OrderInput{
+		CustomerName:  "Budi",
+		PaymentMethod: domain.PaymentMethodCash,
+		Items:         []CreateOrderItem{{MenuID: uuid.New(), Qty: 1}},
+	}
+	_, err := u.CreateManual(context.Background(), uuid.New(), in)
 	if err == nil {
 		t.Fatal("expected STORE_CLOSED error, got nil")
 	}
@@ -186,98 +218,157 @@ func TestOrderUsecase_CreateManual_StoreClosed(t *testing.T) {
 	}
 }
 
-func TestOrderUsecase_CreateManual_Success(t *testing.T) {
+func TestOrderUsecase_CreateManual_ValidationRejects(t *testing.T) {
+	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: true}}
+	u := NewOrderUsecase(nil, nil, settingRepo, nil, nil, nil)
+
+	// Blank customer_name
+	in := OrderInput{
+		CustomerName:  "   ",
+		PaymentMethod: domain.PaymentMethodCash,
+		Items:         []CreateOrderItem{{MenuID: uuid.New(), Qty: 1}},
+	}
+	_, err := u.CreateManual(context.Background(), uuid.New(), in)
+	var appErr *domain.AppError
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeValidationError {
+		t.Fatalf("expected VALIDATION_ERROR on blank customer_name, got %v", err)
+	}
+
+	// Empty items
+	in = OrderInput{
+		CustomerName:  "Budi",
+		PaymentMethod: domain.PaymentMethodCash,
+		Items:         []CreateOrderItem{},
+	}
+	_, err = u.CreateManual(context.Background(), uuid.New(), in)
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeValidationError {
+		t.Fatalf("expected VALIDATION_ERROR on empty items, got %v", err)
+	}
+
+	// Qty <= 0
+	in = OrderInput{
+		CustomerName:  "Budi",
+		PaymentMethod: domain.PaymentMethodCash,
+		Items:         []CreateOrderItem{{MenuID: uuid.New(), Qty: 0}},
+	}
+	_, err = u.CreateManual(context.Background(), uuid.New(), in)
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeValidationError {
+		t.Fatalf("expected VALIDATION_ERROR on qty=0, got %v", err)
+	}
+}
+
+func TestOrderUsecase_CreateManual_UnavailableMenu(t *testing.T) {
+	menuID := uuid.New()
+	menuRepo := &mockMenuRepo{menus: map[uuid.UUID]domain.Menu{}}
+	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: true}}
+	u := NewOrderUsecase(nil, menuRepo, settingRepo, nil, nil, nil)
+
+	in := OrderInput{
+		CustomerName:  "Budi",
+		PaymentMethod: domain.PaymentMethodCash,
+		Items:         []CreateOrderItem{{MenuID: menuID, Qty: 1}},
+	}
+	_, err := u.CreateManual(context.Background(), uuid.New(), in)
+	var appErr *domain.AppError
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeNotFound {
+		t.Fatalf("expected NOT_FOUND on missing menu, got %v", err)
+	}
+}
+
+func TestOrderUsecase_CreateManual_InsufficientStock(t *testing.T) {
 	menuID := uuid.New()
 	menuRepo := &mockMenuRepo{
 		menus: map[uuid.UUID]domain.Menu{
-			menuID: {ID: menuID, Name: "Kopi", Price: 20000},
+			menuID: {ID: menuID, Name: "Latte", Price: 25000},
 		},
 	}
-	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: true, TaxRate: 10}}
+	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: true}}
+	tx := &mockTx{failStock: true}
+	u := NewOrderUsecase(nil, menuRepo, settingRepo, newTestTxRunner(tx), nil, nil)
+
+	in := OrderInput{
+		CustomerName:  "Budi",
+		PaymentMethod: domain.PaymentMethodCash,
+		Items:         []CreateOrderItem{{MenuID: menuID, Qty: 5}},
+	}
+	_, err := u.CreateManual(context.Background(), uuid.New(), in)
+	var appErr *domain.AppError
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeStockNotEnough {
+		t.Fatalf("expected STOCK_NOT_ENOUGH, got %v", err)
+	}
+}
+
+func TestOrderUsecase_CreateManual_TotalsAndSnapshots(t *testing.T) {
+	menuID := uuid.New()
+	menuRepo := &mockMenuRepo{
+		menus: map[uuid.UUID]domain.Menu{
+			menuID: {ID: menuID, Name: "Latte", Price: 25000},
+		},
+	}
+	setting := &domain.Setting{IsOpen: true, ServiceRate: 5, TaxRate: 10}
+	settingRepo := &mockSettingRepo{setting: setting}
 	tx := &mockTx{}
-	u := NewOrderUsecase(nil, menuRepo, settingRepo, newTestTxRunner(tx))
+	u := NewOrderUsecase(nil, menuRepo, settingRepo, newTestTxRunner(tx), nil, nil)
 
 	actorID := uuid.New()
-	order, err := u.CreateManual(context.Background(), actorID, []CreateOrderItem{{MenuID: menuID, Qty: 2}})
+	phone := "08123456789"
+	in := OrderInput{
+		CustomerName:  "Budi",
+		CustomerPhone: &phone,
+		PaymentMethod: domain.PaymentMethodCash,
+		Items:         []CreateOrderItem{{MenuID: menuID, Qty: 2}},
+	}
+
+	order, err := u.CreateManual(context.Background(), actorID, in)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if order.OrderType != domain.OrderTypeManual {
-		t.Errorf("expected MANUAL order type, got %s", order.OrderType)
+	if order.OrderType != domain.OrderTypeTakeAway {
+		t.Errorf("expected TAKE_AWAY, got %s", order.OrderType)
 	}
-	if order.CreatedBy == nil || *order.CreatedBy != actorID {
-		t.Errorf("expected created_by = %v, got %v", actorID, order.CreatedBy)
+	if order.CustomerName != "Budi" || order.CustomerPhone == nil || *order.CustomerPhone != phone {
+		t.Errorf("expected customer name and phone set, got %s, %v", order.CustomerName, order.CustomerPhone)
 	}
-	if order.TableID != nil {
-		t.Errorf("expected nil table_id, got %v", order.TableID)
+	if order.SubtotalAmount != 50000 || order.ServiceAmount != 2500 || order.TaxAmount != 5250 || order.TotalAmount != 57750 {
+		t.Errorf("expected totals {50000, 2500, 5250, 57750}, got {%d, %d, %d, %d}",
+			order.SubtotalAmount, order.ServiceAmount, order.TaxAmount, order.TotalAmount)
 	}
-	if order.SubtotalAmount != 40000 || order.TaxAmount != 4000 || order.TotalAmount != 44000 {
-		t.Errorf("incorrect totals: subtotal=%d, tax=%d, total=%d", order.SubtotalAmount, order.TaxAmount, order.TotalAmount)
+
+	// Change setting rates, verify snapshot immutability (BR-12)
+	setting.ServiceRate = 10
+	setting.TaxRate = 20
+	if order.ServiceRateSnapshot != 5 || order.TaxRateSnapshot != 10 {
+		t.Errorf("order snapshot modified! ServiceRate=%v, TaxRate=%v", order.ServiceRateSnapshot, order.TaxRateSnapshot)
 	}
 }
 
-func TestOrderUsecase_UpdatePayment_ValidationAndInvalidTransition(t *testing.T) {
-	orderID := uuid.New()
-	methodCash := domain.PaymentMethodCash
-	paidOrder := &domain.Order{ID: orderID, PaymentStatus: domain.PaymentStatusPaid}
-
-	repo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{orderID: paidOrder}}
-	u := NewOrderUsecase(repo, nil, nil, nil)
-
-	// Non-LUNAS status rejected
-	_, err := u.UpdatePayment(context.Background(), orderID, domain.PaymentStatusUnpaid, &methodCash)
-	if err == nil {
-		t.Fatal("expected error on non-LUNAS payment update")
+func TestOrderUsecase_OrderNumberGeneration(t *testing.T) {
+	day := time.Date(2026, 11, 21, 10, 0, 0, 0, time.UTC)
+	num1 := domain.FormatOrderNumber(domain.OrderTypeDineIn, day, 1)
+	if num1 != "DI-20261121-001" {
+		t.Errorf("expected DI-20261121-001, got %s", num1)
+	}
+	num2 := domain.FormatOrderNumber(domain.OrderTypeTakeAway, day, 2)
+	if num2 != "TA-20261121-002" {
+		t.Errorf("expected TA-20261121-002, got %s", num2)
 	}
 
-	// Missing method rejected
-	_, err = u.UpdatePayment(context.Background(), orderID, domain.PaymentStatusPaid, nil)
-	var appErr *domain.AppError
-	if !errors.As(err, &appErr) || appErr.Code != domain.CodeValidationError {
-		t.Fatalf("expected VALIDATION_ERROR on missing payment method, got %v", err)
-	}
-
-	// Order already paid rejected
-	_, err = u.UpdatePayment(context.Background(), orderID, domain.PaymentStatusPaid, &methodCash)
-	if !errors.As(err, &appErr) || appErr.Code != domain.CodeInvalidTransition {
-		t.Fatalf("expected INVALID_TRANSITION on already paid order, got %v", err)
+	nextDay := day.Add(24 * time.Hour)
+	numReset := domain.FormatOrderNumber(domain.OrderTypeDineIn, nextDay, 1)
+	if numReset != "DI-20261122-001" {
+		t.Errorf("expected DI-20261122-001, got %s", numReset)
 	}
 }
 
-func TestOrderUsecase_UpdatePayment_RecomputesSelesaiWhenAllDelivered(t *testing.T) {
-	orderID := uuid.New()
-	order := &domain.Order{
-		ID:            orderID,
-		Status:        domain.OrderStatusProcessing,
-		PaymentStatus: domain.PaymentStatusUnpaid,
-		Items: []domain.OrderItem{
-			{Status: domain.OrderItemStatusCompleted},
-			{Status: domain.OrderItemStatusCompleted},
-		},
-	}
-	repo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{orderID: order}}
-	tx := &mockTx{}
-	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx))
-
-	method := domain.PaymentMethodCash
-	res, err := u.UpdatePayment(context.Background(), orderID, domain.PaymentStatusPaid, &method)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if res.Status != domain.OrderStatusCompleted {
-		t.Errorf("expected order status SELESAI, got %s", res.Status)
-	}
-	if tx.updatedStatus != domain.OrderStatusCompleted {
-		t.Errorf("expected aggregate updated in tx to SELESAI, got %s", tx.updatedStatus)
-	}
-}
-
-func TestOrderUsecase_UpdateItemStatus_RoleAndTransitions(t *testing.T) {
+func TestOrderUsecase_UpdateItemStatus_Matrix(t *testing.T) {
 	orderID := uuid.New()
 	itemID := uuid.New()
+	actorID := uuid.New()
+
 	order := &domain.Order{
 		ID:            orderID,
+		OrderType:     domain.OrderTypeDineIn,
 		PaymentStatus: domain.PaymentStatusUnpaid,
 		Items: []domain.OrderItem{
 			{ID: itemID, Status: domain.OrderItemStatusPending},
@@ -285,115 +376,191 @@ func TestOrderUsecase_UpdateItemStatus_RoleAndTransitions(t *testing.T) {
 	}
 	repo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{orderID: order}}
 	tx := &mockTx{}
-	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx))
+	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx), nil, nil)
 
-	// Kitchen user cannot set DELIVERED
-	_, err := u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusDelivered, domain.UserRoleKitchen)
+	// Kitchen on unpaid -> 404 NOT_FOUND (Decision 17)
+	_, err := u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusCooking, actorID, domain.UserRoleKitchen)
 	var appErr *domain.AppError
-	if !errors.As(err, &appErr) || appErr.Code != domain.CodeForbidden {
-		t.Fatalf("expected FORBIDDEN, got %v", err)
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeNotFound {
+		t.Fatalf("expected NOT_FOUND for kitchen on unpaid order, got %v", err)
 	}
 
-	// Transition to COOKING on unpaid order rejected with PAYMENT_REQUIRED
-	_, err = u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusCooking, domain.UserRoleKitchen)
+	// Owner COOKING on unpaid -> PAYMENT_REQUIRED (Decision 9)
+	_, err = u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusCooking, actorID, domain.UserRoleOwner)
 	if !errors.As(err, &appErr) || appErr.Code != domain.CodePaymentRequired {
-		t.Fatalf("expected PAYMENT_REQUIRED, got %v", err)
+		t.Fatalf("expected PAYMENT_REQUIRED for owner cooking unpaid, got %v", err)
 	}
 
-	// Backward transition rejected
+	// Mark paid
 	order.PaymentStatus = domain.PaymentStatusPaid
-	order.Items[0].Status = domain.OrderItemStatusReady
-	_, err = u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusCooking, domain.UserRoleKitchen)
-	if !errors.As(err, &appErr) || appErr.Code != domain.CodeInvalidTransition {
-		t.Fatalf("expected INVALID_TRANSITION on backward transition, got %v", err)
+
+	// CASHIER cannot COOKING on DINE_IN -> FORBIDDEN
+	_, err = u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusCooking, actorID, domain.UserRoleCashier)
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeForbidden {
+		t.Fatalf("expected FORBIDDEN for cashier cooking dine_in, got %v", err)
+	}
+
+	// KITCHEN can COOKING
+	res, err := u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusCooking, actorID, domain.UserRoleKitchen)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if res.Items[0].Status != domain.OrderItemStatusCooking {
+		t.Errorf("expected item status COOKING, got %s", res.Items[0].Status)
+	}
+
+	// Idempotent no-op: target == current -> 200
+	res2, err := u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusCooking, actorID, domain.UserRoleKitchen)
+	if err != nil {
+		t.Fatalf("expected no-op 200, got %v", err)
+	}
+	if res2 == nil {
+		t.Fatal("expected order returned")
+	}
+
+	// KITCHEN can READY
+	_, err = u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusReady, actorID, domain.UserRoleKitchen)
+	if err != nil {
+		t.Fatalf("unexpected error on ready: %v", err)
+	}
+
+	// CASHIER cannot DELIVER on DINE_IN -> FORBIDDEN
+	_, err = u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusDelivered, actorID, domain.UserRoleCashier)
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeForbidden {
+		t.Fatalf("expected FORBIDDEN for cashier delivering dine_in, got %v", err)
+	}
+
+	// OWNER can DELIVER
+	_, err = u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusDelivered, actorID, domain.UserRoleOwner)
+	if err != nil {
+		t.Fatalf("unexpected error on deliver: %v", err)
+	}
+
+	// OWNER can COMPLETED -> order becomes SELESAI
+	res, err = u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusCompleted, actorID, domain.UserRoleOwner)
+	if err != nil {
+		t.Fatalf("unexpected error on complete: %v", err)
+	}
+	if res.Status != domain.OrderStatusCompleted {
+		t.Errorf("expected order aggregate status SELESAI, got %s", res.Status)
 	}
 }
 
-func TestOrderUsecase_CancelItem_RefundAndTotals(t *testing.T) {
+func TestOrderUsecase_CancelOrder_UnpaidRestoresStock(t *testing.T) {
 	orderID := uuid.New()
-	item1ID := uuid.New()
-	item2ID := uuid.New()
 	actorID := uuid.New()
-	method := domain.PaymentMethodCash
-
-	// Paid order with 2 items
+	role := domain.UserRoleOwner
 	order := &domain.Order{
-		ID:             orderID,
-		PaymentStatus:  domain.PaymentStatusPaid,
-		PaymentMethod:  &method,
-		Status:          domain.OrderStatusWaiting,
-		TaxRateSnapshot: 10,
-		SubtotalAmount:  50000,
-		TaxAmount:      5000,
-		TotalAmount:    55000,
+		ID:            orderID,
+		OrderNumber:   "DI-20261121-001",
+		PaymentStatus: domain.PaymentStatusUnpaid,
+		Status:        domain.OrderStatusWaiting,
 		Items: []domain.OrderItem{
-			{ID: item1ID, Price: 25000, Qty: 1, Status: domain.OrderItemStatusPending},
-			{ID: item2ID, Price: 25000, Qty: 1, Status: domain.OrderItemStatusPending},
+			{ID: uuid.New(), Status: domain.OrderItemStatusPending},
 		},
 	}
 	repo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{orderID: order}}
 	tx := &mockTx{}
-	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx))
+	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx), nil, nil)
 
-	// Cancel item 1
-	updated, err := u.CancelItem(context.Background(), orderID, item1ID, actorID)
+	cancelled, err := u.CancelOrder(context.Background(), orderID, "Customer left", &actorID, &role)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if tx.persistedRefund == nil {
-		t.Fatal("expected refund persisted, got nil")
+	if !tx.stockRestored {
+		t.Error("expected stock restored on cancel")
 	}
-	if tx.persistedRefund.ActorID == nil || *tx.persistedRefund.ActorID != actorID {
-		t.Errorf("expected refund actor_id = %v, got %v", actorID, tx.persistedRefund.ActorID)
+	if tx.cancelledOrder != orderID || tx.cancelReason != "Customer left" {
+		t.Errorf("expected CancelOrder called with reason, got %v, %s", tx.cancelledOrder, tx.cancelReason)
 	}
-	if tx.persistedRefund.Reason != "staff cancelled item" {
-		t.Errorf("expected reason 'staff cancelled item', got %s", tx.persistedRefund.Reason)
+	if cancelled.Status != domain.OrderStatusCancelled {
+		t.Errorf("expected status DIBATALKAN, got %s", cancelled.Status)
 	}
-	if updated.SubtotalAmount != 25000 || updated.TaxAmount != 2500 || updated.TotalAmount != 27500 {
-		t.Errorf("expected decreased totals, got subtotal=%d, tax=%d, total=%d", updated.SubtotalAmount, updated.TaxAmount, updated.TotalAmount)
+	if cancelled.CancelReason == nil || *cancelled.CancelReason != "Customer left" {
+		t.Errorf("expected cancel reason set, got %v", cancelled.CancelReason)
 	}
 
-	// Cancel last active item -> totals 0 and DIBATALKAN
-	updated, err = u.CancelItem(context.Background(), orderID, item2ID, actorID)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if updated.Status != domain.OrderStatusCancelled {
-		t.Errorf("expected DIBATALKAN status, got %s", updated.Status)
-	}
-	if updated.SubtotalAmount != 0 || updated.TaxAmount != 0 || updated.TotalAmount != 0 {
-		t.Errorf("expected 0 totals, got sub=%d, tax=%d, total=%d", updated.SubtotalAmount, updated.TaxAmount, updated.TotalAmount)
+	// Cancel again -> 409 INVALID_TRANSITION
+	_, err = u.CancelOrder(context.Background(), orderID, "again", &actorID, &role)
+	var appErr *domain.AppError
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeInvalidTransition {
+		t.Fatalf("expected INVALID_TRANSITION on cancelling already cancelled order, got %v", err)
 	}
 }
 
-func TestOrderUsecase_CancelItem_UnpaidDoesNotRefund(t *testing.T) {
+func TestOrderUsecase_CancelOrder_PaidOrderRejected(t *testing.T) {
 	orderID := uuid.New()
-	itemID := uuid.New()
 	order := &domain.Order{
-		ID:             orderID,
-		PaymentStatus:  domain.PaymentStatusUnpaid,
-		Status:         domain.OrderStatusWaiting,
-		SubtotalAmount: 50000,
-		TaxAmount:      5000,
-		TotalAmount:    55000,
-		Items: []domain.OrderItem{
-			{ID: itemID, Price: 25000, Qty: 1, Status: domain.OrderItemStatusPending},
-			{ID: uuid.New(), Price: 25000, Qty: 1, Status: domain.OrderItemStatusPending},
-		},
+		ID:            orderID,
+		PaymentStatus: domain.PaymentStatusPaid,
+		Status:        domain.OrderStatusProcessing,
 	}
 	repo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{orderID: order}}
-	tx := &mockTx{}
-	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx))
+	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil)
 
-	updated, err := u.CancelItem(context.Background(), orderID, itemID, uuid.New())
+	_, err := u.CancelOrder(context.Background(), orderID, "paid cancel", nil, nil)
+	var appErr *domain.AppError
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeInvalidTransition {
+		t.Fatalf("expected INVALID_TRANSITION when cancelling paid order, got %v", err)
+	}
+}
+
+func TestPublicUsecase_OrdersIsolation(t *testing.T) {
+	sessionA := &domain.TableSession{
+		ID:           uuid.New(),
+		TableID:      uuid.New(),
+		SessionToken: "token-a",
+		Status:       domain.TableSessionStatusOpen,
+	}
+	sessionB := &domain.TableSession{
+		ID:           uuid.New(),
+		TableID:      uuid.New(),
+		SessionToken: "token-b",
+		Status:       domain.TableSessionStatusOpen,
+	}
+
+	orderA := domain.Order{
+		ID:             uuid.New(),
+		TableSessionID: &sessionA.ID,
+		Status:         domain.OrderStatusWaiting,
+		PaymentStatus:  domain.PaymentStatusUnpaid,
+	}
+	orderB := domain.Order{
+		ID:             uuid.New(),
+		TableSessionID: &sessionB.ID,
+		Status:         domain.OrderStatusWaiting,
+		PaymentStatus:  domain.PaymentStatusUnpaid,
+	}
+
+	repo := &mockOrderQueryRepo{
+		orders: []domain.Order{orderA, orderB},
+		byID: map[uuid.UUID]*domain.Order{
+			orderA.ID: &orderA,
+			orderB.ID: &orderB,
+		},
+	}
+	pu := NewPublicUsecase(nil, nil, nil, repo, nil, nil, nil)
+
+	// List orders for Session A -> only orderA
+	orders, err := pu.ListOrders(context.Background(), sessionA)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if tx.persistedRefund != nil {
-		t.Errorf("expected nil refund on unpaid order cancel, got %+v", tx.persistedRefund)
+	if len(orders) != 1 || orders[0].ID != orderA.ID {
+		t.Errorf("expected only session A's order, got %d orders", len(orders))
 	}
-	if updated.SubtotalAmount != 50000 || updated.TotalAmount != 55000 {
-		t.Errorf("expected totals unchanged on unpaid cancel, got subtotal=%d, total=%d", updated.SubtotalAmount, updated.TotalAmount)
+
+	// Session A reads Session B order -> 404 NOT_FOUND
+	_, err = pu.GetOrder(context.Background(), sessionA, orderB.ID)
+	var appErr *domain.AppError
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeNotFound {
+		t.Fatalf("expected 404 NOT_FOUND when accessing order from another session, got %v", err)
+	}
+
+	// Session A cancels Session B order -> 404 NOT_FOUND
+	_, err = pu.CancelOrder(context.Background(), sessionA, orderB.ID, "cancel B")
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeNotFound {
+		t.Fatalf("expected 404 NOT_FOUND when cancelling order from another session, got %v", err)
 	}
 }

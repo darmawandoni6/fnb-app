@@ -26,8 +26,8 @@ func newHandlers(db *gorm.DB, cfg *config.Config) (httpDelivery.Handlers, *useca
 	adminHandler := newAdminHandler(db, categoryRepo, cfg)
 	handlers := httpDelivery.Handlers{
 		Auth:   newAuthHandler(authUsecase, cfg),
-		Public: newPublicHandler(db, sessionUsecase),
-		Order:  newOrderHandler(db),
+		Public: newPublicHandler(db, sessionUsecase, cfg),
+		Order:  newOrderHandler(db, cfg),
 		Admin:  adminHandler,
 		Stock:  newStockHandler(db),
 		Users:  newUsersSettingsHandler(db),
@@ -74,15 +74,21 @@ func newTableSessionUsecase(db *gorm.DB) *usecase.TableSessionUsecase {
 	return usecase.NewTableSessionUsecase(sessionRepo, tableRepo, auditRepo)
 }
 
-func newPublicHandler(db *gorm.DB, sessionUsecase *usecase.TableSessionUsecase) *httpDelivery.PublicHandler {
+func newPublicHandler(db *gorm.DB, sessionUsecase *usecase.TableSessionUsecase, cfg *config.Config) *httpDelivery.PublicHandler {
 	tableRepo := repository.NewTableRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
-	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo)
+	orderRepo := repository.NewOrderRepository(db)
+	withTx := func(ctx context.Context, fn func(usecase.OrderTx) error) error {
+		return database.WithTx(ctx, db, func(tx *gorm.DB) error {
+			return fn(repository.NewOrderRepository(tx))
+		})
+	}
+	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, orderRepo, withTx, nil, cfg.Location())
 	return httpDelivery.NewPublicHandler(publicUsecase, sessionUsecase)
 }
 
-func newOrderHandler(db *gorm.DB) *httpDelivery.OrderHandler {
+func newOrderHandler(db *gorm.DB, cfg *config.Config) *httpDelivery.OrderHandler {
 	orderRepo := repository.NewOrderRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
@@ -91,6 +97,6 @@ func newOrderHandler(db *gorm.DB) *httpDelivery.OrderHandler {
 			return fn(repository.NewOrderRepository(tx))
 		})
 	}
-	orderUsecase := usecase.NewOrderUsecase(orderRepo, menuRepo, settingRepo, withTx)
+	orderUsecase := usecase.NewOrderUsecase(orderRepo, menuRepo, settingRepo, withTx, nil, cfg.Location())
 	return httpDelivery.NewOrderHandler(orderUsecase)
 }

@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 
 import { api } from '@/api'
-import type { StockMovementType } from '@/types'
+import type { StockMovementType } from '@/constants'
 import { cn } from 'cn'
 
 import { formatNumber } from '@/lib/format'

@@ -42,9 +42,9 @@ export function OrderDetailDialog({
       <Dialog open={order !== null} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-xl">
           <DialogHeader>
-            <DialogTitle>Order #{order.id}</DialogTitle>
+            <DialogTitle>Order {order.order_number}</DialogTitle>
             <DialogDescription>
-              {order.order_type}
+              {order.order_type === 'TAKE_AWAY' ? 'Take Away' : 'Dine In'}
               {order.table_number ? ` · Meja ${order.table_number}` : ''} · {order.payment_status}
               {order.payment_method ? ` · ${order.payment_method}` : ''}
             </DialogDescription>
@@ -62,11 +62,11 @@ export function OrderDetailDialog({
               {order.items.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
-                    {item.menu_name}
+                    {item.menu_name_snapshot}
                     {item.note && <p className="text-muted-foreground text-xs">{item.note}</p>}
                   </TableCell>
                   <TableCell className="text-right">{item.qty}</TableCell>
-                  <TableCell className="text-right">{formatRupiah(item.unit_price)}</TableCell>
+                  <TableCell className="text-right">{formatRupiah(item.price)}</TableCell>
                   <TableCell className="text-right">
                     <Badge variant="outline">{item.status}</Badge>
                   </TableCell>
@@ -81,7 +81,13 @@ export function OrderDetailDialog({
               <span>{formatRupiah(order.subtotal_amount)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Pajak ({order.tax_percent}%)</span>
+              <span className="text-muted-foreground">
+                Service ({order.service_rate_snapshot}%)
+              </span>
+              <span>{formatRupiah(order.service_amount)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Pajak ({order.tax_rate_snapshot}%)</span>
               <span>{formatRupiah(order.tax_amount)}</span>
             </div>
             <div className="flex justify-between font-medium">

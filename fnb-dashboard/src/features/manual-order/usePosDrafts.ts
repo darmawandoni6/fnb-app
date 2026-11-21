@@ -1,16 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 
-import type { DiningOption } from '@/types'
-
 const STORAGE_KEY = 'fnb_pos_draft_orders'
 
 export type PosDraftOrder = {
   id: string
   created_at: string
-  dining_option: DiningOption
   customer_name: string
-  table_id: string | null
-  table_number: string | null
   items: Record<string, { qty: number; note: string }>
   item_count: number
   total_estimate: number

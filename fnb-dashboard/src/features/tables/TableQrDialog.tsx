@@ -50,7 +50,7 @@ export function TableQrDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>QR Meja {table.number}</DialogTitle>
+          <DialogTitle>QR Meja {table.table_number}</DialogTitle>
           <DialogDescription>
             Tempel QR ini di meja. Pelanggan memindainya untuk membuka menu.
           </DialogDescription>

@@ -25,11 +25,11 @@ export function TableQrCard({
         size={qrSize}
         marginSize={4}
         level="M"
-        title={`QR Menu meja ${table.number}`}
+        title={`QR Menu meja ${table.table_number}`}
       />
       <div className="flex flex-col items-center gap-0.5">
         <span className="text-[10px] tracking-[0.3em] text-neutral-500 uppercase">Meja</span>
-        <span className="text-4xl leading-none font-black">{table.number}</span>
+        <span className="text-4xl leading-none font-black">{table.table_number}</span>
       </div>
     </div>
   )

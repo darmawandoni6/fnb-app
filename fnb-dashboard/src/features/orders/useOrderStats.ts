@@ -6,12 +6,7 @@ import { todayUTC } from '@/lib/format'
 
 import { useOrders } from './useOrders'
 
-const activeStatuses: OrderStatus[] = [
-  ORDER_STATUS.MENUNGGU,
-  ORDER_STATUS.DIPROSES,
-  ORDER_STATUS.SIAP,
-  ORDER_STATUS.DIANTAR,
-]
+const activeStatuses: OrderStatus[] = [ORDER_STATUS.MENUNGGU, ORDER_STATUS.DIPROSES]
 
 export function useOrderStats() {
   const { data: orders } = useOrders({ date: todayUTC() })

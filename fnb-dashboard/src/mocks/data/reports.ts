@@ -24,8 +24,8 @@ export const generateHistoricalOrders = (): Order[] => {
 
     for (let orderIndex = 0; orderIndex < ordersTodayCount; orderIndex++) {
       const orderId = `hist-ord-${dayOffset}-${orderIndex + 1}`
-      const isQr = random() > 0.4
-      const tableNum = isQr ? String(Math.floor(random() * 8) + 1) : null
+      const isDineIn = random() > 0.4
+      const tableNum = isDineIn ? String(Math.floor(random() * 8) + 1) : null
       const isCash = random() > 0.45
 
       // Random hours between 09:00 and 21:00
@@ -44,30 +44,51 @@ export const generateHistoricalOrders = (): Order[] => {
         orderItems.push({
           id: `item-${orderId}-${itemIdx + 1}`,
           menu_id: selectedMenu.id,
-          menu_name: selectedMenu.name,
+          menu_name_snapshot: selectedMenu.name,
           qty,
-          unit_price: selectedMenu.price,
+          price: selectedMenu.price,
           note: null,
-          status: ITEM_STATUS.DELIVERED,
+          status: ITEM_STATUS.COMPLETED,
+          ready_at: orderTime.toISOString(),
+          delivered_at: orderTime.toISOString(),
+          completed_at: orderTime.toISOString(),
+          cancelled_at: null,
         })
       }
 
-      const subtotal = orderItems.reduce((acc, curr) => acc + curr.qty * curr.unit_price, 0)
-      const taxPercent = 10
-      const taxAmount = Math.round((subtotal * taxPercent) / 100)
-      const totalAmount = subtotal + taxAmount
+      const subtotal = orderItems.reduce((acc, curr) => acc + curr.qty * curr.price, 0)
+      const serviceRate = 5
+      const taxRate = 10
+      const serviceAmount = Math.round((subtotal * serviceRate) / 100)
+      const taxAmount = Math.round(((subtotal + serviceAmount) * taxRate) / 100)
+      const totalAmount = subtotal + serviceAmount + taxAmount
+      const prefix = isDineIn ? 'DI' : 'TA'
 
       generated.push({
         id: orderId,
-        order_type: isQr ? ORDER_TYPE.QR : ORDER_TYPE.MANUAL,
-        table_id: isQr ? `table-${tableNum}` : null,
+        order_number: `${prefix}-${String(dayOffset * 20 + orderIndex + 1).padStart(3, '0')}`,
+        order_type: isDineIn ? ORDER_TYPE.DINE_IN : ORDER_TYPE.TAKE_AWAY,
+        table_id: isDineIn ? `table-${tableNum}` : null,
         table_number: tableNum,
+        table_session_id: isDineIn ? `session-hist-${dayOffset}-${orderIndex}` : null,
+        created_by: isDineIn ? null : 'user-2',
+        created_by_name: isDineIn ? null : 'Kasir',
+        customer_name: isDineIn ? 'Tamu' : 'Pelanggan',
+        customer_phone: null,
         status: ORDER_STATUS.SELESAI,
         payment_status: PAYMENT_STATUS.LUNAS,
         payment_method: isCash ? PAYMENT_METHOD.CASH : PAYMENT_METHOD.NON_CASH,
+        payment_ref: null,
+        paid_at: orderTime.toISOString(),
+        amount_received: isCash ? totalAmount : null,
+        change_amount: isCash ? 0 : null,
+        cancel_reason: null,
+        canceled_at: null,
         subtotal_amount: subtotal,
+        service_rate_snapshot: serviceRate,
+        service_amount: serviceAmount,
+        tax_rate_snapshot: taxRate,
         tax_amount: taxAmount,
-        tax_percent: taxPercent,
         total_amount: totalAmount,
         created_at: orderTime.toISOString(),
         items: orderItems,

@@ -1,9 +1,6 @@
 import { useState } from 'react'
 
-import { useQuery } from '@tanstack/react-query'
-
-import { api } from '@/api'
-import type { DiningOption, Menu, Table } from '@/types'
+import type { Menu } from '@/types'
 import { Clock, FolderDown, Minus, Plus, ShoppingBag, Trash2, User } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -22,13 +19,6 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 
 import { type PosDraftOrder, usePosDrafts } from './usePosDrafts'
 
@@ -40,54 +30,43 @@ export type CartItem = {
 
 type OrderCartPanelProps = {
   cart: Record<string, CartItem>
-  diningOption: DiningOption
   customerName: string
-  selectedTableId: string
-  selectedTableNumber: string
-  taxPercent: number
+  customerPhone: string
+  serviceRate: number
+  taxRate: number
   isStoreClosed: boolean
   isSubmitting: boolean
   onUpdateCart: (updater: (prev: Record<string, CartItem>) => Record<string, CartItem>) => void
-  onSetDiningOption: (opt: DiningOption) => void
   onSetCustomerName: (name: string) => void
-  onSetTable: (id: string, number: string) => void
+  onSetCustomerPhone: (phone: string) => void
   onResetCart: () => void
   onSubmitOrder: () => void
 }
 
 export function OrderCartPanel({
   cart,
-  diningOption,
   customerName,
-  selectedTableId,
-  selectedTableNumber,
-  taxPercent,
+  customerPhone,
+  serviceRate,
+  taxRate,
   isStoreClosed,
   isSubmitting,
   onUpdateCart,
-  onSetDiningOption,
   onSetCustomerName,
-  onSetTable,
+  onSetCustomerPhone,
   onResetCart,
   onSubmitOrder,
 }: OrderCartPanelProps) {
   const { drafts, saveDraft, deleteDraft } = usePosDrafts()
   const [draftDialogOpen, setDraftDialogOpen] = useState(false)
 
-  // Fetch active tables for Dine-in
-  const { data: tables } = useQuery<Table[]>({
-    queryKey: ['tables'],
-    queryFn: api.getTables,
-  })
-
-  const activeTables = (tables ?? []).filter((t) => t.is_active)
-
   const cartItemsList = Object.values(cart).filter((item) => item.qty > 0)
   const totalItemCount = cartItemsList.reduce((sum, item) => sum + item.qty, 0)
 
   const subtotal = cartItemsList.reduce((sum, item) => sum + item.qty * item.menu.price, 0)
-  const taxAmount = Math.round((subtotal * taxPercent) / 100)
-  const grandTotal = subtotal + taxAmount
+  const serviceAmount = Math.round((subtotal * serviceRate) / 100)
+  const taxAmount = Math.round(((subtotal + serviceAmount) * taxRate) / 100)
+  const grandTotal = subtotal + serviceAmount + taxAmount
 
   const handleHoldDraft = () => {
     if (cartItemsList.length === 0) {
@@ -107,10 +86,7 @@ export function OrderCartPanel({
     }
 
     saveDraft({
-      dining_option: diningOption,
       customer_name: name,
-      table_id: diningOption === 'DINE_IN' ? selectedTableId || null : null,
-      table_number: diningOption === 'DINE_IN' ? selectedTableNumber || null : null,
       items: serializedItems,
       item_count: totalItemCount,
       total_estimate: grandTotal,
@@ -134,11 +110,7 @@ export function OrderCartPanel({
     }
 
     onUpdateCart(() => newCart)
-    onSetDiningOption(draft.dining_option)
     onSetCustomerName(draft.customer_name)
-    if (draft.table_id && draft.table_number) {
-      onSetTable(draft.table_id, draft.table_number)
-    }
 
     deleteDraft(draft.id)
     setDraftDialogOpen(false)
@@ -197,8 +169,11 @@ export function OrderCartPanel({
       <CardHeader className="flex flex-row items-center justify-between border-b pb-3">
         <div className="flex items-center gap-2">
           <CardTitle className="text-base font-bold">Pesanan</CardTitle>
+          <Badge variant="secondary" className="text-xs">
+            Take Away
+          </Badge>
           {totalItemCount > 0 && (
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="outline" className="text-xs">
               {totalItemCount} item
             </Badge>
           )}
@@ -241,9 +216,7 @@ export function OrderCartPanel({
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-semibold">{draft.customer_name}</span>
                           <Badge variant="outline" className="text-[10px]">
-                            {draft.dining_option === 'DINE_IN'
-                              ? `Meja ${draft.table_number ?? '-'}`
-                              : 'Take Away'}
+                            Take Away
                           </Badge>
                         </div>
                         <span className="text-muted-foreground">
@@ -297,62 +270,8 @@ export function OrderCartPanel({
       </CardHeader>
 
       <CardContent className="flex flex-1 flex-col gap-4 p-4">
-        {/* Service Option Segmented Toggle */}
-        <div className="bg-muted grid grid-cols-2 rounded-lg p-1 text-xs">
-          <button
-            type="button"
-            onClick={() => onSetDiningOption('DINE_IN')}
-            className={`rounded-md py-1.5 font-medium transition-all ${
-              diningOption === 'DINE_IN'
-                ? 'bg-background text-foreground font-semibold shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Dine In (Makan di Tempat)
-          </button>
-          <button
-            type="button"
-            onClick={() => onSetDiningOption('TAKE_AWAY')}
-            className={`rounded-md py-1.5 font-medium transition-all ${
-              diningOption === 'TAKE_AWAY'
-                ? 'bg-background text-foreground font-semibold shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Take Away (Bungkus)
-          </button>
-        </div>
-
-        {/* Customer & Table Inputs */}
+        {/* Customer Inputs */}
         <div className="flex flex-col gap-2.5">
-          {diningOption === 'DINE_IN' && (
-            <div>
-              <Label htmlFor="table-select" className="mb-1 block text-xs font-semibold">
-                Nomor Meja <span className="text-destructive">*</span>
-              </Label>
-              <Select
-                value={selectedTableNumber}
-                onValueChange={(val) => {
-                  const targetTable = activeTables.find((t) => t.number === val)
-                  if (targetTable) {
-                    onSetTable(targetTable.id, targetTable.number)
-                  }
-                }}
-              >
-                <SelectTrigger id="table-select" className="h-9 text-xs">
-                  <SelectValue placeholder="-- Pilih Meja --" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeTables.map((t) => (
-                    <SelectItem key={t.id} value={t.number}>
-                      Meja {t.number}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
           <div>
             <Label htmlFor="customer-name" className="mb-1 block text-xs font-semibold">
               Nama Pelanggan <span className="text-destructive">*</span>
@@ -367,6 +286,19 @@ export function OrderCartPanel({
                 className="h-9 pl-8 text-xs"
               />
             </div>
+          </div>
+          <div>
+            <Label htmlFor="customer-phone" className="mb-1 block text-xs font-semibold">
+              No. HP (opsional)
+            </Label>
+            <Input
+              id="customer-phone"
+              inputMode="tel"
+              placeholder="08xxxxxxxxxx"
+              value={customerPhone}
+              onChange={(e) => onSetCustomerPhone(e.target.value)}
+              className="h-9 text-xs"
+            />
           </div>
         </div>
 
@@ -456,18 +388,23 @@ export function OrderCartPanel({
             <span>Subtotal</span>
             <span>{formatRupiah(subtotal)}</span>
           </div>
-          {taxPercent > 0 && (
-            <div className="text-muted-foreground flex justify-between">
-              <span>Pajak ({taxPercent}%)</span>
-              <span>{formatRupiah(taxAmount)}</span>
-            </div>
-          )}
+          <div className="text-muted-foreground flex justify-between">
+            <span>Service ({serviceRate}%)</span>
+            <span>{formatRupiah(serviceAmount)}</span>
+          </div>
+          <div className="text-muted-foreground flex justify-between">
+            <span>Pajak ({taxRate}%)</span>
+            <span>{formatRupiah(taxAmount)}</span>
+          </div>
           <div className="text-foreground flex justify-between border-t pt-1.5 text-sm font-bold">
             <span>Total Tagihan</span>
             <span className="text-emerald-600 dark:text-emerald-400">
               {formatRupiah(grandTotal)}
             </span>
           </div>
+          <p className="text-muted-foreground pt-1 text-[10px]">
+            Perkiraan tampilan. Nominal final dihitung server.
+          </p>
         </div>
       </CardContent>
 

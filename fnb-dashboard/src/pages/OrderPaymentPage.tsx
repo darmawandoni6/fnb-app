@@ -7,16 +7,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/api'
 import { ITEM_STATUS, PAYMENT_METHOD, PAYMENT_STATUS, type PaymentMethod } from '@/constants'
 import type { Order } from '@/types'
-import {
-  ArrowLeft,
-  Banknote,
-  CheckCircle2,
-  CreditCard,
-  Printer,
-  QrCode,
-  Receipt,
-  UserCheck,
-} from 'lucide-react'
+import { ArrowLeft, Banknote, CheckCircle2, CreditCard, Printer, UserCheck } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ROUTES } from '@/constants/routes'
@@ -53,7 +44,6 @@ export function OrderPaymentPage() {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PAYMENT_METHOD.CASH)
   const [cashReceivedInput, setCashReceivedInput] = useState<string>('')
-  const [nonCashChannel, setNonCashChannel] = useState<'QRIS' | 'DEBIT' | 'TRANSFER'>('QRIS')
   const [receiptOpen, setReceiptOpen] = useState(false)
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null)
   const [backConfirmOpen, setBackConfirmOpen] = useState(false)
@@ -71,7 +61,6 @@ export function OrderPaymentPage() {
 
   const updatePaymentMutation = useMutation({
     mutationFn: (body: {
-      payment_status: 'LUNAS'
       payment_method: PaymentMethod
       amount_received?: number | null
       change_amount?: number | null
@@ -79,7 +68,7 @@ export function OrderPaymentPage() {
     onSuccess: (updated) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['orders', id] })
-      toast.success(`Pembayaran pesanan #${updated.id} berhasil dicatat LUNAS`)
+      toast.success(`Pembayaran pesanan ${updated.order_number} berhasil dicatat LUNAS`)
       setCompletedOrder(updated)
       setReceiptOpen(true)
     },
@@ -101,7 +90,6 @@ export function OrderPaymentPage() {
 
     const isCash = paymentMethod === PAYMENT_METHOD.CASH
     updatePaymentMutation.mutate({
-      payment_status: PAYMENT_STATUS.LUNAS,
       payment_method: paymentMethod,
       amount_received: isCash ? cashReceived : null,
       change_amount: isCash ? changeAmount : null,
@@ -122,9 +110,10 @@ export function OrderPaymentPage() {
 
   const isAlreadyPaid = order.payment_status === PAYMENT_STATUS.LUNAS
   const canCancelOrder =
+    user?.role === 'OWNER' &&
     !isAlreadyPaid &&
-    order.items.length > 0 &&
-    order.items.every((item) => item.status === ITEM_STATUS.PENDING)
+    order.status === 'MENUNGGU' &&
+    order.items.some((item) => item.status !== ITEM_STATUS.CANCELLED)
   const goBackToNewOrder = () => {
     if (isAlreadyPaid) {
       navigate(ROUTES.ORDERS_NEW)
@@ -188,7 +177,7 @@ export function OrderPaymentPage() {
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base font-bold">Ringkasan Pesanan</CardTitle>
                 <Badge variant="outline" className="font-mono text-xs">
-                  #{order.id}
+                  {order.order_number}
                 </Badge>
               </div>
               <CardDescription className="text-xs">
@@ -208,7 +197,7 @@ export function OrderPaymentPage() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Layanan:</span>
                   <span className="text-foreground font-medium">
-                    {order.dining_option === 'TAKE_AWAY'
+                    {order.order_type === 'TAKE_AWAY'
                       ? 'Take Away (Bungkus)'
                       : `Dine In (Meja ${order.table_number ?? '-'})`}
                   </span>
@@ -230,9 +219,11 @@ export function OrderPaymentPage() {
                     className="flex items-start justify-between border-b pb-1.5 last:border-none"
                   >
                     <div className="min-w-0 pr-2">
-                      <p className="text-foreground line-clamp-1 font-semibold">{item.menu_name}</p>
+                      <p className="text-foreground line-clamp-1 font-semibold">
+                        {item.menu_name_snapshot}
+                      </p>
                       <p className="text-muted-foreground text-[11px]">
-                        {item.qty}x @ {formatRupiah(item.unit_price)}
+                        {item.qty}x @ {formatRupiah(item.price)}
                       </p>
                       {item.note && (
                         <p className="text-muted-foreground text-[10px] italic">
@@ -241,7 +232,7 @@ export function OrderPaymentPage() {
                       )}
                     </div>
                     <span className="text-foreground shrink-0 font-medium">
-                      {formatRupiah(item.qty * item.unit_price)}
+                      {formatRupiah(item.qty * item.price)}
                     </span>
                   </div>
                 ))}
@@ -255,12 +246,14 @@ export function OrderPaymentPage() {
                   <span>Subtotal</span>
                   <span>{formatRupiah(order.subtotal_amount)}</span>
                 </div>
-                {order.tax_percent > 0 && (
-                  <div className="text-muted-foreground flex justify-between">
-                    <span>Pajak ({order.tax_percent}%)</span>
-                    <span>{formatRupiah(order.tax_amount)}</span>
-                  </div>
-                )}
+                <div className="text-muted-foreground flex justify-between">
+                  <span>Service ({order.service_rate_snapshot}%)</span>
+                  <span>{formatRupiah(order.service_amount)}</span>
+                </div>
+                <div className="text-muted-foreground flex justify-between">
+                  <span>Pajak ({order.tax_rate_snapshot}%)</span>
+                  <span>{formatRupiah(order.tax_amount)}</span>
+                </div>
                 <div className="text-foreground flex justify-between pt-1 text-base font-bold">
                   <span>Total Tagihan</span>
                   <span className="text-emerald-600 dark:text-emerald-400">
@@ -392,55 +385,11 @@ export function OrderPaymentPage() {
 
                 {/* Tab 2: Non-Tunai */}
                 <TabsContent value={PAYMENT_METHOD.NON_CASH} className="space-y-4 pt-4">
-                  <div className="space-y-2">
-                    <Label className="text-xs font-semibold">Channel Pembayaran:</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setNonCashChannel('QRIS')}
-                        className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border p-3 text-center transition-all ${
-                          nonCashChannel === 'QRIS'
-                            ? 'border-primary bg-primary/10 text-primary font-semibold'
-                            : 'hover:bg-muted/50 text-muted-foreground'
-                        }`}
-                      >
-                        <QrCode className="h-6 w-6" />
-                        <span className="text-xs">QRIS / E-Wallet</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setNonCashChannel('DEBIT')}
-                        className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border p-3 text-center transition-all ${
-                          nonCashChannel === 'DEBIT'
-                            ? 'border-primary bg-primary/10 text-primary font-semibold'
-                            : 'hover:bg-muted/50 text-muted-foreground'
-                        }`}
-                      >
-                        <CreditCard className="h-6 w-6" />
-                        <span className="text-xs">Kartu Debit</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setNonCashChannel('TRANSFER')}
-                        className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border p-3 text-center transition-all ${
-                          nonCashChannel === 'TRANSFER'
-                            ? 'border-primary bg-primary/10 text-primary font-semibold'
-                            : 'hover:bg-muted/50 text-muted-foreground'
-                        }`}
-                      >
-                        <Receipt className="h-6 w-6" />
-                        <span className="text-xs">Transfer Bank</span>
-                      </button>
-                    </div>
-                  </div>
-
                   <div className="rounded-lg bg-blue-50 p-3 text-xs text-blue-900 dark:bg-blue-950/40 dark:text-blue-300">
-                    <p className="font-semibold">Konfirmasi Transaksi:</p>
+                    <p className="font-semibold">Konfirmasi Non-Tunai:</p>
                     <p className="mt-0.5 text-[11px]">
-                      Pastikan dana telah berhasil diterima di mesin EDC atau mutasi rekening
-                      sebelum menyelesaikan pesanan ini.
+                      Pastikan dana sudah diterima lewat EDC atau mutasi rekening sebelum
+                      menyelesaikan pesanan. Belum ada integrasi payment gateway.
                     </p>
                   </div>
                 </TabsContent>

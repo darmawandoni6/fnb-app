@@ -3,8 +3,9 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
+import type { Settings } from '@/types'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertTriangle, Building2, CheckCircle2, Percent, Store } from 'lucide-react'
+import { AlertTriangle, Building2, CheckCircle2, Percent, Store, Timer } from 'lucide-react'
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 
@@ -27,10 +28,11 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { type SettingsValues, settingsSchema } from '@/features/settings/settingsSchema'
 
-const TAX_PRESETS = [
-  { value: 0, label: '0% (Tanpa Pajak)' },
-  { value: 10, label: '10% (PB1 Reguler)' },
-  { value: 11, label: '11% (PPN)' },
+const RATE_PRESETS = [
+  { value: 0, label: '0%' },
+  { value: 5, label: '5%' },
+  { value: 10, label: '10%' },
+  { value: 11, label: '11%' },
 ] as const
 
 export function SettingsPage() {
@@ -41,8 +43,8 @@ export function SettingsPage() {
   })
 
   const mutation = useMutation({
-    mutationFn: (values: Partial<SettingsValues>) => api.updateSettings(values),
-    onSuccess: (_, variables: Partial<SettingsValues>) => {
+    mutationFn: (values: Partial<Settings>) => api.updateSettings(values),
+    onSuccess: (_, variables) => {
       if (variables.is_open !== undefined) {
         toast.success(
           variables.is_open
@@ -50,7 +52,7 @@ export function SettingsPage() {
             : 'Toko ditutup. Pesanan baru ditolak.',
         )
       } else {
-        toast.success('Pengaturan profil & pajak berhasil disimpan')
+        toast.success('Pengaturan toko berhasil disimpan')
       }
       queryClient.invalidateQueries({ queryKey: ['settings'] })
     },
@@ -66,7 +68,7 @@ export function SettingsPage() {
       <div>
         <h1 className="text-lg font-semibold tracking-tight">Pengaturan Toko</h1>
         <p className="text-muted-foreground text-sm">
-          Kelola status operasional, profil kafe, dan perhitungan tarif pajak transaksi.
+          Kelola status operasional, profil kafe, tarif biaya, dan timer pesanan.
         </p>
       </div>
 
@@ -77,14 +79,18 @@ export function SettingsPage() {
       />
 
       <StoreProfileForm
-        key={`${settings.cafe_name}-${settings.tax_percent}`}
+        key={`${settings.cafe_name}-${settings.service_rate}-${settings.tax_rate}`}
         defaultValues={{
           cafe_name: settings.cafe_name,
-          tax_percent: settings.tax_percent,
-          is_open: settings.is_open,
+          service_rate: settings.service_rate,
+          tax_rate: settings.tax_rate,
+          cash_timeout_minutes: settings.cash_timeout_minutes,
+          delivered_auto_complete_minutes: settings.delivered_auto_complete_minutes,
+          ready_auto_deliver_minutes: settings.ready_auto_deliver_minutes,
+          ready_auto_deliver_warning_minutes: settings.ready_auto_deliver_warning_minutes,
         }}
         isPending={mutation.isPending}
-        onSave={({ cafe_name, tax_percent }) => mutation.mutate({ cafe_name, tax_percent })}
+        onSave={(values) => mutation.mutate(values)}
       />
     </div>
   )
@@ -205,33 +211,30 @@ function StoreProfileForm({
 }: {
   defaultValues: SettingsValues
   isPending: boolean
-  onSave: (values: { cafe_name: string; tax_percent: number }) => void
+  onSave: (values: SettingsValues) => void
 }) {
   const form = useForm<SettingsValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues,
   })
 
-  const currentTax = useWatch({ control: form.control, name: 'tax_percent' })
+  const currentService = useWatch({ control: form.control, name: 'service_rate' })
+  const currentTax = useWatch({ control: form.control, name: 'tax_rate' })
 
   return (
     <Card>
       <CardHeader className="border-b pb-4">
         <div className="flex items-center gap-2">
           <Building2 className="text-primary size-5" />
-          <CardTitle className="text-base font-semibold">Profil Kafe & Perhitungan Pajak</CardTitle>
+          <CardTitle className="text-base font-semibold">Profil Kafe & Biaya</CardTitle>
         </div>
         <CardDescription>
-          Informasi ini ditampilkan pada cetak struk pembayaran dan digunakan sebagai dasar
-          perhitungan pajak transaksi.
+          Informasi ini tampil pada struk dan menjadi dasar perhitungan biaya layanan serta pajak
+          transaksi baru.
         </CardDescription>
       </CardHeader>
 
-      <form
-        onSubmit={form.handleSubmit(({ cafe_name, tax_percent }) =>
-          onSave({ cafe_name, tax_percent }),
-        )}
-      >
+      <form onSubmit={form.handleSubmit(onSave)}>
         <CardContent className="flex flex-col gap-5 pt-5">
           {/* Nama Kafe */}
           <div className="flex flex-col gap-1.5">
@@ -243,72 +246,168 @@ function StoreProfileForm({
               placeholder="Contoh: Kopi Nusantara"
               {...form.register('cafe_name')}
             />
-            <p className="text-muted-foreground text-xs">
-              Nama ini akan dicetak di bagian paling atas struk kasir dan judul menu QR meja.
-            </p>
             {form.formState.errors.cafe_name && (
               <p className="text-destructive text-xs">{form.formState.errors.cafe_name.message}</p>
             )}
           </div>
 
-          {/* Persentase Pajak */}
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="settings-tax-percent">
-              Tarif Pajak Restoran (PB1 / PPN) <span className="text-destructive">*</span>
-            </Label>
-            <div className="relative max-w-xs">
-              <Input
-                id="settings-tax-percent"
-                type="number"
-                min={0}
-                max={100}
-                placeholder="0"
-                className="pr-9 font-mono"
-                {...form.register('tax_percent', { valueAsNumber: true })}
-              />
-              <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm font-semibold">
-                <Percent className="size-3.5" />
-              </span>
-            </div>
-
-            {/* Quick Preset Buttons */}
-            <div className="flex flex-wrap items-center gap-1.5 pt-1">
-              <span className="text-muted-foreground mr-1 text-xs font-medium">Preset cepat:</span>
-              {TAX_PRESETS.map((preset) => (
-                <Button
-                  key={preset.value}
-                  type="button"
-                  variant={currentTax === preset.value ? 'secondary' : 'outline'}
-                  size="xs"
-                  className={currentTax === preset.value ? 'border-primary/40 font-semibold' : ''}
-                  onClick={() =>
-                    form.setValue('tax_percent', preset.value, { shouldValidate: true })
-                  }
-                >
-                  {preset.label}
-                </Button>
-              ))}
-            </div>
-
-            <p className="text-muted-foreground pt-0.5 text-xs">
-              Tarif pajak disalin langsung ke setiap pesanan baru (snapshot historis) dan tidak
-              mengubah pesanan lama.
-            </p>
-            {form.formState.errors.tax_percent && (
-              <p className="text-destructive text-xs">
-                {form.formState.errors.tax_percent.message}
-              </p>
-            )}
+          {/* Tarif service charge & pajak */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <RateField
+              id="settings-service-rate"
+              label="Service Charge"
+              form={form}
+              name="service_rate"
+              current={currentService}
+            />
+            <RateField
+              id="settings-tax-rate"
+              label="Pajak Restoran (PB1 / PPN)"
+              form={form}
+              name="tax_rate"
+              current={currentTax}
+            />
           </div>
+
+          {/* Timer pesanan */}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <Timer className="text-primary size-4" />
+              <Label className="text-sm font-medium">Timer Pesanan (menit)</Label>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <TimerField
+                id="settings-cash-timeout"
+                label="Timeout bayar tunai"
+                form={form}
+                name="cash_timeout_minutes"
+              />
+              <TimerField
+                id="settings-auto-deliver"
+                label="Auto-deliver (READY → DELIVERED)"
+                form={form}
+                name="ready_auto_deliver_minutes"
+              />
+              <TimerField
+                id="settings-auto-deliver-warning"
+                label="Peringatan auto-deliver"
+                form={form}
+                name="ready_auto_deliver_warning_minutes"
+              />
+              <TimerField
+                id="settings-auto-complete"
+                label="Auto-complete (DELIVERED → COMPLETED)"
+                form={form}
+                name="delivered_auto_complete_minutes"
+              />
+            </div>
+            <p className="text-muted-foreground pt-0.5 text-xs">
+              Penjadwal berjalan di server; dashboard hanya menampilkan status turunannya.
+            </p>
+          </div>
+
+          <p className="text-muted-foreground text-xs">
+            Tarif disalin ke setiap pesanan baru (snapshot) dan tidak mengubah pesanan lama (BR-12).
+          </p>
         </CardContent>
 
         <CardFooter className="flex justify-end border-t pt-4">
           <Button type="submit" disabled={isPending}>
-            {isPending ? 'Menyimpan…' : 'Simpan Perubahan'}
+            {isPending ? 'Menyimpan...' : 'Simpan Perubahan'}
           </Button>
         </CardFooter>
       </form>
     </Card>
+  )
+}
+
+type FormLike = ReturnType<typeof useForm<SettingsValues>>
+
+function RateField({
+  id,
+  label,
+  form,
+  name,
+  current,
+}: {
+  id: string
+  label: string
+  form: FormLike
+  name: 'service_rate' | 'tax_rate'
+  current: number
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label htmlFor={id}>
+        {label} <span className="text-destructive">*</span>
+      </Label>
+      <div className="relative max-w-xs">
+        <Input
+          id={id}
+          type="number"
+          min={0}
+          max={100}
+          step="0.1"
+          className="pr-9 font-mono"
+          {...form.register(name, { valueAsNumber: true })}
+        />
+        <span className="text-muted-foreground pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm font-semibold">
+          <Percent className="size-3.5" />
+        </span>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 pt-1">
+        <span className="text-muted-foreground mr-1 text-xs font-medium">Preset:</span>
+        {RATE_PRESETS.map((preset) => (
+          <Button
+            key={preset.value}
+            type="button"
+            variant={current === preset.value ? 'secondary' : 'outline'}
+            size="xs"
+            className={current === preset.value ? 'border-primary/40 font-semibold' : ''}
+            onClick={() => form.setValue(name, preset.value, { shouldValidate: true })}
+          >
+            {preset.label}
+          </Button>
+        ))}
+      </div>
+      {form.formState.errors[name] && (
+        <p className="text-destructive text-xs">{form.formState.errors[name]?.message}</p>
+      )}
+    </div>
+  )
+}
+
+function TimerField({
+  id,
+  label,
+  form,
+  name,
+}: {
+  id: string
+  label: string
+  form: FormLike
+  name:
+    | 'cash_timeout_minutes'
+    | 'delivered_auto_complete_minutes'
+    | 'ready_auto_deliver_minutes'
+    | 'ready_auto_deliver_warning_minutes'
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <Label htmlFor={id} className="text-xs">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        type="number"
+        min={1}
+        className="h-9 font-mono"
+        {...form.register(name, { valueAsNumber: true })}
+      />
+      {form.formState.errors[name] && (
+        <p className="text-destructive text-xs">{form.formState.errors[name]?.message}</p>
+      )}
+    </div>
   )
 }
 
@@ -326,7 +425,6 @@ function SettingsSkeleton() {
           <Skeleton className="h-4 w-80" />
         </CardHeader>
         <CardContent className="space-y-4 pt-4">
-          <Skeleton className="h-16 w-full rounded-lg" />
           <Skeleton className="h-16 w-full rounded-lg" />
         </CardContent>
       </Card>

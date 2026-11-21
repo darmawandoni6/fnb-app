@@ -33,13 +33,13 @@ export function ReportKpiCards({ summary, isLoading }: ReportKpiCardsProps) {
       ? Math.round((summary.non_cash_revenue / summary.total_revenue) * 100)
       : 0
 
-  const qrPercent =
+  const dineInPercent =
     summary.total_orders > 0
-      ? Math.round((summary.qr_orders_count / summary.total_orders) * 100)
+      ? Math.round((summary.dine_in_orders_count / summary.total_orders) * 100)
       : 0
-  const manualPercent =
+  const takeAwayPercent =
     summary.total_orders > 0
-      ? Math.round((summary.manual_orders_count / summary.total_orders) * 100)
+      ? Math.round((summary.take_away_orders_count / summary.total_orders) * 100)
       : 0
 
   return (
@@ -69,8 +69,8 @@ export function ReportKpiCards({ summary, isLoading }: ReportKpiCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{summary.total_orders.toLocaleString('id-ID')}</div>
           <p className="text-muted-foreground mt-1 text-xs">
-            QR: {qrPercent}% ({summary.qr_orders_count}) | Kasir: {manualPercent}% (
-            {summary.manual_orders_count})
+            Dine In: {dineInPercent}% ({summary.dine_in_orders_count}) | Take Away:{' '}
+            {takeAwayPercent}% ({summary.take_away_orders_count})
           </p>
         </CardContent>
       </Card>

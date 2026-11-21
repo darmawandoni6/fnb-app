@@ -2,6 +2,7 @@ import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 
+import { AuditLogPage } from '@/pages/AuditLogPage'
 import { DashboardLayout } from '@/pages/DashboardLayout'
 import { KitchenPage } from '@/pages/KitchenPage'
 import { LoginPage } from '@/pages/LoginPage'
@@ -93,6 +94,11 @@ const router = createBrowserRouter([
             path: ROUTES.REPORTS,
             element: <RoleGuard roles={owner} />,
             children: [{ index: true, element: <ReportsPage /> }],
+          },
+          {
+            path: ROUTES.AUDIT_LOG,
+            element: <RoleGuard roles={owner} />,
+            children: [{ index: true, element: <AuditLogPage /> }],
           },
         ],
       },

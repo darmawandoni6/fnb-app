@@ -7,6 +7,7 @@ import {
   Boxes,
   ChefHat,
   LayoutGrid,
+  ScrollText,
   Settings,
   ShoppingBag,
   Users,
@@ -58,6 +59,7 @@ export const dashboardNavGroups = (role: UserRole): NavGroup[] => {
           { to: ROUTES.REPORTS, label: 'Reports', icon: BarChart3 },
           { to: ROUTES.USERS, label: 'Users', icon: Users },
           { to: ROUTES.SETTINGS, label: 'Settings', icon: Settings },
+          { to: ROUTES.AUDIT_LOG, label: 'Audit Log', icon: ScrollText },
         ],
       },
     ]

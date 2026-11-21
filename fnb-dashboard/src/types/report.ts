@@ -12,8 +12,8 @@ export type SalesReportSummary = {
   average_order_value: number
   cash_revenue: number
   non_cash_revenue: number
-  qr_orders_count: number
-  manual_orders_count: number
+  dine_in_orders_count: number
+  take_away_orders_count: number
   total_items_sold: number
 }
 

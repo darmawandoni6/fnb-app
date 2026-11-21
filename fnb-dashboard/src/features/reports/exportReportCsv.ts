@@ -6,7 +6,7 @@ export function exportReportCsv(orders: Order[], preset: string) {
   if (orders.length === 0) return
 
   const headers = [
-    'ID Pesanan',
+    'No. Pesanan',
     'Tanggal',
     'Waktu',
     'Tipe Pesanan',
@@ -14,6 +14,7 @@ export function exportReportCsv(orders: Order[], preset: string) {
     'Status Pembayaran',
     'Metode Pembayaran',
     'Subtotal (Rp)',
+    'Service (Rp)',
     'Pajak (Rp)',
     'Total (Rp)',
   ]
@@ -27,7 +28,7 @@ export function exportReportCsv(orders: Order[], preset: string) {
     }).format(dateObj)
 
     return [
-      `"${order.id}"`,
+      `"${order.order_number}"`,
       `"${dateStr}"`,
       `"${timeStr}"`,
       `"${order.order_type}"`,
@@ -35,6 +36,7 @@ export function exportReportCsv(orders: Order[], preset: string) {
       `"${order.payment_status}"`,
       `"${order.payment_method ?? '-'}"`,
       order.subtotal_amount,
+      order.service_amount,
       order.tax_amount,
       order.total_amount,
     ].join(',')

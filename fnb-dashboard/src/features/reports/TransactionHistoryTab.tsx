@@ -87,8 +87,8 @@ export function TransactionHistoryTab({ filter }: TransactionHistoryTabProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="ALL">Semua Tipe</SelectItem>
-                <SelectItem value={ORDER_TYPE.QR}>Dine-in (QR)</SelectItem>
-                <SelectItem value={ORDER_TYPE.MANUAL}>Kasir (Manual)</SelectItem>
+                <SelectItem value={ORDER_TYPE.DINE_IN}>Dine In</SelectItem>
+                <SelectItem value={ORDER_TYPE.TAKE_AWAY}>Take Away</SelectItem>
               </SelectContent>
             </Select>
 
@@ -171,18 +171,18 @@ export function TransactionHistoryTab({ filter }: TransactionHistoryTabProps) {
                             <span className="text-muted-foreground">{timeStr}</span>
                           </TableCell>
                           <TableCell className="font-mono text-xs font-medium">
-                            {order.id}
+                            {order.order_number}
                           </TableCell>
                           <TableCell>
                             <Badge
                               variant="outline"
                               className={
-                                order.order_type === ORDER_TYPE.QR
+                                order.order_type === ORDER_TYPE.DINE_IN
                                   ? 'border-blue-500/40 text-blue-600 dark:text-blue-400'
                                   : 'border-orange-500/40 text-orange-600 dark:text-orange-400'
                               }
                             >
-                              {order.order_type === ORDER_TYPE.QR ? 'QR Dine-in' : 'Kasir Manual'}
+                              {order.order_type === ORDER_TYPE.DINE_IN ? 'Dine In' : 'Take Away'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-xs">

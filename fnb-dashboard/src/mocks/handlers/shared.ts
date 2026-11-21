@@ -1,6 +1,6 @@
 import { API_ERROR_CODE, type ApiErrorCode, USER_ROLE, type UserRole } from '@/constants'
 import { db } from '@/mocks/db'
-import type { ApiError, User } from '@/types'
+import type { ApiError, AuditLogEntry, User } from '@/types'
 
 export class MockApiError extends Error implements ApiError {
   code: ApiErrorCode
@@ -30,7 +30,27 @@ export const requireRole = (...roles: UserRole[]) => {
   return user
 }
 
-export const isStaff = (role: UserRole) => role === USER_ROLE.OWNER || role === USER_ROLE.CASHIER
+export const isStaff = (role: UserRole) =>
+  role === USER_ROLE.OWNER || role === USER_ROLE.CASHIER || role === USER_ROLE.KITCHEN
+
+/** PRD §10.15: append-only audit trail for every status change. */
+export const audit = (entry: {
+  entity: string
+  entity_id: string
+  action: string
+  from_value: string | null
+  to_value: string | null
+}) => {
+  const actor = db.users.find(({ id }) => id === db.currentUserId)
+  const record: AuditLogEntry = {
+    id: `audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    ...entry,
+    actor_id: actor?.id ?? null,
+    actor_role: actor?.role ?? null,
+    created_at: new Date().toISOString(),
+  }
+  db.auditLog.unshift(record)
+}
 
 // TS cannot narrow `T | undefined` through `fail()` even though it returns `never`,
 // so lookups use this helper which throws or returns a defined value.

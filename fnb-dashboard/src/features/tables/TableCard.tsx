@@ -33,10 +33,20 @@ export function TableCard({
   const toggle = useMutation({
     mutationFn: () => api.updateTable(table.id, { is_active: !table.is_active }),
     onSuccess: () => {
-      toast.success(`Meja ${table.number} ${table.is_active ? 'dinonaktifkan' : 'diaktifkan'}`)
+      toast.success(
+        `Meja ${table.table_number} ${table.is_active ? 'dinonaktifkan' : 'diaktifkan'}`,
+      )
       onChanged()
     },
     onError: toastApiError,
+  })
+
+  // PRD §4.6: closing a session never touches the table's orders.
+  const closeSession = useMutation({
+    mutationFn: () => api.closeTableSession(table.id),
+    onSuccess: () => toast.success(`Sesi meja ${table.table_number} ditutup`),
+    onError: (error) =>
+      toast.error((error as { message?: string }).message ?? 'Tidak ada sesi aktif'),
   })
 
   const activeId = `table-active-${table.id}`
@@ -55,7 +65,7 @@ export function TableCard({
             <QrCode className="text-muted-foreground h-10 w-10" />
           )}
         </div>
-        <p className="text-sm font-semibold">Meja {table.number}</p>
+        <p className="text-sm font-semibold">Meja {table.table_number}</p>
         <Badge variant={table.is_active ? 'default' : 'secondary'} className="text-[10px]">
           {table.is_active ? 'Aktif' : 'Nonaktif'}
         </Badge>
@@ -73,16 +83,28 @@ export function TableCard({
             {table.is_active ? 'Aktif' : 'Nonaktif'}
           </Label>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground hover:text-foreground h-7 gap-1 px-2 text-xs"
-          onClick={() => setPreviewOpen(true)}
-        >
-          <QrCode className="h-3.5 w-3.5" />
-          Preview QR
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground h-7 gap-1 px-2 text-xs"
+            disabled={closeSession.isPending}
+            onClick={() => closeSession.mutate()}
+          >
+            Tutup sesi
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground hover:text-foreground h-7 gap-1 px-2 text-xs"
+            onClick={() => setPreviewOpen(true)}
+          >
+            <QrCode className="h-3.5 w-3.5" />
+            Preview QR
+          </Button>
+        </div>
       </CardFooter>
 
       <TableQrDialog

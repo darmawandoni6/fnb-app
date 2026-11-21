@@ -14,8 +14,6 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
-import { CancelItemDialog } from './CancelItemDialog'
-
 const onError = (error: unknown) =>
   toast.error((error as { message?: string }).message ?? 'Terjadi kesalahan')
 
@@ -32,9 +30,14 @@ export function OrderCard({
   const queryClient = useQueryClient()
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['orders'] })
 
-  const deliverable = deliveredItem(order)
-  const deliver = useMutation({
-    mutationFn: () => api.updateItemStatus(order.id, deliverable!.id, 'DELIVERED'),
+  // PRD §9: cashier owns READY → DELIVERED → COMPLETED for take away only.
+  const takeAway = order.order_type === ORDER_TYPE.TAKE_AWAY
+  const handOver = itemWithStatus(order, ITEM_STATUS.READY)
+  const complete = itemWithStatus(order, ITEM_STATUS.DELIVERED)
+
+  const advance = useMutation({
+    mutationFn: ({ item, status }: { item: OrderItem; status: string }) =>
+      api.updateItemStatus(order.id, item.id, status as OrderItem['status']),
     onSuccess: invalidate,
     onError,
   })
@@ -43,12 +46,10 @@ export function OrderCard({
     <Card className="cursor-pointer gap-3" onClick={onClick}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-sm">
-          {order.order_type === ORDER_TYPE.QR ? (
-            <Badge variant="secondary">QR</Badge>
-          ) : (
-            <Badge variant="outline">MANUAL</Badge>
-          )}
-          <span>#{order.id}</span>
+          <Badge variant={takeAway ? 'secondary' : 'outline'}>
+            {takeAway ? 'TAKE AWAY' : 'DINE IN'}
+          </Badge>
+          <span>{order.order_number}</span>
           {order.table_number && (
             <span className="text-muted-foreground">Meja {order.table_number}</span>
           )}
@@ -60,7 +61,7 @@ export function OrderCard({
           {order.items.map((item) => (
             <li key={item.id} className="flex items-center justify-between gap-2">
               <span>
-                {item.menu_name} ×{item.qty}
+                {item.menu_name_snapshot} ×{item.qty}
               </span>
               <Badge variant="outline">{item.status}</Badge>
             </li>
@@ -75,7 +76,7 @@ export function OrderCard({
       </CardContent>
       {showCashierActions && (
         <CardFooter className="gap-2" onClick={(e) => e.stopPropagation()}>
-          {order.payment_status === PAYMENT_STATUS.BELUM && (
+          {order.payment_status === PAYMENT_STATUS.BELUM && order.status !== 'DIBATALKAN' && (
             <Button
               size="sm"
               onClick={() => navigate(ROUTES.ORDERS_PAYMENT.replace(':id', order.id))}
@@ -83,13 +84,24 @@ export function OrderCard({
               Bayar (LUNAS)
             </Button>
           )}
-          {deliveredItem(order) && (
-            <Button size="sm" disabled={deliver.isPending} onClick={() => deliver.mutate()}>
-              Antar (DELIVERED)
+          {takeAway && handOver && (
+            <Button
+              size="sm"
+              disabled={advance.isPending}
+              onClick={() => advance.mutate({ item: handOver, status: ITEM_STATUS.DELIVERED })}
+            >
+              Serahkan
             </Button>
           )}
-          {order.items.some((item) => item.status === ITEM_STATUS.PENDING) && (
-            <CancelItemDialog order={order} onSuccess={invalidate} />
+          {takeAway && complete && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={advance.isPending}
+              onClick={() => advance.mutate({ item: complete, status: ITEM_STATUS.COMPLETED })}
+            >
+              Selesaikan
+            </Button>
           )}
         </CardFooter>
       )}
@@ -97,6 +109,6 @@ export function OrderCard({
   )
 }
 
-function deliveredItem(order: Order): OrderItem | undefined {
-  return order.items.find((item) => item.status === ITEM_STATUS.READY)
+function itemWithStatus(order: Order, status: OrderItem['status']) {
+  return order.items.find((item) => item.status === status)
 }

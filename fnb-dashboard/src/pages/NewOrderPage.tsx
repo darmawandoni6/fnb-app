@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
-import type { DiningOption, Menu } from '@/types'
+import type { Menu } from '@/types'
 import { ArrowLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -21,10 +21,8 @@ export function NewOrderPage() {
   const queryClient = useQueryClient()
 
   const [cart, setCart] = useState<Record<string, CartItem>>({})
-  const [diningOption, setDiningOption] = useState<DiningOption>('DINE_IN')
   const [customerName, setCustomerName] = useState<string>('')
-  const [selectedTableId, setSelectedTableId] = useState<string>('')
-  const [selectedTableNumber, setSelectedTableNumber] = useState<string>('')
+  const [customerPhone, setCustomerPhone] = useState<string>('')
 
   const { data: categories, isLoading: isLoadingCategories } = useQuery({
     queryKey: ['menu-categories'],
@@ -37,7 +35,8 @@ export function NewOrderPage() {
   })
 
   const isStoreClosed = settings ? !settings.is_open : false
-  const taxPercent = settings?.tax_percent ?? 0
+  const serviceRate = settings?.service_rate ?? 0
+  const taxRate = settings?.tax_rate ?? 0
 
   const cartItemCounts = Object.entries(cart).reduce(
     (acc, [menuId, item]) => {
@@ -70,8 +69,7 @@ export function NewOrderPage() {
   const handleResetCart = () => {
     setCart({})
     setCustomerName('')
-    setSelectedTableId('')
-    setSelectedTableNumber('')
+    setCustomerPhone('')
   }
 
   const createOrderMutation = useMutation({
@@ -79,7 +77,7 @@ export function NewOrderPage() {
     onSuccess: (newOrder) => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['ingredients'] })
-      toast.success(`Pesanan #${newOrder.id} dibuat. Melanjutkan ke pembayaran...`)
+      toast.success(`Pesanan ${newOrder.order_number} dibuat. Melanjutkan ke pembayaran...`)
       navigate(`/orders/${newOrder.id}/payment`)
     },
     onError: (error) => {
@@ -97,10 +95,8 @@ export function NewOrderPage() {
       }))
 
     const validation = manualOrderSchema.safeParse({
-      dining_option: diningOption,
       customer_name: customerName,
-      table_id: diningOption === 'DINE_IN' ? selectedTableId || null : null,
-      table_number: diningOption === 'DINE_IN' ? selectedTableNumber || null : null,
+      customer_phone: customerPhone,
       items: rawItems,
     })
 
@@ -111,10 +107,8 @@ export function NewOrderPage() {
 
     createOrderMutation.mutate({
       items: rawItems,
-      dining_option: diningOption,
       customer_name: customerName.trim(),
-      table_id: diningOption === 'DINE_IN' ? selectedTableId : null,
-      table_number: diningOption === 'DINE_IN' ? selectedTableNumber : null,
+      customer_phone: customerPhone.trim() || null,
     })
   }
 
@@ -137,7 +131,7 @@ export function NewOrderPage() {
           <div>
             <h1 className="text-lg font-bold tracking-tight">Buat Pesanan Baru (POS)</h1>
             <p className="text-muted-foreground text-xs">
-              Pilih menu dari katalog dan lengkapi detail pesanan pelanggan.
+              Pesanan take away. Pilih menu lalu lanjut ke pembayaran.
             </p>
           </div>
         </div>
@@ -160,20 +154,15 @@ export function NewOrderPage() {
         <div className="lg:sticky lg:top-4 lg:col-span-5 xl:col-span-4">
           <OrderCartPanel
             cart={cart}
-            diningOption={diningOption}
             customerName={customerName}
-            selectedTableId={selectedTableId}
-            selectedTableNumber={selectedTableNumber}
-            taxPercent={taxPercent}
+            customerPhone={customerPhone}
+            serviceRate={serviceRate}
+            taxRate={taxRate}
             isStoreClosed={isStoreClosed}
             isSubmitting={createOrderMutation.isPending}
             onUpdateCart={setCart}
-            onSetDiningOption={setDiningOption}
             onSetCustomerName={setCustomerName}
-            onSetTable={(id, num) => {
-              setSelectedTableId(id)
-              setSelectedTableNumber(num)
-            }}
+            onSetCustomerPhone={setCustomerPhone}
             onResetCart={handleResetCart}
             onSubmitOrder={handleSubmitOrder}
           />

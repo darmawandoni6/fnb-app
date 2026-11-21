@@ -41,8 +41,8 @@ export const getSalesReportSummary = async (filter: ReportFilter): Promise<Sales
     .filter((o) => o.payment_method === PAYMENT_METHOD.NON_CASH)
     .reduce((sum, o) => sum + o.total_amount, 0)
 
-  const qrCount = paidOrders.filter((o) => o.order_type === ORDER_TYPE.QR).length
-  const manualCount = paidOrders.filter((o) => o.order_type === ORDER_TYPE.MANUAL).length
+  const dineInCount = paidOrders.filter((o) => o.order_type === ORDER_TYPE.DINE_IN).length
+  const takeAwayCount = paidOrders.filter((o) => o.order_type === ORDER_TYPE.TAKE_AWAY).length
 
   const totalItemsSold = paidOrders.reduce(
     (sum, o) => sum + o.items.reduce((itemSum, item) => itemSum + item.qty, 0),
@@ -55,8 +55,8 @@ export const getSalesReportSummary = async (filter: ReportFilter): Promise<Sales
     average_order_value: avgOrderValue,
     cash_revenue: cashRevenue,
     non_cash_revenue: nonCashRevenue,
-    qr_orders_count: qrCount,
-    manual_orders_count: manualCount,
+    dine_in_orders_count: dineInCount,
+    take_away_orders_count: takeAwayCount,
     total_items_sold: totalItemsSold,
   }
 }
@@ -66,8 +66,6 @@ export const getSalesTrends = async (filter: ReportFilter): Promise<DailySalesTr
   requireRole(USER_ROLE.OWNER)
 
   const paidOrders = filterOrdersByDate(filter.from_date, filter.to_date)
-
-  // Build daily map between from_date and to_date
   const trendsMap = new Map<string, { revenue: number; order_count: number }>()
 
   const startDate = new Date(filter.from_date)
@@ -114,14 +112,14 @@ export const getTopSellingMenus = async (
 
       if (existing) {
         existing.qty_sold += item.qty
-        existing.total_revenue += item.qty * item.unit_price
+        existing.total_revenue += item.qty * item.price
       } else {
         menuMap.set(item.menu_id, {
           menu_id: item.menu_id,
-          menu_name: item.menu_name,
+          menu_name: item.menu_name_snapshot,
           category_name: categoryName,
           qty_sold: item.qty,
-          total_revenue: item.qty * item.unit_price,
+          total_revenue: item.qty * item.price,
         })
       }
     }
@@ -139,7 +137,6 @@ export const getCategorySales = async (filter: ReportFilter): Promise<CategorySa
   const paidOrders = filterOrdersByDate(filter.from_date, filter.to_date)
   const categoryMap = new Map<string, { name: string; revenue: number; itemsSold: number }>()
 
-  // Initialize from db.categories
   for (const category of db.categories) {
     categoryMap.set(category.id, {
       name: category.name,
@@ -162,7 +159,7 @@ export const getCategorySales = async (filter: ReportFilter): Promise<CategorySa
         itemsSold: 0,
       }
 
-      const itemRev = item.qty * item.unit_price
+      const itemRev = item.qty * item.price
       existing.revenue += itemRev
       existing.itemsSold += item.qty
       grandRevenue += itemRev

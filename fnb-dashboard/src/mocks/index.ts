@@ -4,7 +4,7 @@ import { orders } from './data/orders'
 import { generateHistoricalOrders } from './data/reports'
 import { settings } from './data/settings'
 import { stockMovements } from './data/stockMovements'
-import { tables } from './data/tables'
+import { tableSessions, tables } from './data/tables'
 import { users } from './data/users'
 import { db } from './db'
 
@@ -20,11 +20,13 @@ const seed = () => {
     menus: cat.menus.map((m) => menuById.get(m.id)!).filter(Boolean),
   }))
   db.tables = structuredClone(tables)
+  db.tableSessions = structuredClone(tableSessions)
   db.users = structuredClone(users)
   db.ingredients = structuredClone(ingredients)
   db.recipeItems = structuredClone(recipeItems)
   db.stockMovements = structuredClone(stockMovements)
   db.settings = structuredClone(settings)
+  db.auditLog = []
 }
 
 seed()

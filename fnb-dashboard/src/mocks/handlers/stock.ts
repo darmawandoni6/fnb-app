@@ -1,6 +1,6 @@
-import { API_ERROR_CODE, USER_ROLE } from '@/constants'
+import { API_ERROR_CODE, type StockMovementType, USER_ROLE } from '@/constants'
 import { db } from '@/mocks/db'
-import type { Ingredient, RecipeItem, StockMovement, StockMovementType } from '@/types'
+import type { Ingredient, RecipeItem, StockMovement } from '@/types'
 
 import { delay, fail, findOrThrow, requireRole } from './shared'
 

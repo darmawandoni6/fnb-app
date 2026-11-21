@@ -23,9 +23,8 @@ import { useOrders } from '@/features/orders/useOrders'
 const columns = [
   ORDER_STATUS.MENUNGGU,
   ORDER_STATUS.DIPROSES,
-  ORDER_STATUS.SIAP,
-  ORDER_STATUS.DIANTAR,
   ORDER_STATUS.SELESAI,
+  ORDER_STATUS.DIBATALKAN,
 ] as const
 
 type ViewMode = 'all' | 'unpaid' | 'done'
@@ -38,6 +37,8 @@ export function OrdersPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const canAct = user?.role === 'OWNER' || user?.role === 'CASHIER'
+  // BR-01 / BR-24: only the cashier creates manual orders.
+  const canCreate = user?.role === 'CASHIER'
 
   const visibleOrders = (orders ?? []).filter((order) => {
     if (viewMode === 'unpaid') return order.payment_status === PAYMENT_STATUS.BELUM
@@ -51,7 +52,7 @@ export function OrdersPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold">Orders</h1>
-        {canAct && (
+        {canCreate && (
           <Button size="sm" onClick={() => navigate(ROUTES.ORDERS_NEW)}>
             + Order Manual
           </Button>
@@ -75,7 +76,7 @@ export function OrdersPage() {
       </div>
       <OrderDetailDialog order={selectedOrder} onClose={() => setSelectedOrder(null)} />
       {isPending ? (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {columns.map((status) => (
             <div key={status} className="flex flex-col gap-2">
               <Skeleton className="h-6 w-24" />
@@ -84,7 +85,7 @@ export function OrdersPage() {
           ))}
         </div>
       ) : visibleOrders.length > 0 ? (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {columns.map((status: OrderStatus) => (
             <div key={status} className="flex min-w-0 flex-col gap-3">
               <h2 className="text-sm font-semibold">{status}</h2>

@@ -26,7 +26,7 @@ export function TableFormDialog() {
   const queryClient = useQueryClient()
   const form = useForm<TableValues>({
     resolver: zodResolver(tableSchema),
-    defaultValues: { number: '' },
+    defaultValues: { table_number: '' },
   })
 
   const mutation = useMutation({
@@ -62,9 +62,11 @@ export function TableFormDialog() {
             <Label htmlFor="table-number">
               Nomor meja <span className="text-destructive">*</span>
             </Label>
-            <Input id="table-number" placeholder="Contoh: 1" {...form.register('number')} />
-            {form.formState.errors.number && (
-              <p className="text-destructive text-xs">{form.formState.errors.number.message}</p>
+            <Input id="table-number" placeholder="Contoh: 1" {...form.register('table_number')} />
+            {form.formState.errors.table_number && (
+              <p className="text-destructive text-xs">
+                {form.formState.errors.table_number.message}
+              </p>
             )}
           </div>
           <DialogFooter>

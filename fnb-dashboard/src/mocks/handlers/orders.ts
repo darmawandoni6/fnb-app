@@ -3,24 +3,28 @@ import {
   ITEM_STATUS,
   type ItemStatus,
   ORDER_STATUS,
-  type OrderStatus,
+  type OrderType,
   PAYMENT_STATUS,
   USER_ROLE,
 } from '@/constants'
 import { db } from '@/mocks/db'
-import type { DiningOption, Order } from '@/types'
+import type { Order } from '@/types'
 
 import { deriveOrderStatus } from './deriveStatus'
-import { currentUser, delay, fail, isStaff, requireRole } from './shared'
+import { audit, currentUser, delay, fail, findOrThrow, isStaff, requireRole } from './shared'
 
-type OrderFilters = { status?: OrderStatus; table_id?: string; date?: string }
+type OrderFilters = {
+  status?: Order['status']
+  table_id?: string
+  order_type?: OrderType
+  date?: string
+}
 type OrderItemInput = { menu_id: string; qty: number; note: string | null }
 type CreateManualOrderInput = {
   items: OrderItemInput[]
-  customer_name?: string | null
-  dining_option?: DiningOption
-  table_id?: string | null
-  table_number?: string | null
+  customer_name: string
+  customer_phone?: string | null
+  payment_method?: 'CASH' | 'NON_CASH'
 }
 
 const findOrder = (id: string): Order => {
@@ -33,6 +37,21 @@ const findMenu = (id: string) => {
   return menu ?? fail(API_ERROR_CODE.VALIDATION_ERROR, 'Menu is unavailable')
 }
 
+/** PRD §7.5 / BR-15: TA-### for take away, DI-### for dine-in, reset daily per type. */
+const nextOrderNumber = (orderType: OrderType): string => {
+  const prefix = orderType === 'TAKE_AWAY' ? 'TA-' : 'DI-'
+  const today = new Date().toISOString().slice(0, 10)
+  const highest = db.orders
+    .filter(
+      (order) =>
+        order.order_type === orderType &&
+        order.order_number.startsWith(prefix) &&
+        order.created_at.slice(0, 10) === today,
+    )
+    .reduce((max, order) => Math.max(max, Number(order.order_number.slice(3)) || 0), 0)
+  return `${prefix}${String(highest + 1).padStart(3, '0')}`
+}
+
 export const getOrders = async (filters?: OrderFilters): Promise<Order[]> => {
   await delay()
   const paidOnly = currentUser().role === USER_ROLE.KITCHEN
@@ -41,6 +60,7 @@ export const getOrders = async (filters?: OrderFilters): Promise<Order[]> => {
       (!paidOnly || order.payment_status === PAYMENT_STATUS.LUNAS) &&
       (!filters?.status || order.status === filters.status) &&
       (!filters?.table_id || order.table_id === filters.table_id) &&
+      (!filters?.order_type || order.order_type === filters.order_type) &&
       (!filters?.date || order.created_at.startsWith(filters.date)),
   )
   return orders.map((order) => structuredClone(order))
@@ -56,8 +76,11 @@ export const getOrder = async (id: string): Promise<Order> => {
 
 export const createManualOrder = async (body: CreateManualOrderInput): Promise<Order> => {
   await delay()
-  requireRole('OWNER', 'CASHIER')
+  // BR-01 / BR-24: only the cashier creates orders, and only take away.
+  requireRole(USER_ROLE.CASHIER)
   if (!db.settings.is_open) fail(API_ERROR_CODE.STORE_CLOSED, 'Store is closed')
+  if (!body.customer_name?.trim())
+    fail(API_ERROR_CODE.VALIDATION_ERROR, 'Customer name is required')
   if (body.items.length === 0 || body.items.some(({ qty }) => !Number.isInteger(qty) || qty < 1)) {
     fail(API_ERROR_CODE.VALIDATION_ERROR, 'Order requires valid items')
   }
@@ -76,11 +99,15 @@ export const createManualOrder = async (body: CreateManualOrderInput): Promise<O
   const items = resolved.map(({ input, menu }, index) => ({
     id: `item-${Date.now()}-${index}`,
     menu_id: menu.id,
-    menu_name: menu.name,
+    menu_name_snapshot: menu.name,
     qty: input.qty,
-    unit_price: menu.price,
+    price: menu.price,
     note: input.note,
     status: ITEM_STATUS.PENDING,
+    ready_at: null,
+    delivered_at: null,
+    completed_at: null,
+    cancelled_at: null,
   }))
   resolved.forEach(({ recipes }, itemIndex) =>
     recipes.forEach((recipe, recipeIndex) => {
@@ -100,27 +127,48 @@ export const createManualOrder = async (body: CreateManualOrderInput): Promise<O
       })
     }),
   )
-  const subtotal = items.reduce((sum, item) => sum + item.qty * item.unit_price, 0)
+  const subtotal = items.reduce((sum, item) => sum + item.qty * item.price, 0)
+  const { service_rate, tax_rate } = db.settings
+  const service_amount = Math.round((subtotal * service_rate) / 100)
+  const tax_amount = Math.round(((subtotal + service_amount) * tax_rate) / 100)
   const staff = currentUser()
   const order: Order = {
     id: orderId,
-    order_type: 'MANUAL',
-    dining_option: body.dining_option ?? 'DINE_IN',
-    customer_name: body.customer_name ?? null,
-    created_by_name: staff?.name ?? 'Kasir',
-    table_id: body.dining_option === 'TAKE_AWAY' ? null : (body.table_id ?? null),
-    table_number: body.dining_option === 'TAKE_AWAY' ? null : (body.table_number ?? null),
+    order_number: nextOrderNumber('TAKE_AWAY'),
+    order_type: 'TAKE_AWAY',
+    table_id: null,
+    table_number: null,
+    table_session_id: null,
+    created_by: staff.id,
+    created_by_name: staff.name,
+    customer_name: body.customer_name.trim(),
+    customer_phone: body.customer_phone ?? null,
     status: ORDER_STATUS.MENUNGGU,
     payment_status: PAYMENT_STATUS.BELUM,
     payment_method: null,
+    payment_ref: null,
+    paid_at: null,
+    amount_received: null,
+    change_amount: null,
+    cancel_reason: null,
+    canceled_at: null,
     subtotal_amount: subtotal,
-    tax_amount: Math.round((subtotal * db.settings.tax_percent) / 100),
-    tax_percent: db.settings.tax_percent,
-    total_amount: subtotal + Math.round((subtotal * db.settings.tax_percent) / 100),
+    service_rate_snapshot: service_rate,
+    service_amount,
+    tax_rate_snapshot: tax_rate,
+    tax_amount,
+    total_amount: subtotal + service_amount + tax_amount,
     created_at: new Date().toISOString(),
     items,
   }
   db.orders.unshift(order)
+  audit({
+    entity: 'order',
+    entity_id: order.id,
+    action: 'status_changed',
+    from_value: null,
+    to_value: ORDER_STATUS.MENUNGGU,
+  })
   return structuredClone(order)
 }
 
@@ -132,61 +180,106 @@ export const updateItemStatus = async (
   await delay()
   const user = currentUser()
   const order = findOrder(orderId)
-  const item = order.items.find(({ id }) => id === itemId)
-  if (!item) fail(API_ERROR_CODE.NOT_FOUND, 'Item not found')
-  const orderItem = item!
+  const orderItem = findOrThrow(
+    order.items.find(({ id }) => id === itemId),
+    API_ERROR_CODE.NOT_FOUND,
+    'Item not found',
+  )
+
+  const from = orderItem.status
   const allowed =
-    (orderItem.status === ITEM_STATUS.PENDING && status === ITEM_STATUS.COOKING) ||
-    (orderItem.status === ITEM_STATUS.COOKING && status === ITEM_STATUS.READY) ||
-    (orderItem.status === ITEM_STATUS.READY && status === ITEM_STATUS.DELIVERED)
+    (from === ITEM_STATUS.PENDING && status === ITEM_STATUS.COOKING) ||
+    (from === ITEM_STATUS.COOKING && status === ITEM_STATUS.READY) ||
+    (from === ITEM_STATUS.READY && status === ITEM_STATUS.DELIVERED) ||
+    (from === ITEM_STATUS.DELIVERED && status === ITEM_STATUS.COMPLETED)
   if (!allowed) fail(API_ERROR_CODE.INVALID_TRANSITION, 'Invalid item transition')
+
+  // BR-02 / PRD §5.2: cooking before payment is rejected.
   if (status === ITEM_STATUS.COOKING && order.payment_status === PAYMENT_STATUS.BELUM)
     fail(API_ERROR_CODE.PAYMENT_REQUIRED, 'Payment required')
-  const kitchenAction = status === ITEM_STATUS.COOKING || status === ITEM_STATUS.READY
-  if (kitchenAction && !['OWNER', 'KITCHEN'].includes(user.role))
-    fail(API_ERROR_CODE.FORBIDDEN, 'Role is not authorized')
-  if (status === ITEM_STATUS.DELIVERED && !isStaff(user.role))
-    fail(API_ERROR_CODE.FORBIDDEN, 'Role is not authorized')
+
+  // PRD §9 actor matrix.
+  const takeAway = order.order_type === 'TAKE_AWAY'
+  const allowedByRole =
+    status === ITEM_STATUS.COOKING || status === ITEM_STATUS.READY
+      ? user.role === USER_ROLE.KITCHEN || user.role === USER_ROLE.OWNER
+      : user.role === USER_ROLE.OWNER ||
+        user.role === USER_ROLE.KITCHEN ||
+        (takeAway && user.role === USER_ROLE.CASHIER)
+  if (!allowedByRole) fail(API_ERROR_CODE.FORBIDDEN, 'Role is not authorized')
+
+  const now = new Date().toISOString()
   orderItem.status = status
+  if (status === ITEM_STATUS.READY) orderItem.ready_at = now
+  if (status === ITEM_STATUS.DELIVERED) orderItem.delivered_at = now
+  if (status === ITEM_STATUS.COMPLETED) orderItem.completed_at = now
+  const previousStatus = order.status
   order.status = deriveOrderStatus(order)
-  return structuredClone(order)
-}
-
-export const cancelItem = async (orderId: string, itemId: string): Promise<Order> => {
-  await delay()
-  requireRole('OWNER', 'CASHIER')
-  const order = findOrder(orderId)
-  const item = order.items.find(({ id }) => id === itemId)
-  if (!item) fail(API_ERROR_CODE.NOT_FOUND, 'Item not found')
-  const orderItem = item!
-  if (orderItem.status !== ITEM_STATUS.PENDING)
-    fail(API_ERROR_CODE.INVALID_TRANSITION, 'Only pending items can be cancelled')
-
-  db.recipeItems
-    .filter((recipe) => recipe.menu_id === orderItem.menu_id)
-    .forEach((recipe, index) => {
-      const ingredient = db.ingredients.find(({ id }) => id === recipe.ingredient_id)
-      if (!ingredient) return
-      const qty = recipe.qty_used * orderItem.qty
-      ingredient.stock_qty += qty
-      db.stockMovements.unshift({
-        id: `movement-restore-${Date.now()}-${index}`,
-        ingredient_id: ingredient.id,
-        type: 'RESTORE',
-        qty,
-        created_at: new Date().toISOString(),
-        note: `Batal item ${orderItem.menu_name} pesanan #${order.id}`,
-        order_id: order.id,
-        order_item_id: orderItem.id,
-      })
+  audit({
+    entity: 'order_item',
+    entity_id: orderItem.id,
+    action: 'status_changed',
+    from_value: from,
+    to_value: status,
+  })
+  if (previousStatus !== order.status) {
+    audit({
+      entity: 'order',
+      entity_id: order.id,
+      action: 'status_changed',
+      from_value: previousStatus,
+      to_value: order.status,
     })
-
-  orderItem.status = ITEM_STATUS.CANCELLED
-  order.status = deriveOrderStatus(order)
-  if (order.items.every(({ status }) => status === ITEM_STATUS.CANCELLED)) {
-    order.subtotal_amount = 0
-    order.tax_amount = 0
-    order.total_amount = 0
   }
   return structuredClone(order)
 }
+
+/** PRD §4.7 / §11.3: order-level cancellation, unpaid only, OWNER. */
+export const cancelOrder = async (id: string, reason: string): Promise<Order> => {
+  await delay()
+  requireRole(USER_ROLE.OWNER)
+  const order = findOrder(id)
+  if (order.status !== ORDER_STATUS.MENUNGGU || order.payment_status !== PAYMENT_STATUS.BELUM)
+    fail(API_ERROR_CODE.INVALID_TRANSITION, 'Only unpaid MENUNGGU orders can be cancelled')
+  if (!reason.trim()) fail(API_ERROR_CODE.VALIDATION_ERROR, 'Cancel reason is required')
+
+  const now = new Date().toISOString()
+  order.items
+    .filter((item) => item.status !== ITEM_STATUS.CANCELLED)
+    .forEach((item) => {
+      db.recipeItems
+        .filter((recipe) => recipe.menu_id === item.menu_id)
+        .forEach((recipe, index) => {
+          const ingredient = db.ingredients.find(({ id }) => id === recipe.ingredient_id)
+          if (!ingredient) return
+          const qty = recipe.qty_used * item.qty
+          ingredient.stock_qty += qty
+          db.stockMovements.unshift({
+            id: `movement-restore-${Date.now()}-${item.id}-${index}`,
+            ingredient_id: ingredient.id,
+            type: 'RESTORE',
+            qty,
+            created_at: now,
+            note: `Batal pesanan #${order.order_number}`,
+            order_id: order.id,
+            order_item_id: item.id,
+          })
+        })
+      item.status = ITEM_STATUS.CANCELLED
+      item.cancelled_at = now
+    })
+
+  order.status = ORDER_STATUS.DIBATALKAN
+  order.cancel_reason = reason.trim()
+  order.canceled_at = now
+  audit({
+    entity: 'order',
+    entity_id: order.id,
+    action: 'order_cancelled',
+    from_value: ORDER_STATUS.MENUNGGU,
+    to_value: ORDER_STATUS.DIBATALKAN,
+  })
+  return structuredClone(order)
+}
+
+export { isStaff }

@@ -52,7 +52,7 @@ export function PaymentReceiptDialog({
           </div>
           <DialogTitle className="text-center text-lg font-bold">Pembayaran Berhasil!</DialogTitle>
           <DialogDescription className="text-center text-xs">
-            Pesanan #{order.id} telah lunas dan siap diproses dapur.
+            Pesanan {order.order_number} telah lunas dan siap diproses dapur.
           </DialogDescription>
         </DialogHeader>
 
@@ -67,8 +67,8 @@ export function PaymentReceiptDialog({
 
           <div className="space-y-1 text-[11px]">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">ID Pesanan:</span>
-              <span className="font-medium">{order.id}</span>
+              <span className="text-muted-foreground">No. Pesanan:</span>
+              <span className="font-medium">{order.order_number}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Waktu:</span>
@@ -83,7 +83,7 @@ export function PaymentReceiptDialog({
             <div className="flex justify-between">
               <span className="text-muted-foreground">Layanan:</span>
               <span>
-                {order.dining_option === 'TAKE_AWAY'
+                {order.order_type === 'TAKE_AWAY'
                   ? 'Take Away (Bungkus)'
                   : `Dine In (Meja ${order.table_number ?? '-'})`}
               </span>
@@ -101,12 +101,12 @@ export function PaymentReceiptDialog({
             {order.items.map((item) => (
               <div key={item.id} className="flex flex-col">
                 <div className="flex justify-between text-xs">
-                  <span className="font-medium">{item.menu_name}</span>
-                  <span>{formatRupiah(item.qty * item.unit_price)}</span>
+                  <span className="font-medium">{item.menu_name_snapshot}</span>
+                  <span>{formatRupiah(item.qty * item.price)}</span>
                 </div>
                 <div className="text-muted-foreground flex justify-between text-[10px]">
                   <span>
-                    {item.qty} x {formatRupiah(item.unit_price)}
+                    {item.qty} x {formatRupiah(item.price)}
                     {item.note ? ` (${item.note})` : ''}
                   </span>
                 </div>
@@ -122,12 +122,14 @@ export function PaymentReceiptDialog({
               <span>Subtotal:</span>
               <span>{formatRupiah(order.subtotal_amount)}</span>
             </div>
-            {order.tax_percent > 0 && (
-              <div className="text-muted-foreground flex justify-between">
-                <span>Pajak ({order.tax_percent}%):</span>
-                <span>{formatRupiah(order.tax_amount)}</span>
-              </div>
-            )}
+            <div className="text-muted-foreground flex justify-between">
+              <span>Service ({order.service_rate_snapshot}%):</span>
+              <span>{formatRupiah(order.service_amount)}</span>
+            </div>
+            <div className="text-muted-foreground flex justify-between">
+              <span>Pajak ({order.tax_rate_snapshot}%):</span>
+              <span>{formatRupiah(order.tax_amount)}</span>
+            </div>
             <div className="flex justify-between text-sm font-bold">
               <span>Total:</span>
               <span>{formatRupiah(order.total_amount)}</span>

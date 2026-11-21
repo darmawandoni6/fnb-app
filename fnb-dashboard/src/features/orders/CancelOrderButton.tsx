@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
-import { ITEM_STATUS, PAYMENT_STATUS } from '@/constants'
+import { ORDER_STATUS, PAYMENT_STATUS } from '@/constants'
 import type { Order } from '@/types'
 import { toast } from 'sonner'
 
@@ -12,31 +12,26 @@ import { ROUTES } from '@/constants/routes'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
 
+/** PRD §4.7 / §11.3: order-level cancel, unpaid orders only, OWNER only. */
 export function CancelOrderButton({ order }: { order: Order }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const pendingItems = order.items.filter((item) => item.status === ITEM_STATUS.PENDING)
-
   const cancel = useMutation({
-    mutationFn: async () => {
-      // PRD §10 has no full-order cancel; cancel every PENDING item in sequence.
-      for (const item of pendingItems) {
-        await api.cancelItem(order.id, item.id)
-      }
-    },
+    mutationFn: () => api.cancelOrder(order.id, 'Dibatalkan oleh owner'),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['orders'] })
       queryClient.invalidateQueries({ queryKey: ['ingredients'] })
       queryClient.invalidateQueries({ queryKey: ['stock-movements'] })
-      toast.success(`Pesanan #${order.id} dibatalkan`)
-      navigate(ROUTES.ORDERS_NEW)
+      toast.success(`Pesanan ${order.order_number} dibatalkan`)
+      navigate(ROUTES.ORDERS)
     },
     onError: (error) =>
       toast.error((error as { message?: string }).message ?? 'Gagal membatalkan pesanan'),
   })
 
-  const canCancel = order.payment_status === PAYMENT_STATUS.BELUM && pendingItems.length > 0
+  const canCancel =
+    order.status === ORDER_STATUS.MENUNGGU && order.payment_status === PAYMENT_STATUS.BELUM
   if (!canCancel) return null
 
   return (
@@ -46,8 +41,8 @@ export function CancelOrderButton({ order }: { order: Order }) {
           Batalkan Pesanan
         </Button>
       }
-      title={`Batalkan pesanan #${order.id}?`}
-      description={`Semua ${pendingItems.length} item akan dibatalkan, stok dikembalikan, dan total menjadi Rp0. Tindakan ini tidak bisa diurungkan.`}
+      title={`Batalkan pesanan ${order.order_number}?`}
+      description="Seluruh item akan dibatalkan, stok dikembalikan, dan pesanan berstatus DIBATALKAN. Tindakan ini tidak bisa diurungkan."
       onConfirm={() => cancel.mutate()}
       pending={cancel.isPending}
     />

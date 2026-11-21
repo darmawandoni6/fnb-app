@@ -43,7 +43,7 @@ Verify: every path renders something and `*` redirects.
 
 Files: `src/components/AppShell.tsx`
 
-- Sticky header showing `cafe_name` only; the API returns no `table_number`.
+- Sticky header showing `cafe_name` plus optional `leading` and `trailing` slots; the API returns no `table_number`.
 - `max-w-xl` container for phones, widening cleanly on tablets.
 - Background `bg-canvas`, text `text-text`, font `font-ui`.
 
@@ -223,6 +223,18 @@ Files: `src/features/browse/pages/MenuHomePage.tsx`, `src/features/browse/useTab
 
 Verify: clearing `localStorage` and opening `/` lands on `/tidak-valid`.
 
+### Step 19 — Add header slots and the order-history entry
+
+Files: `src/components/AppShell.tsx`, `src/features/orders/status.ts`, `src/features/orders/status.test.ts`, `src/features/browse/pages/MenuHomePage.tsx`
+
+- `AppShell` gains `leading?: ReactNode` and `trailing?: ReactNode`; the title becomes `truncate`, the trailing slot is `ml-auto shrink-0`.
+- Export `isFinished` from `features/orders/status.ts` and add `unfinishedOrderCount(orders: TrackedOrder[])` next to it; the badge and `useOrderList` share one terminal-status predicate.
+- `/` renders a `Receipt` icon in the trailing slot when `session.orders.length > 0`; the link targets `/status`.
+- The badge shows `unfinishedOrderCount` and hides at `0`; the number is `aria-hidden` and the link carries `aria-label` ("Pesanan" or "Pesanan, N belum selesai").
+- No polling on `/`; the badge reads stored snapshots.
+
+Verify: reloading `/` with unfinished orders shows the badge; finishing or cancelling them hides the badge but keeps the icon.
+
 ## Phase Checklist
 
 - [x] Routes all resolve; `*` redirects to `/`.
@@ -233,6 +245,7 @@ Verify: clearing `localStorage` and opening `/` lands on `/tidak-valid`.
 - [x] Quick add merges into one line with clamped qty.
 - [x] Menu detail add and `?edit` save both work, including the merge case.
 - [x] Loading, empty, and error states render.
+- [x] Header slots exist; `/` exposes an order-history entry with an unfinished count.
 - [x] `npm run lint && npm run format:check && npm run build` pass.
 
 ## Exit Criteria

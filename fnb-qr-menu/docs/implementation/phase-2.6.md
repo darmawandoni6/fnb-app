@@ -149,20 +149,32 @@ Files: `src/features/checkout/pages/InvalidTablePage.tsx`
 
 Verify: `demo-invalid` and an unknown token both land here.
 
+### Step 13 — Add the back navigation
+
+Files: `src/features/checkout/pages/CartPage.tsx`, `src/features/orders/pages/StatusPage.tsx`
+
+- Both screens pass a `leading` slot to `AppShell`: a `ChevronLeft` link to `/`, `aria-label="Kembali"`, 44×44 touch target.
+- `/keranjang` shows it even when the cart is empty.
+- `/menu/:menuId` keeps its inline labeled link ("Kembali ke Menu" / "Kembali ke Keranjang"); no header back there.
+- `/tutup` and `/tidak-valid` stay dead ends.
+
+Verify: `/keranjang` and `/status` return to `/` with one tap; `/menu/:menuId` keeps its contextual label.
+
 ## Phase Checklist
 
 - [x] `/status` with no orders redirects to `/`.
 - [x] Cards render newest first with exactly one open.
-- [ ] One list request per 5 seconds refreshes every card.
-- [ ] Polling stops when every stored order is `SELESAI` or `DIBATALKAN`.
-- [ ] Stepper derives from item statuses; no `SIAP` / `DIANTAR` aggregate exists.
+- [x] One list request per 5 seconds refreshes every card.
+- [x] Polling stops when every stored order is `SELESAI` or `DIBATALKAN`.
+- [x] Stepper derives from item statuses; no `SIAP` / `DIANTAR` aggregate exists.
 - [x] `CANCELLED` items stay visible, crossed out.
 - [x] Payment badge and server totals render as returned.
-- [ ] Cancel button appears only for `MENUNGGU` + `BELUM` and cancels the whole order with a reason.
-- [ ] A `LUNAS` or `DIPROSES` order shows no cancel button and no refund warning.
-- [ ] `401` re-opens the session once and polling continues.
+- [x] Cancel button appears only for `MENUNGGU` + `BELUM` and cancels the whole order with a reason.
+- [x] A `LUNAS` or `DIPROSES` order shows no cancel button and no refund warning.
+- [x] `401` re-opens the session once and polling continues.
 - [x] `429` backs off and keeps the last snapshots.
 - [x] "Tambah pesanan" returns to `/` with orders preserved.
+- [x] `/keranjang` and `/status` expose a header back link to `/`.
 - [x] `/tutup` and `/tidak-valid` behave per their guards.
 - [x] `npm run lint && npm run format:check && npm run build` pass.
 
@@ -170,7 +182,7 @@ Verify: `demo-invalid` and an unknown token both land here.
 
 - [x] The full mock flow works: scan → browse → cart → checkout → order → track → cancel.
 - [x] No screen computes order status or money.
-- [ ] Phase 3 needs no component change.
+- [x] Phase 3 needs no component change.
 
 ## Gotchas
 

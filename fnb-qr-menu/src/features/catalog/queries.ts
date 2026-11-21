@@ -4,13 +4,15 @@ import { getPublicMenu } from '@/api'
 
 import { QUERY_KEYS } from '@/constants/queryKeys'
 
+import { withSessionRetry } from '@/features/session/token'
+
 export const catalogKeys = {
-  menu: (qr: string) => QUERY_KEYS.publicMenu(qr),
+  menu: (sessionToken: string) => QUERY_KEYS.publicMenu(sessionToken),
 }
 
-export const menuQuery = (qr: string) =>
+export const menuQuery = (sessionToken: string) =>
   queryOptions({
-    queryKey: catalogKeys.menu(qr),
-    queryFn: () => getPublicMenu(qr),
-    enabled: Boolean(qr),
+    queryKey: catalogKeys.menu(sessionToken),
+    queryFn: () => withSessionRetry((token) => getPublicMenu(token)),
+    enabled: Boolean(sessionToken),
   })

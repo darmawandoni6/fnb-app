@@ -13,7 +13,8 @@ export type MenuCategory = {
 
 export type PublicMenu = {
   cafeName: string
-  taxPercent: number
+  serviceRate: number
+  taxRate: number
   isOpen: boolean
   categories: MenuCategory[]
 }

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 
-import { AlertTriangle, Info, UtensilsCrossed } from 'lucide-react'
+import { AlertTriangle, Info, Receipt, UtensilsCrossed } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { API_ERROR } from '@/constants/errors'
@@ -19,19 +19,20 @@ import { CategoryTabs } from '@/features/browse/components/CategoryTabs'
 import { MenuItemCard } from '@/features/browse/components/MenuItemCard'
 import { SearchField } from '@/features/browse/components/SearchField'
 import { browseState, patchBrowseState } from '@/features/browse/state'
-import { useUrlTable } from '@/features/browse/useUrlTable'
+import { useTableSession } from '@/features/browse/useTableSession'
 import { usePublicMenu } from '@/features/catalog/hooks'
+import { unfinishedOrderCount } from '@/features/orders/status'
 import { takeFlash, useCustomerSession } from '@/features/session/store'
 
 export function MenuHomePage() {
-  const qr = useUrlTable()
+  const { qr, sessionToken, isOpening, invalid } = useTableSession()
   const [session, updateSession] = useCustomerSession()
   const navigate = useNavigate()
 
   const [selectedCategory, setSelectedCategory] = useState(browseState.cat)
   const [searchQuery, setSearchQuery] = useState(browseState.q)
 
-  const { data: menuData, isLoading, isError, error, refetch } = usePublicMenu(qr)
+  const { data: menuData, isLoading, isError, error, refetch } = usePublicMenu(sessionToken)
 
   // One-off flash/notice (e.g. new table session notice)
   useEffect(() => {
@@ -83,8 +84,7 @@ export function MenuHomePage() {
       .filter((cat) => cat.menus.length > 0)
   }, [menuData, selectedCategory, searchQuery])
 
-  // Guard: empty table QR
-  if (!qr) {
+  if ((invalid || !qr) && !isOpening) {
     return <Navigate to={ROUTES.INVALID} replace />
   }
 
@@ -108,8 +108,31 @@ export function MenuHomePage() {
 
   const totalVisibleMenus = filteredCategories.reduce((sum, cat) => sum + cat.menus.length, 0)
 
+  const unfinished = unfinishedOrderCount(session.orders)
+
   return (
-    <AppShell cafeName={menuData?.cafeName}>
+    <AppShell
+      cafeName={menuData?.cafeName}
+      trailing={
+        session.orders.length > 0 ? (
+          <Link
+            to={ROUTES.STATUS}
+            aria-label={unfinished > 0 ? `Pesanan, ${unfinished} belum selesai` : 'Pesanan'}
+            className="text-text-muted hover:text-text relative flex size-11 items-center justify-center rounded-full transition-colors"
+          >
+            <Receipt className="size-5" />
+            {unfinished > 0 && (
+              <span
+                aria-hidden
+                className="bg-accent absolute top-1 right-1 flex min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-semibold text-white"
+              >
+                {unfinished}
+              </span>
+            )}
+          </Link>
+        ) : undefined
+      }
+    >
       <div className="flex flex-col gap-4 pb-24">
         {/* Step 12: Closed Banner */}
         {session.browseOnly && (
@@ -125,7 +148,7 @@ export function MenuHomePage() {
         )}
 
         {/* Step 13: Loading skeleton state */}
-        {isLoading && (
+        {(isLoading || isOpening) && (
           <div className="flex flex-col gap-4">
             <Skeleton className="h-10 w-full rounded-full" />
             <div className="flex gap-2">
@@ -142,7 +165,7 @@ export function MenuHomePage() {
         )}
 
         {/* Step 13: Error state */}
-        {!isLoading && isError && (
+        {!isLoading && !isOpening && isError && (
           <div className="border-border bg-surface flex flex-col items-center justify-center rounded-2xl border p-8 text-center">
             <AlertTriangle className="text-destructive mb-3 size-10" />
             <h2 className="font-editorial text-text text-lg font-bold">Gagal Memuat Menu</h2>
@@ -156,7 +179,7 @@ export function MenuHomePage() {
         )}
 
         {/* Menu content */}
-        {!isLoading && !isError && menuData && (
+        {!isLoading && !isOpening && !isError && menuData && (
           <>
             {/* Step 9: Search */}
             <SearchField

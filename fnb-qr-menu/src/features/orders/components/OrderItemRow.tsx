@@ -5,23 +5,17 @@ import { cn } from '@/lib/utils'
 import type { PublicOrderItem } from '@/types/order'
 
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 
 const STATUS_CLASS: Record<ItemStatus, string> = {
   [ITEM_STATUS.PENDING]: 'bg-secondary text-secondary-foreground',
   [ITEM_STATUS.COOKING]: 'bg-warning/10 text-warning',
-  [ITEM_STATUS.READY]: 'bg-positive/10 text-positive',
+  [ITEM_STATUS.READY]: 'bg-accent-soft text-accent-text',
   [ITEM_STATUS.DELIVERED]: 'border-border text-text-muted',
+  [ITEM_STATUS.COMPLETED]: 'bg-positive/10 text-positive',
   [ITEM_STATUS.CANCELLED]: 'bg-destructive/10 text-destructive',
 }
 
-interface OrderItemRowProps {
-  item: PublicOrderItem
-  disabled?: boolean
-  onCancel: (item: PublicOrderItem) => void
-}
-
-export function OrderItemRow({ item, disabled = false, onCancel }: OrderItemRowProps) {
+export function OrderItemRow({ item }: { item: PublicOrderItem }) {
   const isCancelled = item.status === ITEM_STATUS.CANCELLED
 
   return (
@@ -35,7 +29,7 @@ export function OrderItemRow({ item, disabled = false, onCancel }: OrderItemRowP
                 isCancelled && 'text-text-muted line-through',
               )}
             >
-              {item.menuName}
+              {item.menuNameSnapshot}
             </p>
             <p className="text-text-muted mt-0.5 text-xs">
               {item.qty} × {formatRupiah(item.price)}
@@ -51,19 +45,6 @@ export function OrderItemRow({ item, disabled = false, onCancel }: OrderItemRowP
           </Badge>
         </div>
       </div>
-
-      {item.status === ITEM_STATUS.PENDING && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={disabled}
-          onClick={() => onCancel(item)}
-          className="text-destructive border-destructive/30 hover:bg-destructive/10 shrink-0"
-        >
-          Batalkan
-        </Button>
-      )}
     </div>
   )
 }

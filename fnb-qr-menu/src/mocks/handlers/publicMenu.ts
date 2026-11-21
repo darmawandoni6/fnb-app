@@ -1,19 +1,19 @@
 import { CLOSED_MENU, OPEN_MENU } from '@/mocks/data/menus'
+import { findMockSession } from '@/mocks/data/sessions'
 
 import { API_ERROR } from '@/constants/errors'
-import { MOCK_TABLE_TOKEN } from '@/constants/mockTokens'
 import { mockError } from '@/lib/apiError'
 import type { PublicMenu } from '@/types/menu'
 
 import { sleep } from './index'
 
-export async function getPublicMenu(qrToken: string): Promise<PublicMenu> {
+export async function getPublicMenu(sessionToken: string): Promise<PublicMenu> {
   await sleep()
 
-  if (qrToken === MOCK_TABLE_TOKEN.CLOSED) return structuredClone(CLOSED_MENU)
-  if (qrToken === MOCK_TABLE_TOKEN.OPEN || qrToken === MOCK_TABLE_TOKEN.OUT_OF_STOCK) {
-    return structuredClone(OPEN_MENU)
+  const session = findMockSession(sessionToken)
+  if (!session) {
+    throw mockError(API_ERROR.UNAUTHORIZED, 401, 'Sesi meja tidak valid')
   }
 
-  throw mockError(API_ERROR.NOT_FOUND, 404, 'QR meja tidak ditemukan')
+  return structuredClone(session.scenario === 'closed' ? CLOSED_MENU : OPEN_MENU)
 }

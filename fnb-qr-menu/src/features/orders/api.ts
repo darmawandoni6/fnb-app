@@ -1,11 +1,14 @@
 import { queryOptions } from '@tanstack/react-query'
 
-import { getPublicOrder } from '@/api'
+import { getPublicOrders } from '@/api'
 
 import { QUERY_KEYS } from '@/constants/queryKeys'
 
-export const orderQuery = (trackingToken: string) =>
+import { withSessionRetry } from '@/features/session/token'
+
+export const ordersQuery = (sessionToken: string) =>
   queryOptions({
-    queryKey: QUERY_KEYS.publicOrder(trackingToken),
-    queryFn: () => getPublicOrder(trackingToken),
+    queryKey: QUERY_KEYS.publicOrders(sessionToken),
+    queryFn: () => withSessionRetry((token) => getPublicOrders(token)),
+    enabled: Boolean(sessionToken),
   })

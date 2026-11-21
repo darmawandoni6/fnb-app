@@ -3,6 +3,7 @@ export const ITEM_STATUS = {
   COOKING: 'COOKING',
   READY: 'READY',
   DELIVERED: 'DELIVERED',
+  COMPLETED: 'COMPLETED',
   CANCELLED: 'CANCELLED',
 } as const
 
@@ -12,6 +13,7 @@ export const ITEM_STATUS_LABEL: Record<ItemStatus, string> = {
   PENDING: 'Menunggu',
   COOKING: 'Diproses',
   READY: 'Siap',
-  DELIVERED: 'Diantar',
+  DELIVERED: 'Dalam pengantaran',
+  COMPLETED: 'Selesai',
   CANCELLED: 'Dibatalkan',
 }

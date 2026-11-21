@@ -201,9 +201,7 @@ Verify: `npm run build` passes.
 Files: `src/api/index.ts`, `src/api/session.ts`, `src/api/publicMenu.ts`, `src/api/publicOrders.ts`
 
 ```ts
-import * as mockMenu from '@/mocks/handlers/publicMenu'
-import * as mockOrders from '@/mocks/handlers/publicOrders'
-import * as mockSession from '@/mocks/handlers/session'
+import * as mocks from '@/mocks'
 
 import { useMocks } from '@/lib/mode'
 
@@ -211,17 +209,11 @@ import * as httpMenu from './publicMenu'
 import * as httpOrders from './publicOrders'
 import * as httpSession from './session'
 
-export const openTableSession = useMocks
-  ? mockSession.openTableSession
-  : httpSession.openTableSession
-export const getPublicMenu = useMocks ? mockMenu.getPublicMenu : httpMenu.getPublicMenu
-export const createPublicOrder = useMocks
-  ? mockOrders.createPublicOrder
-  : httpOrders.createPublicOrder
-export const getPublicOrders = useMocks ? mockOrders.getPublicOrders : httpOrders.getPublicOrders
-export const cancelPublicOrder = useMocks
-  ? mockOrders.cancelPublicOrder
-  : httpOrders.cancelPublicOrder
+export const openTableSession = useMocks ? mocks.openTableSession : httpSession.openTableSession
+export const getPublicMenu = useMocks ? mocks.getPublicMenu : httpMenu.getPublicMenu
+export const createPublicOrder = useMocks ? mocks.createPublicOrder : httpOrders.createPublicOrder
+export const getPublicOrders = useMocks ? mocks.getPublicOrders : httpOrders.getPublicOrders
+export const cancelPublicOrder = useMocks ? mocks.cancelPublicOrder : httpOrders.cancelPublicOrder
 ```
 
 Phase 1 fills the mock modules; Phase 3 fills the HTTP modules. Until then both sides export typed stubs that throw `NOT_IMPLEMENTED`. The old `getPublicOrder` / `cancelOrderItem` exports are removed with the rework.
@@ -242,18 +234,18 @@ Verify: a throwaway component can add a cart line and survives a reload.
 
 ## Phase Checklist
 
-- [ ] `npm run dev` serves the shell.
-- [ ] `npm run lint && npm run format:check && npm run build` pass.
-- [ ] `@/*` alias works in both `tsconfig` and Vite.
-- [ ] Tokens render (`bg-canvas`, `text-text`, `font-ui`).
-- [ ] `.env.example` lists `VITE_API_URL` and `VITE_USE_MOCKS`; no `.env` staged.
-- [ ] `src/api/index.ts` exists and every later import targets `@/api`.
-- [ ] Session store round-trips a cart line.
+- [x] `npm run dev` serves the shell.
+- [x] `npm run lint && npm run format:check && npm run build` pass.
+- [x] `@/*` alias works in both `tsconfig` and Vite.
+- [x] Tokens render (`bg-canvas`, `text-text`, `font-ui`).
+- [x] `.env.example` lists `VITE_API_URL` and `VITE_USE_MOCKS`; no `.env` staged.
+- [x] `src/api/index.ts` exists and every later import targets `@/api`.
+- [x] Session store round-trips a cart line.
 
 ## Exit Criteria
 
-- [ ] `npm run lint && npm run format:check && npm run build` pass.
-- [ ] No screens built yet; Phase 1 starts from a green build.
+- [x] `npm run lint && npm run format:check && npm run build` pass.
+- [x] Phase 1 starts from a green build; screens arrive in Phase 2.
 
 ## Gotchas
 

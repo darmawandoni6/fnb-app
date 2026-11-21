@@ -152,19 +152,19 @@ Verify: `VITE_USE_MOCKS=true npm run build` fails with that message; unset it an
 
 ## Phase Checklist
 
-- [ ] `demo-meja`, `demo-tutup`, `demo-habis`, `demo-invalid`, and an unknown token all behave per the table.
-- [ ] An unknown session token returns `UNAUTHORIZED` on menu and orders.
-- [ ] Session open → menu → create → list → cancel works in memory.
-- [ ] Cancelling anything but a `MENUNGGU` unpaid order returns `INVALID_TRANSITION`.
-- [ ] Every handler has 200–500 ms latency.
-- [ ] `VITE_USE_MOCKS=true npm run build` fails.
-- [ ] `npm run lint && npm run format:check && npm run build` pass with the flag off.
+- [x] `demo-meja`, `demo-tutup`, `demo-habis`, `demo-invalid`, and an unknown token all behave per the table.
+- [x] An unknown session token returns `UNAUTHORIZED` on menu and orders.
+- [x] Session open → menu → create → list → cancel works in memory.
+- [x] Cancelling anything but a `MENUNGGU` unpaid order returns `INVALID_TRANSITION`.
+- [x] Every handler has 200–500 ms latency.
+- [x] `VITE_USE_MOCKS=true npm run build` fails.
+- [x] `npm run lint && npm run format:check && npm run build` pass with the flag off.
 
 ## Exit Criteria
 
-- [ ] All five API functions resolve from `@/api` without a backend.
-- [ ] Mock signatures match `docs/tech-stack.md` Public API exactly.
-- [ ] Phase 2 can start with no UI-facing API changes expected.
+- [x] All five API functions resolve from `@/api` without a backend.
+- [x] Mock signatures match `docs/tech-stack.md` Public API exactly.
+- [x] Phase 2 can start with no UI-facing API changes expected.
 
 ## Gotchas
 

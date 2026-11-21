@@ -11,7 +11,7 @@ import { useCustomerSession } from '@/features/session/store'
 
 export function ClosedPage() {
   const [session, updateSession] = useCustomerSession()
-  const { data: menuData } = usePublicMenu(session.qr)
+  const { data: menuData } = usePublicMenu(session.sessionToken)
   const navigate = useNavigate()
 
   if (menuData?.isOpen) {

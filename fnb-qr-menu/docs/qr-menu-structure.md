@@ -35,6 +35,7 @@ Route guards:
 - `/` redirects to `/tutup` when `is_open` is `false` and the customer has not chosen browse-only.
 - `/status` with no stored order redirects to `/`.
 - `/menu/:menuId` with an unknown menu id redirects to `/`.
+- `/keranjang` and `/status` show a header back link to `/`; `/tutup` and `/tidak-valid` are dead ends by design.
 
 `?meja` is applied to the session on the first load (session open), then removed from the URL so a reload keeps the session.
 
@@ -213,5 +214,7 @@ Rules:
 - The UI does not change order status directly.
 - The customer may cancel a whole order only while it is `MENUNGGU` with `payment_status` `BELUM`, with an optional reason; there is no refund warning in v1.
 - `CANCELLED` items stay visible, crossed out.
+- `/` shows a `Receipt` icon in the header when `session.orders` is non-empty; the badge counts orders still `MENUNGGU`/`DIPROSES` and hides at `0`. The badge reads stored snapshots; `/` does not poll.
+- Header slots are optional: `leading` for the back link on `/keranjang` and `/status`, `trailing` for the order-history entry on `/`.
 - Ordering is disabled while `is_open` is `false`.
 - Prices, service, tax, and totals always come from the server.

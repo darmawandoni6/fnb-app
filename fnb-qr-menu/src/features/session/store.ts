@@ -11,13 +11,13 @@ export type CartLine = {
 
 export type TrackedOrder = {
   id: string
-  trackingToken: string
   snapshot: OrderStatusResponse
 }
 
 export type CustomerSession = {
   v: typeof SESSION_VERSION
   qr: string
+  sessionToken: string
   cart: CartLine[]
   orders: TrackedOrder[]
   browseOnly: boolean
@@ -28,6 +28,7 @@ export type CustomerSession = {
 export const EMPTY_SESSION: CustomerSession = {
   v: SESSION_VERSION,
   qr: '',
+  sessionToken: '',
   cart: [],
   orders: [],
   browseOnly: false,
@@ -67,12 +68,7 @@ function isCartLine(value: unknown): value is CartLine {
 }
 
 function isTrackedOrder(value: unknown): value is TrackedOrder {
-  return (
-    isRecord(value) &&
-    typeof value.id === 'string' &&
-    typeof value.trackingToken === 'string' &&
-    isRecord(value.snapshot)
-  )
+  return isRecord(value) && typeof value.id === 'string' && isRecord(value.snapshot)
 }
 
 function isCustomerSession(value: unknown): value is CustomerSession {
@@ -80,6 +76,7 @@ function isCustomerSession(value: unknown): value is CustomerSession {
     isRecord(value) &&
     value.v === SESSION_VERSION &&
     typeof value.qr === 'string' &&
+    typeof value.sessionToken === 'string' &&
     Array.isArray(value.cart) &&
     value.cart.every(isCartLine) &&
     Array.isArray(value.orders) &&
@@ -120,12 +117,13 @@ function write(next: CustomerSession) {
   const current = read()
   let valueToWrite = next
 
-  // Reset semantics: a different qr than the stored one clears cart and orders
+  // Reset semantics: a different qr than the stored one clears cart, orders, and the session token
   if (current.qr !== '' && next.qr !== current.qr) {
     valueToWrite = {
       ...next,
       cart: [],
       orders: [],
+      sessionToken: '',
       browseOnly: false,
     }
     setFlash('Sesi pesanan baru dimulai')

@@ -7,7 +7,8 @@ test('resolves mock handlers when VITE_USE_MOCKS=true', async () => {
   vi.resetModules()
 
   const api = await import('./index')
-  const menu = await api.getPublicMenu('demo-meja')
+  const opened = await api.openTableSession('demo-meja')
+  const menu = await api.getPublicMenu(opened.sessionToken)
 
   expect(menu.isOpen).toBe(true)
 })

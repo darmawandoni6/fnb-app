@@ -1,26 +1,25 @@
 import { Link, Navigate } from 'react-router-dom'
 
-import { Loader2, ShoppingBag } from 'lucide-react'
+import { ChevronLeft, Loader2, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ROUTES } from '@/constants/routes'
 
 import { AppShell } from '@/components/AppShell'
-import { Button } from '@/components/ui/button'
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty'
 import { usePublicMenu } from '@/features/catalog/hooks'
 import { CartLineRow } from '@/features/checkout/components/CartLineRow'
+import { CheckoutForm } from '@/features/checkout/components/CheckoutForm'
 import { useSendOrder } from '@/features/checkout/hooks'
 import { useCustomerSession } from '@/features/session/store'
 
 export function CartPage() {
   const [session] = useCustomerSession()
-  const { data: menuData } = usePublicMenu(session.qr)
+  const { data: menuData } = usePublicMenu(session.sessionToken)
 
   const { mutation, visibleLines } = useSendOrder()
 
-  // Guard: redirect to home if no qr
-  if (!session.qr) {
+  if (!session.sessionToken) {
     return <Navigate to={ROUTES.HOME} replace />
   }
 
@@ -29,17 +28,28 @@ export function CartPage() {
   const allHidden = session.cart.length > 0 && visibleLines.length === 0
   const canSubmit = visibleLines.length > 0 && !isBlocked && !isPending
 
-  function handleSubmit() {
-    if (!canSubmit) {
+  function handleSubmit(input: Parameters<typeof mutation.mutate>[0]) {
+    if (visibleLines.length === 0) {
       if (isBlocked) toast.error('Pemesanan dinonaktifkan saat kafe tutup')
       return
     }
-    mutation.mutate()
+    mutation.mutate(input)
   }
 
   return (
-    <AppShell cafeName={menuData?.cafeName}>
-      <div className="flex flex-col gap-4 pb-32">
+    <AppShell
+      cafeName={menuData?.cafeName}
+      leading={
+        <Link
+          to={ROUTES.HOME}
+          aria-label="Kembali"
+          className="text-text-muted hover:text-text -ml-2 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors"
+        >
+          <ChevronLeft className="size-5" />
+        </Link>
+      }
+    >
+      <div className="flex flex-col gap-4 pb-8">
         <h1 className="font-editorial text-text text-xl font-bold">Keranjang</h1>
 
         {/* Empty cart */}
@@ -79,46 +89,28 @@ export function CartPage() {
 
         {/* Cart line rows */}
         {visibleLines.length > 0 && (
-          <div className="flex flex-col gap-3">
-            {visibleLines.map((line) => (
-              <CartLineRow key={line.key} line={line} disabled={isPending} />
-            ))}
-          </div>
+          <>
+            <div className="flex flex-col gap-3">
+              {visibleLines.map((line) => (
+                <CartLineRow key={line.key} line={line} disabled={isPending} />
+              ))}
+            </div>
+
+            <p className="text-text-muted text-center text-xs">
+              {visibleLines.length} item · total dihitung kasir
+            </p>
+
+            <CheckoutForm disabled={!canSubmit} pending={isPending} onSubmit={handleSubmit} />
+
+            {isPending && (
+              <p className="text-text-muted flex items-center justify-center gap-2 text-xs">
+                <Loader2 className="size-3 animate-spin" />
+                Mengirim pesanan...
+              </p>
+            )}
+          </>
         )}
       </div>
-
-      {/* Sticky footer */}
-      {session.cart.length > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-30 p-4">
-          <div className="mx-auto max-w-xl">
-            <div className="bg-surface border-border rounded-2xl border p-4 shadow-lg">
-              {/* Step 3: No aggregate — only item count */}
-              <p className="text-text-muted mb-3 text-center text-xs">
-                {visibleLines.length} item · total dihitung kasir
-              </p>
-              <Button
-                type="button"
-                className="h-12 w-full rounded-full text-base font-semibold"
-                disabled={!canSubmit || allHidden}
-                onClick={handleSubmit}
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 size-4 animate-spin" />
-                    Mengirim Pesanan...
-                  </>
-                ) : isBlocked ? (
-                  'Pemesanan Dinonaktifkan'
-                ) : allHidden ? (
-                  'Menu Sudah Tidak Tersedia'
-                ) : (
-                  'Pesan Sekarang'
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
     </AppShell>
   )
 }

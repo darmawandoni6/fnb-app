@@ -17,7 +17,7 @@ The checklist gates every commit.
 
 ## Status
 
-Scaffolded through Phase 2.6 against the old contract (`tracking_token`, per-item cancel, menu per `qr_token`). The plan now follows the current `../docs/api.md` (table session token, order-level cancel, checkout form); steps marked `[REWORK]` in each phase file must be applied to the shipped code before Phase 3. Vitest is installed with `npm test`.
+Phases 0–2.6 are shipped against the current `../docs/api.md` contract (table session token, order-level cancel, checkout form, list polling); the `[REWORK]` steps in phases 0–2.6 are applied. Next step: `docs/implementation/phase-3.md` (HTTP client behind `@/api`). Vitest runs with `npm test`.
 
 ## Plan conventions
 
@@ -61,7 +61,7 @@ Verification order before commit: `npm run lint && npm run format:check && npm r
 - Cancellation is order-level: `POST /public/orders/:id/cancel` with `{ reason }`, only while the order is `MENUNGGU` with `payment_status` `BELUM`. No item-level cancel, no refund warning in v1.
 - API errors use envelope codes (`UNAUTHORIZED`, `STORE_CLOSED`, `STOCK_NOT_ENOUGH`, `NOT_FOUND`, `VALIDATION_ERROR`, `INVALID_TRANSITION`). Branch on `code`, display `message`. See `../docs/api-response.md`.
 - Ordering is disabled while `is_open` is `false`.
-- The menu response returns no `table_number` (only the session open does), no opening hours, and no order timeline; the header shows `cafe_name` only and the stepper derives from item statuses.
+- The menu response returns no `table_number` (only the session open does), no opening hours, and no order timeline; the header shows `cafe_name` plus optional leading/trailing slots, and the stepper derives from item statuses.
 - Unit tests are Vitest only (`cart`, `session`, `status`), delivered in Phase 4 per PRD §15.
 
 ## Tooling quirks

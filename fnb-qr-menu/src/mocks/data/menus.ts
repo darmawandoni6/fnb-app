@@ -2,7 +2,8 @@ import type { PublicMenu } from '@/types/menu'
 
 export const OPEN_MENU: PublicMenu = {
   cafeName: 'Kopi Senja',
-  taxPercent: 10,
+  serviceRate: 5,
+  taxRate: 10,
   isOpen: true,
   categories: [
     {

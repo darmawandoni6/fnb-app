@@ -131,12 +131,12 @@ Verify: double-clicking submit creates exactly one order.
 - [x] Stepper clamps at 50 and removing the last unit removes the line after confirmation.
 - [x] Note edits persist to the session.
 - [x] Hidden lines are excluded from the payload; an all-hidden cart cannot submit.
-- [ ] Checkout form requires `customer_name`, accepts an optional phone, and offers `CASH` / `NON_CASH`.
+- [x] Checkout form requires `customer_name`, accepts an optional phone, and offers `CASH` / `NON_CASH`.
 - [x] Submit stores the order card and clears the cart.
-- [ ] `NON_CASH` navigates to the returned `payment_url` with the order already stored.
+- [x] `NON_CASH` navigates to the returned `payment_url` with the order already stored.
 - [x] `STORE_CLOSED` toasts and routes to `/tutup`.
 - [x] `STOCK_NOT_ENOUGH` toasts and refetches.
-- [ ] `429` backs off with a single toast.
+- [x] `429` backs off with a single toast.
 - [x] Pending state blocks double submit.
 - [x] `npm run lint && npm run format:check && npm run build` pass.
 
@@ -144,7 +144,7 @@ Verify: double-clicking submit creates exactly one order.
 
 - [x] An order can be created end-to-end on mock data and appears as a stored session order.
 - [x] No client-side money aggregate exists anywhere in the cart flow.
-- [ ] `CASH` and `NON_CASH` both complete from the cart on mock data.
+- [x] `CASH` and `NON_CASH` both complete from the cart on mock data.
 - [x] Phase 2.6 can render the stored order on `/status`.
 
 ## Gotchas

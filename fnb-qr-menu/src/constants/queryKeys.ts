@@ -1,4 +1,4 @@
 export const QUERY_KEYS = {
-  publicMenu: (qrToken: string) => ['public-menu', qrToken] as const,
-  publicOrder: (trackingToken: string) => ['public-order', trackingToken] as const,
+  publicMenu: (sessionToken: string) => ['public-menu', sessionToken] as const,
+  publicOrders: (sessionToken: string) => ['public-orders', sessionToken] as const,
 }

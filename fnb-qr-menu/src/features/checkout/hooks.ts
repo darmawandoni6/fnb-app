@@ -1,3 +1,5 @@
+import { useRef } from 'react'
+
 import { useNavigate } from 'react-router-dom'
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
@@ -8,58 +10,71 @@ import { toast } from 'sonner'
 import { API_ERROR } from '@/constants/errors'
 import { ROUTES } from '@/constants/routes'
 import { isApiError } from '@/lib/apiError'
-import type { MenuItem } from '@/types/menu'
-import type { CreatePublicOrderResponse } from '@/types/order'
+import type { CheckoutInput } from '@/schemas/checkout'
 
 import { cartLines } from '@/features/browse/cart'
 import { usePublicMenu } from '@/features/catalog/hooks'
 import { catalogKeys } from '@/features/catalog/queries'
 import { useCustomerSession } from '@/features/session/store'
+import { withSessionRetry } from '@/features/session/token'
 
 export function useSendOrder() {
   const [session, updateSession] = useCustomerSession()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { data: menuData } = usePublicMenu(session.qr)
+  const { data: menuData } = usePublicMenu(session.sessionToken)
+  const hasWarnedRateLimit = useRef(false)
 
-  const allMenus: MenuItem[] = menuData?.categories.flatMap((c) => c.menus) ?? []
+  const allMenus = menuData?.categories.flatMap((c) => c.menus) ?? []
   const visibleLines = cartLines(session.cart, allMenus)
 
   const mutation = useMutation({
-    mutationFn: () => {
+    mutationFn: (input: CheckoutInput) => {
       if (visibleLines.length === 0) {
         return Promise.reject(new Error('Keranjang kosong atau semua menu tidak tersedia'))
       }
-      return createPublicOrder(session.qr, {
-        items: visibleLines.map((l) => ({
-          menuId: l.menuId,
-          qty: l.qty,
-          note: l.note || null,
-        })),
-      })
+      return withSessionRetry((sessionToken) =>
+        createPublicOrder(sessionToken, {
+          orderType: 'DINE_IN',
+          customerName: input.customerName.trim(),
+          customerPhone: input.customerPhone.trim() || null,
+          paymentMethod: input.paymentMethod,
+          items: visibleLines.map((line) => ({
+            menuId: line.menuId,
+            qty: line.qty,
+            note: line.note || null,
+          })),
+        }),
+      )
     },
 
-    onSuccess: (response: CreatePublicOrderResponse) => {
+    onSuccess: (response) => {
       updateSession((prev) => ({
         ...prev,
         cart: [],
-        orders: [
-          {
-            id: response.orderId,
-            trackingToken: response.trackingToken,
-            snapshot: response,
-          },
-          ...prev.orders,
-        ],
+        orders: [{ id: response.id, snapshot: response }, ...prev.orders],
       }))
+
+      if (response.paymentUrl) {
+        window.location.assign(response.paymentUrl)
+        return
+      }
       navigate(ROUTES.STATUS)
     },
 
     onError: (error: unknown) => {
       if (isApiError(error)) {
+        if (error.status === 429) {
+          if (!hasWarnedRateLimit.current) {
+            hasWarnedRateLimit.current = true
+            toast.error('Terlalu banyak pesanan. Coba lagi sebentar.')
+          }
+          return
+        }
+        hasWarnedRateLimit.current = false
         if (error.code === API_ERROR.STORE_CLOSED) {
           toast.error(error.message)
-          void queryClient.invalidateQueries({ queryKey: catalogKeys.menu(session.qr) })
+          void queryClient.invalidateQueries({ queryKey: catalogKeys.menu(session.sessionToken) })
           navigate(ROUTES.CLOSED)
           return
         }
@@ -68,9 +83,11 @@ export function useSendOrder() {
           error.code === API_ERROR.VALIDATION_ERROR
         ) {
           toast.error(error.message)
-          void queryClient.invalidateQueries({ queryKey: catalogKeys.menu(session.qr) })
+          void queryClient.invalidateQueries({ queryKey: catalogKeys.menu(session.sessionToken) })
           return
         }
+        toast.error(error.message)
+        return
       }
       toast.error('Terjadi kesalahan. Silakan coba lagi.')
     },

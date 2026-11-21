@@ -32,7 +32,7 @@ export function MenuDetailPage() {
   const navigate = useNavigate()
 
   const [session, updateSession] = useCustomerSession()
-  const { data: menuData, isLoading, isError } = usePublicMenu(session.qr)
+  const { data: menuData, isLoading, isError } = usePublicMenu(session.sessionToken)
 
   // Find the menu item across all categories
   const menu = useMemo(() => {
@@ -54,7 +54,7 @@ export function MenuDetailPage() {
   const [note, setNote] = useState(() => (existingLine ? existingLine.note : ''))
 
   // Guard: if menu query finished and menu is not found, redirect to /
-  if (!isLoading && !isError && (!menu || !session.qr)) {
+  if (!isLoading && !isError && (!menu || !session.sessionToken)) {
     return <Navigate to={ROUTES.HOME} replace />
   }
 

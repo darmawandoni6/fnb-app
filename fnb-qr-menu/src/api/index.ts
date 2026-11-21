@@ -4,8 +4,10 @@ import { useMocks } from '@/lib/mode'
 
 import * as httpMenu from './publicMenu'
 import * as httpOrders from './publicOrders'
+import * as httpSession from './session'
 
+export const openTableSession = useMocks ? mocks.openTableSession : httpSession.openTableSession
 export const getPublicMenu = useMocks ? mocks.getPublicMenu : httpMenu.getPublicMenu
 export const createPublicOrder = useMocks ? mocks.createPublicOrder : httpOrders.createPublicOrder
-export const getPublicOrder = useMocks ? mocks.getPublicOrder : httpOrders.getPublicOrder
-export const cancelOrderItem = useMocks ? mocks.cancelOrderItem : httpOrders.cancelOrderItem
+export const getPublicOrders = useMocks ? mocks.getPublicOrders : httpOrders.getPublicOrders
+export const cancelPublicOrder = useMocks ? mocks.cancelPublicOrder : httpOrders.cancelPublicOrder

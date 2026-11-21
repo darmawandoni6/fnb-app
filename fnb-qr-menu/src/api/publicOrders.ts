@@ -1,24 +1,26 @@
 import { notImplemented } from '@/api/notImplemented'
 import type {
+  CancelPublicOrderRequest,
   CreatePublicOrderRequest,
-  CreatePublicOrderResponse,
   OrderStatusResponse,
+  PublicOrder,
 } from '@/types/order'
 
 export async function createPublicOrder(
-  _qrToken: string,
+  _sessionToken: string,
   _request: CreatePublicOrderRequest,
-): Promise<CreatePublicOrderResponse> {
-  notImplemented('POST /public/tables/:qr_token/orders')
-}
-
-export async function getPublicOrder(_trackingToken: string): Promise<OrderStatusResponse> {
-  notImplemented('GET /public/orders/:tracking_token')
-}
-
-export async function cancelOrderItem(
-  _trackingToken: string,
-  _itemId: string,
 ): Promise<OrderStatusResponse> {
-  notImplemented('POST /public/orders/:tracking_token/cancel')
+  notImplemented('POST /public/orders')
+}
+
+export async function getPublicOrders(_sessionToken: string): Promise<PublicOrder[]> {
+  notImplemented('GET /public/orders')
+}
+
+export async function cancelPublicOrder(
+  _sessionToken: string,
+  _orderId: string,
+  _request: CancelPublicOrderRequest,
+): Promise<OrderStatusResponse> {
+  notImplemented('POST /public/orders/:id/cancel')
 }

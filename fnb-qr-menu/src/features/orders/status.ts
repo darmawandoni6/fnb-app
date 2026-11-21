@@ -1,107 +1,91 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { cancelOrderItem } from '@/api'
+import { cancelPublicOrder } from '@/api'
 import { toast } from 'sonner'
 
 import { API_ERROR } from '@/constants/errors'
+import { ORDER_STATUS } from '@/constants/orderStatus'
 import type { OrderStatus } from '@/constants/orderStatus'
 import { POLL_INTERVAL_MS } from '@/constants/orderStatus'
 import { QUERY_KEYS } from '@/constants/queryKeys'
 import { isApiError } from '@/lib/apiError'
+import type { PublicOrder } from '@/types/order'
 
 import { useCustomerSession } from '@/features/session/store'
 import type { TrackedOrder } from '@/features/session/store'
+import { withSessionRetry } from '@/features/session/token'
 
-import { orderQuery } from './api'
+import { ordersQuery } from './api'
 
-const isFinished = (status: OrderStatus) => status === 'SELESAI' || status === 'DIBATALKAN'
+export const isFinished = (status: OrderStatus) =>
+  status === ORDER_STATUS.SELESAI || status === ORDER_STATUS.DIBATALKAN
 
-const isNotFound = (error: unknown) => isApiError(error) && error.code === API_ERROR.NOT_FOUND
+export const unfinishedOrderCount = (orders: TrackedOrder[]) =>
+  orders.filter((order) => !isFinished(order.snapshot.status)).length
 
 const isRateLimited = (error: unknown) => isApiError(error) && error.status === 429
 
-export function useTrackedOrder(order: TrackedOrder, enabled: boolean) {
-  const [, updateSession] = useCustomerSession()
-  const hasWarnedRateLimit = useRef(false)
+export function useOrderList(enabled: boolean) {
+  const [session, updateSession] = useCustomerSession()
 
   const query = useQuery({
-    ...orderQuery(order.trackingToken),
-    initialData: order.snapshot,
-    initialDataUpdatedAt: 0,
-    enabled,
-    retry: (failureCount, error) => !isNotFound(error) && !isRateLimited(error) && failureCount < 1,
+    ...ordersQuery(session.sessionToken),
+    enabled: enabled && Boolean(session.sessionToken),
     refetchIntervalInBackground: true,
+    retry: (failureCount, error) => !isRateLimited(error) && failureCount < 1,
     refetchInterval: (query) => {
       if (!enabled) return false
-
-      const status = query.state.data?.status ?? order.snapshot.status
-      if (isFinished(status)) return false
-
-      if (query.state.error) {
-        if (isNotFound(query.state.error)) return false
-        // A 429 skips the next tick instead of retrying immediately.
-        if (isRateLimited(query.state.error)) return POLL_INTERVAL_MS * 2
+      const latest = query.state.data
+      if (latest && latest.length > 0 && latest.every((order) => isFinished(order.status))) {
+        return false
       }
-
+      if (isRateLimited(query.state.error)) return POLL_INTERVAL_MS * 2
       return POLL_INTERVAL_MS
     },
   })
 
   useEffect(() => {
-    const snapshot = query.data
-    if (!snapshot) return
+    const list = query.data
+    if (!list) return
 
     updateSession((prev) => ({
       ...prev,
-      orders: prev.orders.map((entry) =>
-        entry.trackingToken === order.trackingToken ? { ...entry, snapshot } : entry,
-      ),
+      orders: prev.orders.map((entry) => {
+        const fresh = list.find((order) => order.id === entry.id)
+        return fresh ? { ...entry, snapshot: fresh } : entry
+      }),
     }))
-  }, [query.data, order.trackingToken, updateSession])
-
-  useEffect(() => {
-    if (!query.error) {
-      hasWarnedRateLimit.current = false
-      return
-    }
-    if (isRateLimited(query.error) && !hasWarnedRateLimit.current) {
-      hasWarnedRateLimit.current = true
-      toast.error(isApiError(query.error) ? query.error.message : 'Terlalu banyak permintaan')
-    }
-  }, [query.error])
+  }, [query.data, updateSession])
 
   return query
 }
 
-export function useCancelOrderItem(order: TrackedOrder) {
-  const [, updateSession] = useCustomerSession()
+export function useCancelOrder(order: PublicOrder) {
+  const [session, updateSession] = useCustomerSession()
   const queryClient = useQueryClient()
+  const listKey = QUERY_KEYS.publicOrders(session.sessionToken)
 
   return useMutation({
-    mutationFn: (itemId: string) => cancelOrderItem(order.trackingToken, itemId),
+    mutationFn: (reason: string) =>
+      withSessionRetry((token) => cancelPublicOrder(token, order.id, { reason })),
 
     onSuccess: (response) => {
       updateSession((prev) => ({
         ...prev,
         orders: prev.orders.map((entry) =>
-          entry.trackingToken === order.trackingToken ? { ...entry, snapshot: response } : entry,
+          entry.id === response.id ? { ...entry, snapshot: response } : entry,
         ),
       }))
-      queryClient.setQueryData(QUERY_KEYS.publicOrder(order.trackingToken), response)
-      void queryClient.invalidateQueries({
-        queryKey: QUERY_KEYS.publicOrder(order.trackingToken),
-      })
+      void queryClient.invalidateQueries({ queryKey: listKey })
     },
 
     onError: (error: unknown) => {
       if (isApiError(error)) {
         toast.error(error.message)
         if (error.code === API_ERROR.INVALID_TRANSITION) {
-          void queryClient.invalidateQueries({
-            queryKey: QUERY_KEYS.publicOrder(order.trackingToken),
-          })
+          void queryClient.invalidateQueries({ queryKey: listKey })
         }
         return
       }

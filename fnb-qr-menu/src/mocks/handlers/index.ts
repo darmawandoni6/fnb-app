@@ -1,5 +1,6 @@
 export * from './publicMenu'
 export * from './publicOrders'
+export * from './session'
 
 const MIN_LATENCY_MS = 200
 const MAX_LATENCY_MS = 500

@@ -1,20 +1,31 @@
 import { ITEM_STATUS } from '@/constants/itemStatus'
 import { ORDER_STATUS } from '@/constants/orderStatus'
 import { PAYMENT_STATUS } from '@/constants/paymentStatus'
-import type { OrderStatusResponse } from '@/types/order'
+import type { PublicOrder } from '@/types/order'
 
-export const SEEDED_ORDERS: OrderStatusResponse[] = [
+const base = {
+  orderType: 'DINE_IN' as const,
+  customerName: 'Budi',
+  serviceAmount: 0,
+  paymentUrl: null,
+}
+
+export const SEEDED_ORDERS: PublicOrder[] = [
   {
-    orderId: 'order-menunggu',
+    ...base,
+    id: 'order-menunggu',
+    orderNumber: 'DI-001',
     status: ORDER_STATUS.MENUNGGU,
     paymentStatus: PAYMENT_STATUS.BELUM,
     subtotalAmount: 81000,
-    taxAmount: 8100,
-    totalAmount: 89100,
+    serviceAmount: 4050,
+    taxAmount: 8505,
+    totalAmount: 93555,
     items: [
       {
         id: 'item-menunggu-1',
-        menuName: 'Latte',
+        menuId: 'menu-latte',
+        menuNameSnapshot: 'Latte',
         qty: 2,
         price: 28000,
         status: ITEM_STATUS.PENDING,
@@ -22,7 +33,8 @@ export const SEEDED_ORDERS: OrderStatusResponse[] = [
       },
       {
         id: 'item-menunggu-2',
-        menuName: 'Croissant',
+        menuId: 'menu-croissant',
+        menuNameSnapshot: 'Croissant',
         qty: 1,
         price: 25000,
         status: ITEM_STATUS.PENDING,
@@ -31,16 +43,20 @@ export const SEEDED_ORDERS: OrderStatusResponse[] = [
     ],
   },
   {
-    orderId: 'order-diproses',
+    ...base,
+    id: 'order-diproses',
+    orderNumber: 'DI-002',
     status: ORDER_STATUS.DIPROSES,
-    paymentStatus: PAYMENT_STATUS.BELUM,
+    paymentStatus: PAYMENT_STATUS.LUNAS,
     subtotalAmount: 42000,
-    taxAmount: 4200,
-    totalAmount: 46200,
+    serviceAmount: 2100,
+    taxAmount: 4410,
+    totalAmount: 48510,
     items: [
       {
         id: 'item-diproses-1',
-        menuName: 'Americano',
+        menuId: 'menu-americano',
+        menuNameSnapshot: 'Americano',
         qty: 1,
         price: 22000,
         status: ITEM_STATUS.COOKING,
@@ -48,7 +64,8 @@ export const SEEDED_ORDERS: OrderStatusResponse[] = [
       },
       {
         id: 'item-diproses-2',
-        menuName: 'Pisang Goreng',
+        menuId: 'menu-pisang-goreng',
+        menuNameSnapshot: 'Pisang Goreng',
         qty: 1,
         price: 20000,
         status: ITEM_STATUS.READY,
@@ -57,16 +74,20 @@ export const SEEDED_ORDERS: OrderStatusResponse[] = [
     ],
   },
   {
-    orderId: 'order-siap',
-    status: ORDER_STATUS.SIAP,
+    ...base,
+    id: 'order-siap',
+    orderNumber: 'DI-003',
+    status: ORDER_STATUS.DIPROSES,
     paymentStatus: PAYMENT_STATUS.LUNAS,
     subtotalAmount: 32000,
-    taxAmount: 3200,
-    totalAmount: 35200,
+    serviceAmount: 1600,
+    taxAmount: 3360,
+    totalAmount: 36960,
     items: [
       {
         id: 'item-siap-1',
-        menuName: 'Matcha Latte',
+        menuId: 'menu-matcha',
+        menuNameSnapshot: 'Matcha Latte',
         qty: 1,
         price: 32000,
         status: ITEM_STATUS.READY,
@@ -75,16 +96,20 @@ export const SEEDED_ORDERS: OrderStatusResponse[] = [
     ],
   },
   {
-    orderId: 'order-diantar',
-    status: ORDER_STATUS.DIANTAR,
+    ...base,
+    id: 'order-diantar',
+    orderNumber: 'DI-004',
+    status: ORDER_STATUS.DIPROSES,
     paymentStatus: PAYMENT_STATUS.LUNAS,
     subtotalAmount: 50000,
-    taxAmount: 5000,
-    totalAmount: 55000,
+    serviceAmount: 2500,
+    taxAmount: 5250,
+    totalAmount: 57750,
     items: [
       {
         id: 'item-diantar-1',
-        menuName: 'Nasi Goreng Senja',
+        menuId: 'menu-nasi-goreng',
+        menuNameSnapshot: 'Nasi Goreng Senja',
         qty: 1,
         price: 35000,
         status: ITEM_STATUS.DELIVERED,
@@ -92,7 +117,8 @@ export const SEEDED_ORDERS: OrderStatusResponse[] = [
       },
       {
         id: 'item-diantar-2',
-        menuName: 'Teh Melati',
+        menuId: 'menu-teh',
+        menuNameSnapshot: 'Teh Melati',
         qty: 1,
         price: 15000,
         status: ITEM_STATUS.DELIVERED,
@@ -101,34 +127,42 @@ export const SEEDED_ORDERS: OrderStatusResponse[] = [
     ],
   },
   {
-    orderId: 'order-selesai',
+    ...base,
+    id: 'order-selesai',
+    orderNumber: 'DI-005',
     status: ORDER_STATUS.SELESAI,
     paymentStatus: PAYMENT_STATUS.LUNAS,
     subtotalAmount: 18000,
-    taxAmount: 1800,
-    totalAmount: 19800,
+    serviceAmount: 900,
+    taxAmount: 1890,
+    totalAmount: 20790,
     items: [
       {
         id: 'item-selesai-1',
-        menuName: 'Espresso',
+        menuId: 'menu-espresso',
+        menuNameSnapshot: 'Espresso',
         qty: 1,
         price: 18000,
-        status: ITEM_STATUS.DELIVERED,
+        status: ITEM_STATUS.COMPLETED,
         note: null,
       },
     ],
   },
   {
-    orderId: 'order-dibatalkan',
+    ...base,
+    id: 'order-dibatalkan',
+    orderNumber: 'DI-006',
     status: ORDER_STATUS.DIBATALKAN,
     paymentStatus: PAYMENT_STATUS.BELUM,
     subtotalAmount: 27000,
-    taxAmount: 2700,
-    totalAmount: 29700,
+    serviceAmount: 1350,
+    taxAmount: 2835,
+    totalAmount: 31185,
     items: [
       {
         id: 'item-dibatalkan-1',
-        menuName: 'Chocolate',
+        menuId: 'menu-chocolate',
+        menuNameSnapshot: 'Chocolate',
         qty: 1,
         price: 27000,
         status: ITEM_STATUS.CANCELLED,
@@ -136,32 +170,10 @@ export const SEEDED_ORDERS: OrderStatusResponse[] = [
       },
     ],
   },
-  {
-    orderId: 'order-lunas',
-    status: ORDER_STATUS.MENUNGGU,
-    paymentStatus: PAYMENT_STATUS.LUNAS,
-    subtotalAmount: 28000,
-    taxAmount: 2800,
-    totalAmount: 30800,
-    items: [
-      {
-        id: 'item-lunas-1',
-        menuName: 'Cappuccino',
-        qty: 1,
-        price: 28000,
-        status: ITEM_STATUS.PENDING,
-        note: 'oat milk',
-      },
-    ],
-  },
 ]
 
+// Orders are scoped to an issued session token; a new session starts with none.
 export const ORDER_STORE = {
-  store: new Map<string, OrderStatusResponse>(),
+  bySession: new Map<string, PublicOrder[]>(),
   nextSeq: 1,
-}
-
-for (const order of SEEDED_ORDERS) {
-  const trackingToken = `demo-${order.orderId.replace('order-', '')}`
-  ORDER_STORE.store.set(trackingToken, order)
 }

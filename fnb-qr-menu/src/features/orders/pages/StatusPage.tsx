@@ -1,8 +1,8 @@
 import { useState } from 'react'
 
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 
-import { Plus } from 'lucide-react'
+import { ChevronLeft, Plus } from 'lucide-react'
 
 import { ROUTES } from '@/constants/routes'
 
@@ -12,11 +12,14 @@ import { usePublicMenu } from '@/features/catalog/hooks'
 import { OrderCard } from '@/features/orders/components/OrderCard'
 import { useCustomerSession } from '@/features/session/store'
 
+import { useOrderList } from '../status'
+
 export function StatusPage() {
   const [session, updateSession] = useCustomerSession()
   const [selectedId, setSelectedId] = useState<string | null>(() => session.orders[0]?.id ?? null)
   const navigate = useNavigate()
-  const { data: menuData } = usePublicMenu(session.qr)
+  const { data: menuData } = usePublicMenu(session.sessionToken)
+  useOrderList(session.orders.length > 0)
 
   if (session.orders.length === 0) {
     return <Navigate to={ROUTES.HOME} replace />
@@ -26,20 +29,24 @@ export function StatusPage() {
     ? selectedId
     : session.orders[0].id
 
-  function handleRemove(orderId: string) {
-    updateSession((prev) => ({
-      ...prev,
-      orders: prev.orders.filter((order) => order.id !== orderId),
-    }))
-  }
-
   function handleAddOrder() {
     updateSession((prev) => ({ ...prev, cart: [] }))
     navigate(ROUTES.HOME)
   }
 
   return (
-    <AppShell cafeName={menuData?.cafeName}>
+    <AppShell
+      cafeName={menuData?.cafeName}
+      leading={
+        <Link
+          to={ROUTES.HOME}
+          aria-label="Kembali"
+          className="text-text-muted hover:text-text -ml-2 flex size-11 shrink-0 items-center justify-center rounded-full transition-colors"
+        >
+          <ChevronLeft className="size-5" />
+        </Link>
+      }
+    >
       <div className="flex flex-col gap-4 pb-8">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -64,7 +71,6 @@ export function StatusPage() {
               order={order}
               open={order.id === activeId}
               onToggle={() => setSelectedId(order.id)}
-              onRemove={handleRemove}
             />
           ))}
         </div>

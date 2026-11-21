@@ -41,6 +41,7 @@ test('two tabs stay in sync through the storage event', async () => {
   const otherTabSession = {
     v: 1,
     qr: 'table-remote',
+    sessionToken: 'session-remote',
     cart: [{ menuId: 'menu-remote', qty: 3, note: 'es batu' }],
     orders: [],
     browseOnly: false,

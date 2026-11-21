@@ -74,12 +74,12 @@ func (h *UsersSettingsHandler) UpdateSettings(c echo.Context) error {
 		old.CafeName = *r.CafeName
 	}
 	if r.TaxPercent != nil {
-		old.TaxPercent = *r.TaxPercent
+		old.TaxRate = *r.TaxPercent
 	}
 	if r.IsOpen != nil {
 		old.IsOpen = *r.IsOpen
 	}
-	v, e := h.settings.Update(c.Request().Context(), old.CafeName, old.TaxPercent, old.IsOpen)
+	v, e := h.settings.Update(c.Request().Context(), old.CafeName, old.TaxRate, old.IsOpen)
 	if e != nil {
 		return e
 	}

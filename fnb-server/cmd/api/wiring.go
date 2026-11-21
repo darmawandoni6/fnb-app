@@ -51,8 +51,9 @@ func newStockHandler(db *gorm.DB) *httpDelivery.StockHandler {
 
 func newUsersSettingsHandler(db *gorm.DB) *httpDelivery.UsersSettingsHandler {
 	userRepo := repository.NewUserRepository(db)
+	sessionRepo := repository.NewSessionRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
-	return httpDelivery.NewUsersSettingsHandler(usecase.NewUserAdminUsecase(userRepo), usecase.NewSettingsUsecase(settingRepo))
+	return httpDelivery.NewUsersSettingsHandler(usecase.NewUserAdminUsecase(userRepo, sessionRepo), usecase.NewSettingsUsecase(settingRepo))
 }
 
 func newAuthUsecase(db *gorm.DB, cfg *config.Config) *usecase.AuthUsecase {

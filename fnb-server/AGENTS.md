@@ -25,6 +25,7 @@ Verification order before commit: `go test ./... && go build ./...`
 - `.env` must quote `DATABASE_URL` — DSN contains spaces. Unquoted, the shell splits it and Go falls back to the OS user with empty dbname.
 - Ports: API `8081`, Postgres `5433`, PostgREST `3000`. `8080`/`5432` may be occupied by other local projects. If free, prefer defaults from `.env.example` and update this file.
 - `docker/postgres/init.sql` runs only on first volume creation. Role changes need `make reset`, which deletes DB data — confirm first.
+- `SEED_OWNER_EMAIL` and `SEED_OWNER_PASSWORD` seed the initial `OWNER` on startup if `users` is empty. In production, missing credentials prevent startup.
 - `.env` is gitignored. Never commit it, `bin/`, credentials, or tokens.
 
 ## Architecture

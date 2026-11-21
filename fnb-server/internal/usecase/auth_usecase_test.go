@@ -184,3 +184,85 @@ func TestAuthUsecase_RefreshToken_Rotation(t *testing.T) {
 		t.Fatal("expected refresh with revoked token to fail")
 	}
 }
+
+func TestAuthUsecase_Login_InactiveUser(t *testing.T) {
+	hash, _ := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+	user := &domain.User{
+		ID:           uuid.New(),
+		Email:        "inactive@fnb.com",
+		PasswordHash: string(hash),
+		Role:         domain.UserRoleCashier,
+		IsActive:     false,
+	}
+
+	userRepo := &mockUserRepo{users: map[string]*domain.User{user.Email: user}}
+	sessionRepo := &mockSessionRepo{sessions: make(map[string]*domain.Session)}
+
+	u := NewAuthUsecase(userRepo, sessionRepo, "secret", 15*time.Minute, 24*time.Hour)
+
+	_, err := u.Login(context.Background(), "inactive@fnb.com", "password")
+	if err == nil {
+		t.Fatal("expected error for inactive user, got nil")
+	}
+
+	var appErr *domain.AppError
+	if !errors.As(err, &appErr) || appErr.Code != domain.CodeUserInactive {
+		t.Fatalf("expected USER_INACTIVE code, got: %v", err)
+	}
+}
+
+func TestAuthUsecase_Logout_Idempotent(t *testing.T) {
+	userRepo := &mockUserRepo{users: make(map[string]*domain.User)}
+	sessionRepo := &mockSessionRepo{sessions: make(map[string]*domain.Session)}
+
+	u := NewAuthUsecase(userRepo, sessionRepo, "secret", 15*time.Minute, 24*time.Hour)
+
+	// Logging out with empty token succeeds
+	if err := u.Logout(context.Background(), ""); err != nil {
+		t.Errorf("expected nil on empty logout, got: %v", err)
+	}
+
+	// Logging out with non-existent token succeeds
+	if err := u.Logout(context.Background(), "random-non-existent-token"); err != nil {
+		t.Errorf("expected nil on unknown token logout, got: %v", err)
+	}
+
+	// Logging out with valid token revokes it and second call also succeeds
+	rawToken, tokenHash, _ := u.generateRefreshToken()
+	sessionID := uuid.New()
+	sessionRepo.sessions[tokenHash] = &domain.Session{
+		ID:        sessionID,
+		TokenHash: tokenHash,
+		ExpiresAt: time.Now().UTC().Add(24 * time.Hour),
+	}
+
+	if err := u.Logout(context.Background(), rawToken); err != nil {
+		t.Errorf("expected logout to succeed, got: %v", err)
+	}
+	if sessionRepo.sessions[tokenHash].RevokedAt == nil {
+		t.Errorf("expected session to be revoked")
+	}
+
+	// Second logout with already revoked token
+	if err := u.Logout(context.Background(), rawToken); err != nil {
+		t.Errorf("expected repeated logout to be idempotent, got: %v", err)
+	}
+}
+
+func TestAuthUsecase_ValidateAccessToken_Expired(t *testing.T) {
+	userRepo := &mockUserRepo{users: make(map[string]*domain.User)}
+	sessionRepo := &mockSessionRepo{sessions: make(map[string]*domain.Session)}
+
+	// Negative TTL to produce an already expired token
+	u := NewAuthUsecase(userRepo, sessionRepo, "secret", -1*time.Minute, 24*time.Hour)
+
+	token, err := u.generateAccessToken(uuid.New(), domain.UserRoleOwner)
+	if err != nil {
+		t.Fatalf("failed to generate token: %v", err)
+	}
+
+	_, err = u.ValidateAccessToken(token)
+	if err == nil {
+		t.Fatal("expected expired token to be rejected, got nil error")
+	}
+}

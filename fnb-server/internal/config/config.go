@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"log/slog"
 	"os"
 	"time"
@@ -13,27 +14,55 @@ const (
 
 // Config is the process environment, loaded once at startup.
 type Config struct {
-	DatabaseURL string
-	Environment string
-	Port        string
-	LogLevel    slog.Level
-	JWTSecret   string
-	AccessTTL   time.Duration
-	RefreshTTL  time.Duration
-	UploadDir   string
+	DatabaseURL       string
+	Environment       string
+	Port              string
+	LogLevel          slog.Level
+	JWTSecret         string
+	AccessTTL         time.Duration
+	RefreshTTL        time.Duration
+	UploadDir         string
+	SeedOwnerEmail    string
+	SeedOwnerPassword string
 }
 
 func LoadConfig() *Config {
 	return &Config{
-		DatabaseURL: getEnv("DATABASE_URL", defaultDSN),
-		Environment: getEnv("APP_ENV", EnvProduction),
-		Port:        getEnv("PORT", defaultPort),
-		LogLevel:    parseLevel(getEnv("LOG_LEVEL", "info")),
-		JWTSecret:   getEnv("JWT_SECRET", ""),
-		AccessTTL:   getDuration("ACCESS_TTL", 15*time.Minute),
-		RefreshTTL:  getDuration("REFRESH_TTL", 720*time.Hour),
-		UploadDir:   getEnv("UPLOAD_DIR", "./uploads"),
+		DatabaseURL:       getEnv("DATABASE_URL", defaultDSN),
+		Environment:       getEnv("APP_ENV", EnvProduction),
+		Port:              getEnv("PORT", defaultPort),
+		LogLevel:          parseLevel(getEnv("LOG_LEVEL", "info")),
+		JWTSecret:         getEnv("JWT_SECRET", ""),
+		AccessTTL:         getDuration("ACCESS_TTL", 15*time.Minute),
+		RefreshTTL:        getDuration("REFRESH_TTL", 720*time.Hour),
+		UploadDir:         getEnv("UPLOAD_DIR", "./uploads"),
+		SeedOwnerEmail:    getEnv("SEED_OWNER_EMAIL", ""),
+		SeedOwnerPassword: getEnv("SEED_OWNER_PASSWORD", ""),
 	}
+}
+
+func (c *Config) Validate(log *slog.Logger) error {
+	if c.Environment == EnvProduction {
+		if c.JWTSecret == "" {
+			return errors.New("JWT_SECRET is required in production")
+		}
+		if c.SeedOwnerEmail == "" || c.SeedOwnerPassword == "" {
+			return errors.New("SEED_OWNER_EMAIL and SEED_OWNER_PASSWORD are required in production")
+		}
+	} else {
+		if c.JWTSecret == "" {
+			c.JWTSecret = "dev-secret-key-change-in-production"
+			if log != nil {
+				log.Warn("JWT_SECRET is empty; using default development secret key")
+			}
+		}
+		if c.SeedOwnerEmail == "" || c.SeedOwnerPassword == "" {
+			if log != nil {
+				log.Warn("SEED_OWNER_EMAIL or SEED_OWNER_PASSWORD not set; owner seeding will be skipped")
+			}
+		}
+	}
+	return nil
 }
 
 func getEnv(key, defaultValue string) string {

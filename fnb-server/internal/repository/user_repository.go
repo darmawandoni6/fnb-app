@@ -63,3 +63,11 @@ func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
 	}
 	return nil
 }
+
+func (r *UserRepository) Count(ctx context.Context) (int64, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&domain.User{}).Count(&count).Error; err != nil {
+		return 0, fmt.Errorf("count users: %w", err)
+	}
+	return count, nil
+}

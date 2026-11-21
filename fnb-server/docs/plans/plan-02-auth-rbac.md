@@ -1,5 +1,13 @@
 # Plan 02 — Auth and RBAC
 
+> **Status:** DONE (Completed on 2026-11-21)
+> - Verified `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout` contracts and cookie security (`Path: "/auth"`).
+> - Added `UserRepository.Count` and `SeedUsecase` with idempotent owner seeding on startup.
+> - Handled session revocation on user deactivation in `UserAdminUsecase`.
+> - Enforced production validation on `JWT_SECRET` and `SEED_OWNER_*`.
+> - Updated Bruno API collection in `api-collection/auth/`.
+> - Unit tests passing: `seed_usecase_test.go`, `auth_usecase_test.go`, `auth_handler_test.go`.
+
 Verifies and tightens the existing auth slice against PRD §3 and §9. Mostly hardening, no redesign.
 
 Depends on: 01.

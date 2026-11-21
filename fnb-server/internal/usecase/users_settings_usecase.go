@@ -7,14 +7,18 @@ import (
 	"strings"
 
 	"fnb-server/internal/domain"
+
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type UserAdminUsecase struct{ repo domain.AdminUserRepository }
+type UserAdminUsecase struct {
+	repo        domain.AdminUserRepository
+	sessionRepo domain.SessionRepository
+}
 
-func NewUserAdminUsecase(repo domain.AdminUserRepository) *UserAdminUsecase {
-	return &UserAdminUsecase{repo: repo}
+func NewUserAdminUsecase(repo domain.AdminUserRepository, sessionRepo domain.SessionRepository) *UserAdminUsecase {
+	return &UserAdminUsecase{repo: repo, sessionRepo: sessionRepo}
 }
 func (u *UserAdminUsecase) List(ctx context.Context) ([]domain.User, error) { return u.repo.List(ctx) }
 func validStaffRole(role domain.UserRole) bool {
@@ -83,7 +87,13 @@ func (u *UserAdminUsecase) Update(ctx context.Context, id uuid.UUID, name *strin
 		user.PasswordHash = string(hash)
 	}
 	if active != nil {
+		wasActive := user.IsActive
 		user.IsActive = *active
+		if wasActive && !*active && u.sessionRepo != nil {
+			if err := u.sessionRepo.RevokeByUserID(ctx, user.ID); err != nil {
+				return nil, err
+			}
+		}
 	}
 	if err = u.repo.Update(ctx, user); err != nil {
 		return nil, err
@@ -97,7 +107,7 @@ func NewSettingsUsecase(repo domain.AdminSettingRepository) *SettingsUsecase {
 	return &SettingsUsecase{repo: repo}
 }
 func defaultSetting() *domain.Setting {
-	return &domain.Setting{CafeName: "", TaxPercent: 0, IsOpen: true}
+	return &domain.Setting{CafeName: "", TaxRate: 0, ServiceRate: 5, IsOpen: true}
 }
 func (u *SettingsUsecase) Get(ctx context.Context) (*domain.Setting, error) {
 	s, e := u.repo.GetFirst(ctx)
@@ -124,7 +134,7 @@ func (u *SettingsUsecase) Update(ctx context.Context, cafe string, tax float64, 
 		s = defaultSetting()
 	}
 	s.CafeName = cafe
-	s.TaxPercent = tax
+	s.TaxRate = tax
 	s.IsOpen = open
 	if e = u.repo.Update(ctx, s); e != nil {
 		return nil, e

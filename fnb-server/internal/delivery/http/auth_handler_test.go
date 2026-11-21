@@ -38,6 +38,10 @@ func (m *mockUserRepo) Create(ctx context.Context, user *domain.User) error {
 	return nil
 }
 
+func (m *mockUserRepo) Count(ctx context.Context) (int64, error) {
+	return int64(len(m.users)), nil
+}
+
 type mockSessionRepo struct {
 	sessions map[string]*domain.Session
 }

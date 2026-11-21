@@ -79,7 +79,7 @@ func (h *AuthHandler) setRefreshCookie(c echo.Context, token string, expiresAt t
 	c.SetCookie(&http.Cookie{
 		Name:     RefreshCookieName,
 		Value:    token,
-		Path:     "/",
+		Path:     "/auth",
 		Expires:  expiresAt,
 		HttpOnly: true,
 		Secure:   h.isProduction,
@@ -91,7 +91,7 @@ func (h *AuthHandler) clearRefreshCookie(c echo.Context) {
 	c.SetCookie(&http.Cookie{
 		Name:     RefreshCookieName,
 		Value:    "",
-		Path:     "/",
+		Path:     "/auth",
 		Expires:  time.Unix(0, 0),
 		MaxAge:   -1,
 		HttpOnly: true,

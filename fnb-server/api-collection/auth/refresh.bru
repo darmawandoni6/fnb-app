@@ -10,6 +10,12 @@ post {
   auth: none
 }
 
+script:post-response {
+  if (res.status === 200 && res.body.success === true) {
+    bru.setVar("accessToken", res.body.data.access_token);
+  }
+}
+
 tests {
   test("returns a refreshed access token", function() {
     expect(res.status).to.equal(200);

@@ -54,7 +54,7 @@ Feature coverage from Phase 2 already: active orders (kanban), unpaid badge per 
    - Reuses `useOrders({ date: todayUTC() })` output (same query key as board — single poll, no extra requests).
    - Helper `todayUTC()` in `src/lib/format.ts`: `new Date().toISOString().slice(0, 10)`.
    - Computes (display-only aggregation of server data):
-     - `activeCount` — status in `MENUNGGU | DIPROSES | SIAP | DIANTAR`
+     - `activeCount` — status in `MENUNGGU | DIPROSES`
      - `unpaidCount` — `payment_status === 'BELUM'`
      - `doneCount` — status `SELESAI`
      - `salesToday` — sum `total_amount` where `payment_status === 'LUNAS'`
@@ -67,8 +67,8 @@ Feature coverage from Phase 2 already: active orders (kanban), unpaid badge per 
 8. **Order tracking detail dialog (`src/features/orders/OrderDetailDialog.tsx`)**
    - Triggered by clicking an `OrderCard`.
    - Shows full items table (`Table` component): name, qty, note, unit price, item status.
-   - Totals block: subtotal, tax, total (all from `Order` fields — read-only).
-   - Timeline of item statuses (`PENDING`/`COOKING`/`READY`/`DELIVERED`/`CANCELLED`) — tracking view, no actions here.
+   - Totals block: subtotal, service charge, tax, total (all from `Order` fields — read-only).
+   - Timeline of item statuses (`PENDING`/`COOKING`/`READY`/`DELIVERED`/`COMPLETED`/`CANCELLED`) — tracking view, no actions here.
    - Payment info: status + method.
 
 9. **Verify**
@@ -88,7 +88,7 @@ Goal: organize the sidebar navigation with logical group headers and intuitive `
 1. **Role `OWNER`**:
    - **Operasional**: Orders (`ShoppingBag`)
    - **Katalog & Meja**: Menus (`UtensilsCrossed`), Tables (`LayoutGrid`), Stock (`Boxes`)
-   - **Bisnis & Sistem**: Reports (`BarChart3`), Users (`Users`), Settings (`Settings`)
+   - **Bisnis & Sistem**: Reports (`BarChart3`), Users (`Users`), Settings (`Settings`), Audit Log (`ScrollText`)
 2. **Role `CASHIER`**:
    - **Operasional**: Orders (`ShoppingBag`)
 3. **Role `KITCHEN`**:

@@ -34,6 +34,8 @@ Mock layer only (`src/api/` re-exports `src/mocks/`); real HTTP handlers land in
 1. **`src/features/manual-order/PaymentReceiptDialog.tsx`**
    - Read `order.amount_received` / `order.change_amount`; drop the `amountReceived` / `changeAmount` props. Cash lines stay conditional so `NON_CASH` and legacy orders render cleanly.
    - Replace the hardcoded cafe name with `settings.cafe_name` via `useQuery({ queryKey: ['settings'], queryFn: api.getSettings })`, fallback `'Kafe'`.
+   - Print `order.order_number` (`TA-###`), never the internal id, and show the full money breakdown: subtotal, service charge, tax, total (PRD §6, §7.2).
+   - Keep the 58/80 mm print CSS area; the receipt is for take away orders.
    - Make `onNewOrder` optional; when absent, render a full-width `Selesai` button calling `onClose`.
 2. **`src/pages/OrderPaymentPage.tsx`**
    - Send `amount_received` / `change_amount` in `handleSettlePayment` for `CASH`.
@@ -61,7 +63,7 @@ npm run build
 Manual check with `npm run dev`, logged in as `kasir@demo.cafe`:
 
 - Sidebar shows `Orders` and `Stock`; the stock page has no add/restock/edit controls.
-- Cash payment receipt shows amount received and change.
+- Cash payment receipt shows amount received and change, plus `order_number`, service charge, and tax.
 - Closing the receipt and reopening it from `Cetak Ulang Struk` and from the order detail dialog shows identical content.
 - Renaming the cafe in Settings changes the receipt header on reprint.
 

@@ -14,7 +14,7 @@ Goal: replace the Reports stub page (`StubPage`) with a complete, interactive Ta
   - Top 10 Menu Terlaris (Horizontal Bar Chart).
   - Kontribusi Penjualan per Kategori Menu (Bar / Pie Chart).
 - **Tab 3 — Riwayat Transaksi**:
-  - Filter lokal: Tipe Pesanan (Semua / QR / Manual) & Metode Pembayaran (Semua / Tunai / Non-Tunai).
+  - Filter lokal: Tipe Pesanan (Semua / Dine In / Take Away) & Metode Pembayaran (Semua / Tunai / Non-Tunai).
   - Ekspor CSV client-side (`laporan-transaksi-[preset]-[tanggal].csv`).
   - Tabel riwayat transaksi dengan pagination dan empty state.
 
@@ -28,7 +28,7 @@ Goal: replace the Reports stub page (`StubPage`) with a complete, interactive Ta
 1. **`src/types/report.ts`**:
    - `ReportDatePreset`: `'today' | 'last_7_days' | 'last_30_days' | 'this_month'`
    - `ReportFilter`: `{ preset: ReportDatePreset; from_date: string; to_date: string }`
-   - `SalesReportSummary`: `{ total_revenue, total_orders, average_order_value, cash_revenue, non_cash_revenue, qr_orders_count, manual_orders_count, total_items_sold }`
+   - `SalesReportSummary`: `{ total_revenue, total_orders, average_order_value, cash_revenue, non_cash_revenue, dine_in_orders_count, take_away_orders_count, total_items_sold }`
    - `DailySalesTrend`: `{ date: string, revenue: number, order_count: number }`
    - `TopSellingMenuItem`: `{ menu_id, menu_name, category_name, qty_sold, total_revenue }`
    - `CategorySalesShare`: `{ category_id, category_name, total_revenue, total_items_sold, percentage }`

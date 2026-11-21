@@ -28,9 +28,9 @@
 - Local API base URL: `http://localhost:8081` via `VITE_API_URL`.
 - QR Menu base URL via `VITE_QR_MENU_URL` (no default). Table QR codes encode `${VITE_QR_MENU_URL}/?meja=<qr_token>`; when the var is empty the "Buka QR Menu" action is disabled and the QR dialog shows a warning.
 - All responses follow the `{success, data}` / `{success, error{code, message}}` envelope.
-- MVP updates: polling every 5 seconds with TanStack Query; no WebSocket or SSE.
+- Updates: WebSocket hub `GET /ws` per PRD §11.4 (subscribed to `order:{id}`), with TanStack Query polling every 3–5 seconds as the fallback while the socket is down.
 - Polling runs while the tab is active; default TanStack behavior pauses when the tab is hidden.
-- Order boards fetch filtered by status (`?status=`), not all orders client-side.
+- Order boards fetch from `GET /orders` and filter client-side per role (the kitchen keeps `LUNAS` orders only).
 - Money is integer rupiah; dashboard never computes prices, tax, or totals — server does.
 - Order status is read from API aggregate; client never recalculates it.
 
@@ -226,7 +226,7 @@ const form = useForm<LoginFormValues>({
 9. Setup constants, types, and schemas.
 10. Build dashboard layout.
 11. Build cashier and kitchen order boards.
-12. Add polling and mutations.
+12. Add polling, WebSocket subscription, and mutations.
 13. Add manual order form with Zod and React Hook Form.
 14. Add tests for validation and status transitions.
 
@@ -235,8 +235,7 @@ const form = useForm<LoginFormValues>({
 Do not add these for MVP:
 
 - Redux or Zustand: TanStack Query plus AuthContext cover state needs.
-- WebSocket or SSE: PRD specifies polling for MVP.
-- Chart library: add when reports are implemented.
+- Chart library beyond Recharts: add when a new chart type is required.
 - Date library: use `Intl.DateTimeFormat` first.
 - Storybook.
 - Playwright E2E: add after MVP flow is stable.

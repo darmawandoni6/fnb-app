@@ -40,7 +40,16 @@ export const db = {
   users: [] as User[],
   ingredients: [] as Ingredient[],
   recipeItems: [] as RecipeItem[],
-  settings: { cafe_name: 'Demo Cafe', tax_percent: 10, is_open: true } as Settings,
+  settings: {
+    cafe_name: 'Demo Cafe',
+    service_rate: 5,
+    tax_rate: 10,
+    is_open: true,
+    cash_timeout_minutes: 15,
+    delivered_auto_complete_minutes: 5,
+    ready_auto_deliver_minutes: 10,
+    ready_auto_deliver_warning_minutes: 2,
+  } as Settings,
   currentUserId: '' as string, // mock session: set on login, no token mechanics
 }
 ```
@@ -72,20 +81,20 @@ Each file exports a `seed*()` function or plain array that populates `db`. IDs u
 
 `ingredients.ts` — 5 ingredients with `stock` numbers, plus `recipeItems` mapping 2 menus to ingredients so `STOCK_NOT_ENOUGH` can trigger.
 
-`settings.ts` — `is_open: true`, `tax_percent: 10`.
+`settings.ts` — `service_rate: 5`, `tax_rate: 10`, `is_open: true`, `cash_timeout_minutes: 15`, `delivered_auto_complete_minutes: 5`, `ready_auto_deliver_minutes: 10`, `ready_auto_deliver_warning_minutes: 2`.
 
 `orders.ts` — seed orders covering every matrix cell:
 
-| Order | type   | status     | payment     | items (status)   | purpose                                          |
-| ----- | ------ | ---------- | ----------- | ---------------- | ------------------------------------------------ |
-| 1     | QR     | MENUNGGU   | BELUM       | 2× PENDING       | kitchen blocked by PAYMENT_REQUIRED              |
-| 2     | MANUAL | DIPROSES   | LUNAS       | PENDING, COOKING | kitchen PENDING→COOKING                          |
-| 3     | QR     | DIPROSES   | LUNAS       | COOKING, READY   | kitchen COOKING→READY                            |
-| 4     | QR     | SIAP       | LUNAS       | READY            | cashier READY→DELIVERED                          |
-| 5     | MANUAL | DIANTAR    | LUNAS       | DELIVERED        | verify aggregate move                            |
-| 6     | QR     | SELESAI    | LUNAS, CASH | DELIVERED        | history                                          |
-| 7     | QR     | DIBATALKAN | BELUM       | 1× CANCELLED     | cancelled order                                  |
-| 8     | QR     | MENUNGGU   | BELUM       | 1× PENDING       | cancel PENDING item → all cancelled → DIBATALKAN |
+| Order | type      | order_number | status     | payment     | items (status)   | purpose                                         |
+| ----- | --------- | ------------ | ---------- | ----------- | ---------------- | ----------------------------------------------- |
+| 1     | DINE_IN   | DI-001       | MENUNGGU   | BELUM       | 2× PENDING       | kitchen blocked by PAYMENT_REQUIRED             |
+| 2     | TAKE_AWAY | TA-001       | DIPROSES   | LUNAS       | PENDING, COOKING | kitchen PENDING→COOKING                         |
+| 3     | DINE_IN   | DI-002       | DIPROSES   | LUNAS       | COOKING, READY   | kitchen COOKING→READY                           |
+| 4     | DINE_IN   | DI-003       | DIPROSES   | LUNAS       | READY            | kitchen READY→DELIVERED                         |
+| 5     | TAKE_AWAY | TA-002       | DIPROSES   | LUNAS       | DELIVERED        | cashier DELIVERED→COMPLETED                     |
+| 6     | TAKE_AWAY | TA-003       | SELESAI    | LUNAS, CASH | COMPLETED        | history + receipt reprint                       |
+| 7     | DINE_IN   | DI-004       | DIBATALKAN | BELUM       | CANCELLED        | cancelled order                                 |
+| 8     | TAKE_AWAY | TA-004       | MENUNGGU   | BELUM       | PENDING          | order-level cancel → all CANCELLED → DIBATALKAN |
 
 Item fields follow `src/types/order.ts`. Amounts use menu prices. Totals are precomputed server-side style; mock must behave like server, so client never computes totals.
 
@@ -113,17 +122,17 @@ logout(): Promise<void>
 `orders.ts`:
 
 ```ts
-getOrders(filters?: { status?: OrderStatus; table_id?: string; date?: string }): Promise<Order[]>
+getOrders(filters?: { status?: OrderStatus; table_id?: string; order_type?: OrderType; date?: string }): Promise<Order[]>
 getOrder(id: string): Promise<Order>
-createManualOrder(body: { items: { menu_id: string; qty: number; note: string | null }[] }): Promise<Order>
+createManualOrder(body: { items: { menu_id: string; qty: number; note: string | null }[]; customer_name: string; customer_phone?: string | null; payment_method: PaymentMethod }): Promise<Order>
 updateItemStatus(orderId: string, itemId: string, status: ItemStatus): Promise<Order>
-cancelItem(orderId: string, itemId: string): Promise<Order>
+cancelOrder(orderId: string, reason: string): Promise<Order>
 ```
 
 `payments.ts`:
 
 ```ts
-updatePayment(orderId: string, body: { payment_status: 'LUNAS'; payment_method: PaymentMethod }): Promise<Order>
+updatePayment(orderId: string, body: { payment_method: PaymentMethod; amount_received?: number; change_amount?: number }): Promise<Order>
 ```
 
 `menus.ts`:
@@ -138,15 +147,15 @@ All handlers are async and await `delay(200 + Math.random() * 300)` first. This 
 
 ## Step 4 — Status Derivation (`orders.ts` helper)
 
-No order-status setter. Compute aggregate from items + payment per PRD §5.1:
+No order-status setter. Compute aggregate from items + payment per PRD §5.3:
 
-1. If all items are `CANCELLED` → `DIBATALKAN`.
+1. If every item is `CANCELLED` and the order was unpaid → `DIBATALKAN`.
 2. Active items exclude `CANCELLED` items.
-3. If payment is `BELUM` → `MENUNGGU`.
-4. If any active item is `PENDING` or `COOKING` → `DIPROSES`.
-5. If any active item is `DELIVERED` and not all are delivered → `DIANTAR`.
-6. If all active items are `DELIVERED` → `SELESAI`.
-7. Otherwise, all active items are `READY` → `SIAP`.
+3. If `payment_status` is `BELUM` → `MENUNGGU`.
+4. If `payment_status` is `LUNAS` and at least one active item is not `COMPLETED` → `DIPROSES`.
+5. If `payment_status` is `LUNAS` and every item is `COMPLETED` or `CANCELLED` → `SELESAI`.
+
+There is no `SIAP` or `DIANTAR` order status (PRD §5.1).
 
 `ponytail:` this matrix must match `fnb-server`; if server disagrees at integration, fix here and server side, not UI.
 
@@ -154,22 +163,23 @@ No order-status setter. Compute aggregate from items + payment per PRD §5.1:
 
 Implement PRD §5.2 and `api.md` exactly:
 
-| Action                      | Guard                                                            | Throw                                                         |
-| --------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------- |
-| item `PENDING` → `COOKING`  | order `LUNAS`; actor KITCHEN/OWNER                               | `PAYMENT_REQUIRED` if `BELUM`, `FORBIDDEN` if CASHIER         |
-| item `COOKING` → `READY`    | actor KITCHEN/OWNER                                              | `FORBIDDEN` if CASHIER, `INVALID_TRANSITION` if not `COOKING` |
-| item `READY` → `DELIVERED`  | actor CASHIER/OWNER                                              | `FORBIDDEN` if KITCHEN, `INVALID_TRANSITION` if not `READY`   |
-| cancel item                 | item `PENDING`; actor CASHIER/OWNER                              | `FORBIDDEN` if KITCHEN, `INVALID_TRANSITION` if not `PENDING` |
-| payment                     | order `BELUM`; method `CASH`/`NON_CASH`                          | `INVALID_TRANSITION` if already `LUNAS`                       |
-| create manual order         | `settings.is_open`; at least one item; `qty >= 1`; CASHIER/OWNER | `STORE_CLOSED` if closed, `FORBIDDEN` for KITCHEN             |
-| stock check on create       | recipe qty ≤ ingredient stock                                    | `STOCK_NOT_ENOUGH`                                            |
-| menu availability on create | menu `is_available`                                              | `VALIDATION_ERROR`                                            |
+| Action                         | Guard                                                                             | Throw                                                           |
+| ------------------------------ | --------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| item `PENDING` → `COOKING`     | order `LUNAS`; actor KITCHEN/OWNER                                                | `PAYMENT_REQUIRED` if `BELUM`, `FORBIDDEN` if CASHIER           |
+| item `COOKING` → `READY`       | actor KITCHEN/OWNER                                                               | `FORBIDDEN` if CASHIER, `INVALID_TRANSITION` if not `COOKING`   |
+| item `READY` → `DELIVERED`     | actor KITCHEN/OWNER; CASHIER only for `TAKE_AWAY`                                 | `FORBIDDEN` if not allowed, `INVALID_TRANSITION` if not `READY` |
+| item `DELIVERED` → `COMPLETED` | actor KITCHEN/OWNER; CASHIER only for `TAKE_AWAY`                                 | `FORBIDDEN` if not allowed, `INVALID_TRANSITION`                |
+| cancel order                   | order `MENUNGGU` + `BELUM`; actor OWNER                                           | `FORBIDDEN` if not OWNER, `INVALID_TRANSITION` otherwise        |
+| payment                        | order `BELUM`; method `CASH`/`NON_CASH`; idempotent repeat returns the same order | `VALIDATION_ERROR` for an unknown method                        |
+| create manual order            | `settings.is_open`; at least one item; `qty >= 1`; CASHIER only; `TAKE_AWAY` only | `STORE_CLOSED` if closed, `FORBIDDEN` for OWNER/KITCHEN         |
+| stock check on create          | recipe qty ≤ ingredient stock                                                     | `STOCK_NOT_ENOUGH`                                              |
+| menu availability on create    | menu `is_available`                                                               | `VALIDATION_ERROR`                                              |
 
 On successful mutation:
 
 - Recompute order status.
 - Decrement ingredient stock on order creation.
-- Write mock refund record when cancelling an item from a `LUNAS` order, per `api.md`.
+- Order cancellation restores stock for every item, writes `RESTORE` movements with `order_id`/`order_item_id`, and sets `cancel_reason`/`canceled_at`.
 
 Throw `ApiError` (`{ code, message }`), never raw envelope. Role checking reads `db.currentUserId` → user role.
 
@@ -205,12 +215,13 @@ Check:
 
 1. `PENDING`→`COOKING` on `BELUM` order throws `PAYMENT_REQUIRED`.
 2. Same transition on `LUNAS` order succeeds and order becomes `DIPROSES`.
-3. `COOKING`→`READY`→`DELIVERED`; last item + `LUNAS` → `SELESAI`.
-4. Cancelling only `PENDING` item → `DIBATALKAN`.
-5. Paying `LUNAS` order again throws `INVALID_TRANSITION`.
-6. CASHIER calling `COOKING` throws `FORBIDDEN`.
+3. `COOKING`→`READY`→`DELIVERED`→`COMPLETED`; every item terminal + `LUNAS` → `SELESAI`.
+4. Order-level cancel on `MENUNGGU`+`BELUM` → every item `CANCELLED`, order `DIBATALKAN`, stock restored.
+5. Paying a `LUNAS` order again returns the same order (idempotent, no second `payment_log`).
+6. CASHIER calling `COOKING` throws `FORBIDDEN`; CASHIER cancelling an order throws `FORBIDDEN`.
 7. Closed store order creation throws `STORE_CLOSED`.
 8. Order exceeding stock throws `STOCK_NOT_ENOUGH`.
+9. OWNER creating an order throws `FORBIDDEN`.
 
 Run from `main.tsx` behind `if (useMocks)` during Phase 1 only. Remove call when Phase 2 starts; keep file. Self-check uses scratch cloned state or reseeds fixtures before execution.
 

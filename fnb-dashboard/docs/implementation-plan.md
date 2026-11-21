@@ -10,6 +10,8 @@ Plan for the internal dashboard based on:
 - `../docs/api-response.md`
 - `docs/tech-stack.md`
 
+`../docs/PRD.md` and `../docs/flow.md` are the source of truth. When this plan, the mock layer, or the code disagrees with them, the PRD wins and the other side is fixed.
+
 Unit and component testing are excluded from this plan's scope.
 
 ## Phase 0 — Scaffold and Foundation
@@ -110,19 +112,23 @@ src/mocks/
 
 11. Create realistic fixtures:
 
-    - QR and `MANUAL` orders.
-    - Order statuses `MENUNGGU`, `DIPROSES`, `SIAP`, `DIANTAR`, `SELESAI`, `DIBATALKAN`.
-    - Item statuses `PENDING`, `COOKING`, `READY`, `DELIVERED`, `CANCELLED`.
+    - `DINE_IN` and `TAKE_AWAY` orders (PRD §10.1).
+    - Order statuses `MENUNGGU`, `DIPROSES`, `SELESAI`, `DIBATALKAN` (PRD §5.1).
+    - Item statuses `PENDING`, `COOKING`, `READY`, `DELIVERED`, `COMPLETED`, `CANCELLED` (PRD §5.2).
     - Payments `BELUM` and `LUNAS`.
     - Menus and categories.
     - Tables, users, ingredients, and settings.
+    - `order_number` in `TA-###` / `DI-###` form.
 
 12. Implement mock transitions per PRD §5.2:
 
     - `PENDING` → `COOKING`
     - `COOKING` → `READY`
     - `READY` → `DELIVERED`
-    - `PENDING` → `CANCELLED`
+    - `DELIVERED` → `COMPLETED`
+    - `PENDING` → `CANCELLED`, only as part of order cancellation
+
+    Order cancellation is order-level only (`POST /orders/:id/cancel`, `OWNER`, PRD §4.7/§11.3): every item becomes `CANCELLED`, stock is restored, and `RESTORE` movements are written. There is no item-level cancel endpoint in v1.
 
 13. Mocks must return the same error codes as the backend:
 
@@ -178,18 +184,17 @@ src/mocks/
 
 26. Create `useOrders(filters)` using TanStack Query.
 27. Set polling `refetchInterval: 5_000`.
-28. Create `OrdersPage` as a kanban board:
+28. Create `OrdersPage` as a kanban board over `order.status` (PRD §5.1):
 
     - `MENUNGGU`
     - `DIPROSES`
-    - `SIAP`
-    - `DIANTAR`
     - `SELESAI`
+    - `DIBATALKAN`
 
 29. Create `OrderCard` containing:
 
-    - Order number.
-    - Order type (QR or manual).
+    - Order number (`TA-###` / `DI-###`).
+    - Order type (`DINE_IN` / `TAKE_AWAY`).
     - Table number.
     - Order time.
     - Total.
@@ -198,53 +203,59 @@ src/mocks/
     - Item status.
     - Action buttons.
 
-30. Implement cashier actions:
+30. Implement cashier actions (PRD §9):
 
-    - Mark order `LUNAS`.
-    - Choose payment method `CASH` or `NON_CASH`.
-    - `READY` → `DELIVERED`.
-    - Cancel a `PENDING` item.
+    - Confirm payment `BELUM` → `LUNAS` with method `CASH` or `NON_CASH`.
+    - `READY` → `DELIVERED` and `DELIVERED` → `COMPLETED` for `TAKE_AWAY` only.
+    - No cancellation: cancelling an unpaid order is `OWNER`-only and order-level.
 
-31. Create `PaymentDialog`.
+31. Create the payment page (see 2.5) instead of a modal dialog.
 32. Disable actions when the role or transition is not allowed.
 33. Add loading skeletons and empty states.
 
 ### 2.4 Kitchen Board
 
-34. Create `KitchenPage`.
-35. Query orders with the required status filter, e.g. `?status=DIPROSES`.
-36. Display items in columns:
+34. Create `KitchenPage` with two tabs (PRD §4.4, §7.3):
 
-    - `PENDING`
-    - `COOKING`
-    - `READY`
+    - "Masak": items `PENDING` and `COOKING`.
+    - "Pass/Counter": items `READY` and `DELIVERED`.
 
-37. Implement kitchen actions:
+35. Query `GET /orders` and keep only `LUNAS` orders that still have active items; the kitchen never reads unpaid orders.
+36. Display items per tab:
+
+    - Masak columns: `PENDING`, `COOKING`.
+    - Pass/Counter: `READY`, with the `DELIVERED → COMPLETED` override.
+
+37. Implement kitchen actions (PRD §5.2):
 
     - `PENDING` → `COOKING`.
     - `COOKING` → `READY`.
+    - `READY` → `DELIVERED`.
+    - `DELIVERED` → `COMPLETED` override.
 
-38. Ensure a `BELUM` order cannot move to `COOKING`.
-39. Use a wide layout for kitchen monitors.
+38. Ensure a `BELUM` order cannot move to `COOKING`; surface `PAYMENT_REQUIRED`.
+39. Show the auto-deliver warning `ready_auto_deliver_warning_minutes` before `ready_auto_deliver_minutes` and the auto-complete timer, from `GET /settings`. Use a wide layout for kitchen monitors.
 
 ### 2.5 Manual Order (POS & Payment Flow)
 
 See `docs/implementation/phase-2.6-pos.md` for detail.
 
 40. Create dedicated POS page (`NewOrderPage` at `/orders/new`) replacing the simple modal dialog:
+    - `TAKE_AWAY` only (BR-01): no `DINE_IN` toggle and no table select. `OWNER` cannot create orders (BR-24).
     - Left column: Category tabs, search input, and menu catalog grid with 2-character initials when images are absent.
-    - Right column: Order cart panel with Dine In (mandatory table select) vs Take Away toggle, mandatory customer name, item notes, subtotal, tax calculation, and hold draft (park order to `localStorage`).
+    - Right column: Order cart panel with mandatory customer name, optional phone, item notes, subtotal, service charge, tax, grand total, and hold draft (park order to `localStorage`).
+    - Totals in the cart are a preview; the server returns the authoritative amounts.
 41. Create dedicated Checkout & Payment page (`OrderPaymentPage` at `/orders/:id/payment`):
     - Order preview & handling cashier info.
-    - Cash payment (amount received, quick nominal buttons, change calculation) and Non-cash payment (QRIS, Debit, Transfer).
-    - Status lifecycle: order starts as `MENUNGGU` & `BELUM`, updates to `LUNAS` upon payment completion, making it available for kitchen cooking (`PENDING` → `COOKING` → `DIPROSES`).
-    - Printable receipt modal with `window.print()` and return navigation.
+    - Cash payment (amount received, quick nominal buttons, change calculation) and non-cash confirmation (`NON_CASH`, no gateway reference until Midtrans is live).
+    - Status lifecycle: order starts `MENUNGGU` & `BELUM`; confirming payment sets `LUNAS` and the order becomes `DIPROSES` (PRD §5.3).
+    - Printable receipt (58/80 mm) with `window.print()`, showing `order_number`, service charge, tax, and the persisted `amount_received`/`change_amount`.
     - Back returns to `/orders/new`; unpaid orders require confirmation before leaving.
-    - Unpaid orders with all items `PENDING` can be cancelled after confirmation; cancellation restores mock stock.
+    - Unpaid order cancellation calls `POST /orders/:id/cancel`; the action is visible to `OWNER` only.
     - Order-board payment actions use this checkout page instead of the legacy payment modal.
-42. Submit `createManualOrder` with items, customer name, dining option, and table number.
-43. Handle `STORE_CLOSED` with a toast and disable actions.
-44. Add mock/API contract `POST /orders/:id/cancel` for unpaid orders whose items are all `PENDING`, including stock restoration.
+42. Submit `createManualOrder` with items, customer name, optional phone, and payment method. The mock/API derives `order_type = TAKE_AWAY` and `table_id = null`.
+43. Handle `STORE_CLOSED` with a toast and disable creation; existing orders stay readable and processable.
+44. Add mock/API contract `POST /orders/:id/cancel` for unpaid orders (PRD §4.7), including stock restoration, `cancel_reason`, and `canceled_at`.
 
 ### 2.6 Owner Stub Pages
 
@@ -256,6 +267,7 @@ See `docs/implementation/phase-2.6-pos.md` for detail.
     - Reports.
     - Settings.
     - Users.
+    - Audit Log.
 
 49. Use the `Empty` component for features not yet in Phase 1.
 
@@ -286,7 +298,7 @@ See `docs/implementation/phase-3-crud.md` Step 4 for detail.
 
 See `docs/implementation/phase-3-crud.md` Step 5, `/home/doni/.opencode/plan/stock-redesign.md` (data model), `/home/doni/.opencode/plan/stock-page-two-panel.md` (layout) and `/home/doni/.opencode/plan/stock-color-pattern.md` (color + separators) for detail.
 
-- Types follow PRD §9: `stock_qty`, `min_stock`, `qty_used`, `stock_movements.order_id`; global `LOW_STOCK_THRESHOLD` removed.
+- Types follow PRD §10.8–§10.10: `stock_qty`, `min_stock`, `qty_used`, `stock_movements.order_id`; global `LOW_STOCK_THRESHOLD` removed.
 - One-screen two-panel layout (no tabs, no summary cards): ingredients 2/3 left, movements 1/3 right, stacked below `lg`.
 - Ingredients panel uses the generic `src/components/data-table.tsx` (TanStack Table v9): name search, chips `Semua/Menipis/Habis/Aman` with counts, sorting on name and stock, pagination; stock number colored by three-tier threshold.
 - One color per status across number, chip, and badge (Habis red, Menipis amber, Aman emerald, `Semua` neutral); quantities formatted `id-ID` (thousand separators). Movement type badges stay neutral.
@@ -295,6 +307,18 @@ See `docs/implementation/phase-3-crud.md` Step 5, `/home/doni/.opencode/plan/sto
 - Movements panel: grouped-by-date list, chips `Semua/Masuk/Keluar` mapped by qty sign, signed colored qty, `#order_id` note, internal scroll.
 - Order creation writes `OUT` per recipe; cancellation writes `RESTORE`; log is append-only.
 - `docs/api.md` adds `min_stock`, `POST /ingredients/:id/adjust`, `GET /stock-movements`, and the recipe `STORE_CLOSED` rule; `docs/flow.md` adds Stock Opname and Recipe Management sections.
+
+## 2.10 PRD Conformance (mock)
+
+Sliced in the mock layer. They are part of the dashboard scope, not Phase 2 extras.
+
+- **Money model (PRD §6)**: `subtotal_amount`, `service_rate_snapshot`, `service_amount`, `tax_rate_snapshot`, `tax_amount`, `total_amount`. Service is computed from the subtotal, tax from subtotal + service, round half up per component. All values integer rupiah.
+- **Settings (PRD §10.16)**: `cafe_name`, `service_rate`, `tax_rate`, `is_open`, `cash_timeout_minutes`, `delivered_auto_complete_minutes`, `ready_auto_deliver_minutes`, `ready_auto_deliver_warning_minutes`. Settings page edits all of them; `tax_percent` is replaced by `tax_rate`.
+- **Order number (PRD §7.5)**: `TA-###` / `DI-###`, reset daily per type. The board and the receipt display `order_number`, never the internal id.
+- **Order lifecycle timers (PRD §4.3, §4.4)**: countdown for unpaid cash orders (`cash_timeout_minutes`), auto-deliver warning, auto-complete indicator. The scheduler stays server-side; the dashboard only displays the derived state.
+- **Table session (PRD §4.6, §9)**: `GET /tables/:id/session` and `POST /tables/:id/session/close` (`CASHIER`, `OWNER`), plus a close action on the tables page and the order detail.
+- **Audit log (PRD §7.4)**: `GET /audit-log` (`OWNER`) with a read-only table page.
+- **Roles (PRD §9)**: `OWNER` confirms payment and cancels unpaid orders; `CASHIER` creates take away orders and owns `READY → DELIVERED → COMPLETED` for take away; `KITCHEN` owns `PENDING → COOKING → READY → DELIVERED` and the `COMPLETED` override.
 
 ## Phase 3 — API Integration
 
@@ -329,9 +353,9 @@ Prerequisite: `fnb-server` running at `http://localhost:8081`.
     2. Orders.
     3. Payments.
     4. Menus.
-    5. Tables.
+    5. Tables and table sessions.
     6. Stock.
-    7. Users and settings.
+    7. Users, settings, and audit log.
 
 55. Implement the order endpoints:
 
@@ -340,17 +364,20 @@ Prerequisite: `fnb-server` running at `http://localhost:8081`.
     - `POST /orders/manual`.
     - `PATCH /orders/:id/payment`.
     - `PATCH /orders/:id/items/:item_id/status`.
-    - `POST /orders/:id/items/:item_id/cancel`.
+    - `POST /orders/:id/cancel` (`OWNER`, unpaid orders only).
 
-55b. Mock alignment with PRD §9 & flow.md (separate commit):
+55b. Mock alignment with PRD §5 and §9 (separate commit):
 
-    - `cancelItem` restores recipe stock, writes `StockMovement` with type `RESTORE` and `order_item_id`.
-    - `StockMovement` type extended: `IN` | `OUT` | `RESTORE` | `ADJUSTMENT` + optional `order_item_id`.
-    - When all items become `CANCELLED`, set `subtotal_amount = tax_amount = total_amount = 0` and order status `DIBATALKAN`.
-    - Remove full-order cancel endpoint `POST /orders/:id/cancel` (not in PRD §10). Payment page cancels all `PENDING` items by iterating `cancelItem`.
-    - Refund calculation for `LUNAS` orders (PRD §9) recorded as a gap; no `Refund` type in the mock yet.
+    - Order-level cancel: `POST /orders/:id/cancel` sets every item `CANCELLED`, writes `RESTORE` movements with `order_id`/`order_item_id`, fills `cancel_reason`/`canceled_at`, keeps the price snapshot, and derives `DIBATALKAN`.
+    - `StockMovement` type: `IN` | `OUT` | `RESTORE` | `ADJUSTMENT` + optional `order_item_id`.
+    - Payment confirmation is idempotent: repeating `PATCH /orders/:id/payment` returns `200` with the same order and writes no second `payment_log` (BR-11).
+    - Item statuses follow PRD §5.2 including `COMPLETED`; `COMPLETED` is the only terminal item state besides `CANCELLED`.
+    - No refund path in v1; refunds stay manual (BR-20).
 
-56. Verify live API polling with two dashboard sessions. 57. Verify error codes end-to-end:
+55c. Real time per PRD §11.4: connect `GET /ws`, subscribe to `order:{id}`, refetch on `order.created` / `order.updated` / `item.updated` / `session.closed`, and keep polling 3–5 s as the fallback while the socket is down.
+
+56. Verify live polling and socket updates with two dashboard sessions.
+57. Verify error codes end-to-end:
 
     - `PAYMENT_REQUIRED`.
     - `INVALID_TRANSITION`.
@@ -386,8 +413,21 @@ Prerequisite: `fnb-server` running at `http://localhost:8081`.
 - [ ] KITCHEN sees the kitchen board.
 - [ ] Mock polling updates data.
 - [ ] Mock payment succeeds.
-- [ ] Mock item statuses follow the transition matrix.
+- [ ] Mock item statuses follow the transition matrix, including `DELIVERED → COMPLETED`.
+- [ ] Mock order cancellation is order-level, `OWNER`-only, and restores stock.
 - [ ] Mock error codes appear as toasts.
+
+### PRD conformance
+
+- [ ] Order status set is `MENUNGGU`, `DIPROSES`, `SELESAI`, `DIBATALKAN`; no `SIAP`/`DIANTAR`.
+- [ ] Item status set includes `COMPLETED`; order becomes `SELESAI` only when every item is `COMPLETED` or `CANCELLED`.
+- [ ] Totals use `service_rate` + `tax_rate` snapshots, integer rupiah, round half up.
+- [ ] `order_number` follows `TA-###` / `DI-###`.
+- [ ] Cashier creates `TAKE_AWAY` orders only; owner creates none.
+- [ ] Payment confirmation is idempotent.
+- [ ] Kitchen has "Masak" and "Pass/Counter" tabs with the auto-deliver warning.
+- [ ] Table session can be closed by `CASHIER`/`OWNER`.
+- [ ] Audit log is readable by `OWNER`.
 
 ### API
 
@@ -395,11 +435,13 @@ Prerequisite: `fnb-server` running at `http://localhost:8081`.
 - [ ] Live login works.
 - [ ] Page refresh keeps the session via the refresh cookie.
 - [ ] Logout clears the session.
-- [ ] Cashier can create a manual order.
+- [ ] Cashier can create a take away order.
 - [ ] Cashier can mark payment `LUNAS`.
 - [ ] Kitchen can only process paid orders.
-- [ ] Cashier can change `READY` to `DELIVERED`.
-- [ ] Live polling updates the board within 5 seconds.
+- [ ] Cashier can move take away items `READY → DELIVERED → COMPLETED`.
+- [ ] Kitchen can move items `PENDING → COOKING → READY → DELIVERED` and override `COMPLETED`.
+- [ ] Owner can cancel an unpaid order, and stock is restored.
+- [ ] Live polling updates the board within 5 seconds; the socket updates it faster when connected.
 - [ ] API errors follow the backend envelope and error codes.
 
 ## Excluded
@@ -407,7 +449,7 @@ Prerequisite: `fnb-server` running at `http://localhost:8081`.
 - Unit testing.
 - Component testing.
 - E2E testing.
-- WebSocket or SSE.
 - Redux or Zustand.
-- Chart library until reports are implemented.
 - Playwright until the MVP flow is stable.
+
+WebSocket is in scope (PRD §11.4); polling 3–5 s is the fallback, not the primary transport. Reports endpoints stay out of Phase 3 (PRD §17 phase 2) and keep running on mocks.

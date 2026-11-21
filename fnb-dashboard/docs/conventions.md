@@ -14,8 +14,6 @@ Place constants shared across features in `src/constants/`.
 export const ORDER_STATUS = {
   MENUNGGU: 'MENUNGGU',
   DIPROSES: 'DIPROSES',
-  SIAP: 'SIAP',
-  DIANTAR: 'DIANTAR',
   SELESAI: 'SELESAI',
   DIBATALKAN: 'DIBATALKAN',
 } as const

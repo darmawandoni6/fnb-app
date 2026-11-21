@@ -12,7 +12,9 @@ Goal: replace all owner stub pages with working CRUD screens. Signatures follow 
 - Table creation, QR grid, QR preview, and bulk QR printing.
 - Stock: ingredient CRUD, restock, recipe items, low-stock warning, stock movements.
 - Users CRUD (create `CASHIER`/`KITCHEN`, activate/deactivate).
-- Settings (`cafe_name`, `tax_percent`, `is_open`).
+- Settings (`cafe_name`, `service_rate`, `tax_rate`, `is_open`, `cash_timeout_minutes`, `delivered_auto_complete_minutes`, `ready_auto_deliver_minutes`, `ready_auto_deliver_warning_minutes`).
+- Table session read and manual close (`CASHIER`, `OWNER`).
+- Audit log read-only page (`OWNER`).
 
 Out of scope:
 
@@ -20,7 +22,6 @@ Out of scope:
 - Table QR token rotation (needs `POST /tables/:id/rotate-qr`; existing labels would have to be reprinted).
 - Editing an existing table number (create-only; wrong numbers are deactivated and recreated).
 - Charts/reports (PRD Phase 3 Insights — Reports stays a stub).
-- Recipe-edit restriction while `is_open` (server-side rule, enforced when real API lands).
 
 ## Step 1 — Types and mock handlers
 
@@ -73,7 +74,14 @@ Out of scope:
 
    `src/mocks/handlers/settings.ts` (new):
    - `getSettings()` — moved from `auth.ts`.
-   - `updateSettings({ cafe_name?, tax_percent?, is_open? })` → `Settings`; OWNER-only; `tax_percent` must be an integer 0–100.
+   - `updateSettings(body)` → `Settings`; OWNER-only; `service_rate` and `tax_rate` are numbers ≥ 0; timer fields are integers ≥ 1.
+
+   `src/mocks/handlers/tables.ts` (extend):
+   - `getTableSession(id)` → open session or `NOT_FOUND` (`CASHIER`, `OWNER`).
+   - `closeTableSession(id)` → closes the open session without touching its orders (`CASHIER`, `OWNER`).
+
+   `src/mocks/handlers/audit.ts` (new):
+   - `getAuditLog(filters?)` → `AuditLogEntry[]`; OWNER-only.
 
    Re-export everything in `src/mocks/handlers/index.ts`.
 
@@ -99,7 +107,7 @@ Out of scope:
 11. Menu card: image (`object-cover`, h-28) dimmed (`opacity-60 grayscale`) when unavailable, fallback to 2-char initials in pastel color block (shared `src/lib/menu.ts`), name, price (`formatRupiah`). Card footer: availability `Switch` (`Tersedia`/`Habis`) + `Resep` button (ingredient count badge) + `Edit` button.
 12. Card footer switch toggles `is_available` via `updateMenu`; no dropdown, **no Delete button on menu card** — PRD Phase 2 specifies "Mark menus unavailable" only; soft delete remains in mock handler for API parity.
 13. Menu form (`sm:max-w-lg`): live image preview, 2-column grid on `sm` with required markers. Price input masked as `type="text" inputMode="numeric"` rendered with `toLocaleString('id-ID')` and `Rp` prefix (same pattern as `OrderPaymentPage` "Uang Diterima"); value sent to API stays integer rupiah. All fields keep the component default height (`h-8`) — the price input only adds the `Rp` prefix and mono font, never a height override. Image accepts a URL; upload via multipart deferred to API phase (PRD §7 "Upload menu photos locally through the backend and static files").
-14. `Category` type gains `sort_order: number` (PRD §9). `getMenuCategories` returns categories sorted by `sort_order` asc. `createCategory` auto-assigns `sort_order = count + 1`. `updateCategory` accepts `sort_order`.
+14. `Category` type gains `sort_order: number` (PRD §10.6). `getMenuCategories` returns categories sorted by `sort_order` asc. `createCategory` auto-assigns `sort_order = count + 1`. `updateCategory` accepts `sort_order`.
 15. `updateMenu` mock handler accepts `category_id?` and moves the menu between category arrays in `db.categories`.
 16. Mock seed in `src/mocks/index.ts` fixed: `category.menus` references same objects as `db.menus` so toggling availability in UI reflects immediately.
 
@@ -114,17 +122,18 @@ Recipe editing lives on the menu card, not `/stock`: `src/features/menus/RecipeD
 21. No "generate ulang" action: `qr_token` is immutable in M1, so re-rendering only redraws the same image. Recorded gap — add the button when `POST /tables/:id/rotate-qr` exists (old QR stops working, labels must be reprinted).
 22. `PrintAllTablesDialog`: header button opens a 2×2 A4 preview of active tables only, then `Cetak`. Cards come from `TableQrCard` (same component as the preview dialog): `settings.cafe_name` header, "Scan untuk lihat menu" caption, QR, then a small `Meja` label with the number in large type. Printing relies on the print-only container in `src/index.css`, which also fixes `PaymentReceiptDialog` printing the whole dashboard.
 23. `src/lib/qr.ts` exposes `QR_MENU_URL` and `getTableQrUrl(token)` = `${VITE_QR_MENU_URL}/?meja=<qr_token>`. No default: when the env is empty the QR dialog warns and `Buka QR Menu` is disabled. Contract documented in `docs/api.md`.
+24. Table session (PRD §4.6, §9): the card shows the open session when one exists, with a `Tutup sesi` action (`CASHIER`, `OWNER`) calling `POST /tables/:id/session/close`. Closing never touches orders; the same action is available from the order detail.
 
 ## Step 5 — Stock page (`src/pages/StockPage.tsx`)
 
 20. Layout: one screen, no tabs and no summary cards. `grid gap-4 lg:grid-cols-3` — ingredients panel `lg:col-span-2`, movements panel `lg:col-span-1`; below `lg` they stack with ingredients first. Ingredient counts live in the status filter chips.
-21. Types follow PRD §9: `Ingredient.stock_qty` + `Ingredient.min_stock`, `RecipeItem.qty_used`, `StockMovement.order_id`. `LOW_STOCK_THRESHOLD` is deleted from `src/constants/stock.ts`.
+21. Types follow PRD §10.8–§10.10: `Ingredient.stock_qty` + `Ingredient.min_stock`, `RecipeItem.qty_used`, `StockMovement.order_id`. `LOW_STOCK_THRESHOLD` is deleted from `src/constants/stock.ts`.
 22. Ingredients panel is a `Card` (title + description) wrapping the generic `src/components/data-table.tsx` (TanStack Table v9): a name search column filter, chips `Semua (n)` / `Menipis (n)` / `Habis (n)` / `Aman (n)` driving the `status` filter, sorting on `name` and `stock_qty`, and pagination (`pageSize` 10, footer shows range + Sebelumnya/Berikutnya, rendered whenever rows exist so the range line is always visible).
 23. Columns: Nama bahan, Sisa stok (number colored `text-destructive` at 0, `amber-700/dark:amber-300` when `0 < stock_qty <= min_stock`, `emerald-700/dark:emerald-300` otherwise, muted unit beside it), Batas bawah (`min_stock` + unit), Status `Badge`, Aksi dropdown. All quantities render through `formatNumber` (`src/lib/format.ts`, `id-ID`) so thousands use dots (`1.000`, `+2.000`).
 24. One color per status, shared by number, chip, and badge: Habis `text-destructive` on `bg-destructive/10`; Menipis amber 700/300 on `bg-amber-500/10`; Aman emerald 700/300 on `bg-emerald-500/10`; neutral `Semua` uses `bg-muted`. Chip active = soft tint + `ring-1` in the status color; badges use `variant="outline"` plus the same tint. Movement type badges stay neutral `outline` because the signed qty already carries direction. See `/home/doni/.opencode/plan/stock-color-pattern.md`.
 25. Aksi dropdown: Restock (`IN`, optional note), Sesuaikan stok (`ADJUSTMENT` opname), Edit bahan (name/unit/`min_stock`), Lihat pemakaian (read-only dialog with menu names + qty per portion). No delete — PRD never lists it and `recipe_items`/`stock_movements` reference ingredients.
 26. `ingredientSchema` requires `min_stock` (integer ≥ 0, default 0). `restockSchema` adds an optional `note`. `adjustStockSchema` takes the counted `stock_qty` plus an optional note.
-27. Movements panel is a grouped list, not a table: chips `Semua` / `Masuk` / `Keluar` map by the PRD §9 qty sign (`qty > 0` masuk covers `IN`, `RESTORE`, positive `ADJUSTMENT`; `qty < 0` keluar covers `OUT`, negative `ADJUSTMENT`). Rows show ingredient + relative time, type `Badge`, signed colored qty with unit, and note (`#order_id` or free text); grouped by `Hari ini` / `Kemarin` / date. Internal scroll (`lg:h-[calc(100vh-8rem)]`, mobile `max-h-96`), all movements newest first.
+27. Movements panel is a grouped list, not a table: chips `Semua` / `Masuk` / `Keluar` map by the PRD §10.10 qty sign (`qty > 0` masuk covers `IN`, `RESTORE`, positive `ADJUSTMENT`; `qty < 0` keluar covers `OUT`, negative `ADJUSTMENT`). Rows show ingredient + relative time, type `Badge`, signed colored qty with unit, and note (`#order_id` or free text); grouped by `Hari ini` / `Kemarin` / date. Internal scroll (`lg:h-[calc(100vh-8rem)]`, mobile `max-h-96`), all movements newest first.
 28. Restock writes `IN`; Sesuaikan writes `ADJUSTMENT` with the signed delta and rejects an unchanged count. Opname is an extension beyond PRD Phase 2 — documented in `docs/api.md` and `docs/flow.md`.
 29. Order creation writes `OUT` (negative) per recipe with `order_id`/`order_item_id`; item cancellation writes `RESTORE` (positive). The log is append-only; corrections are new `ADJUSTMENT` rows.
 30. Seed: realistic `min_stock`, several lowered stocks, one ingredient at 0, movements spread across days. `src/mocks/selfcheck.ts`: assert `min_stock` persists, order writes a negative `OUT`, adjust writes `ADJUSTMENT`, cancel writes `RESTORE`, and recipe writes are rejected with `STORE_CLOSED` while the store is open.
@@ -139,13 +148,13 @@ Recipe editing lives on the menu card, not `/stock`: `src/features/menus/RecipeD
 
 33. Modular stacked 2-card layout (`max-w-2xl`):
     - **Card 1: Status Operasional Toko**: `Switch` `is_open`, badge status aktif/tutup, dialog konfirmasi saat menutup toko (`ConfirmDialog`), callout edukasi aturan bisnis (order QR/POS dan penguncian resep per PRD §8).
-    - **Card 2: Profil Kafe & Pajak**: `cafe_name` (Input), `tax_percent` (Input number 0–100 dengan addon `%` dan preset button chips 0%, 10%, 11%).
+    - **Card 2: Profil Kafe & Biaya**: `cafe_name` (Input), `service_rate` and `tax_rate` (Input number ≥ 0 dengan addon `%` dan preset chips), plus the timer fields `cash_timeout_minutes`, `delivered_auto_complete_minutes`, `ready_auto_deliver_minutes`, `ready_auto_deliver_warning_minutes` (PRD §10.16). Rates apply to new orders only (BR-12).
 34. Skeleton loader saat data pertama kali dimuat (`isPending`).
 35. `settingsSchema` (Zod); save via `updateSettings`; invalidate `['settings']` (manual-order dan POS membaca settings).
 
 ## Step 8 — Wire routes
 
-36. `src/App.tsx`: replace `StubPage` entries with the real pages (`MENUS`, `TABLES`, `STOCK`, `USERS`, `SETTINGS`). Keep `Reports` as `StubPage` (PRD Phase 3 Insights).
+36. `src/App.tsx`: replace `StubPage` entries with the real pages (`MENUS`, `TABLES`, `STOCK`, `USERS`, `SETTINGS`, `AUDIT_LOG`). Keep `Reports` as `StubPage` (PRD Phase 3 Insights).
 
 ## Step 9 — Verify
 
@@ -161,6 +170,9 @@ Manual checklist:
 - Low-stock card populates from the seed; menipis/habis badges match `min_stock`; restock increases stock and writes `IN`; `Sesuaikan stok` writes `ADJUSTMENT`; creating and cancelling an order writes `OUT`/`RESTORE`.
 - Toggling a menu unavailable shows it disabled in the manual-order dialog.
 - Tables grid shows QR thumbnails; switch deactivates/activates a table; duplicate numbers are rejected.
+- `Tutup sesi` closes the open table session without deleting its orders.
+- Audit log page lists status changes read-only for `OWNER`.
+- Settings save `service_rate`, `tax_rate`, and the four timer fields; new orders snapshot the new rates.
 - `Cetak Semua QR` prints only active tables, 2×2 per A4, without dashboard chrome.
 - With `VITE_QR_MENU_URL` empty, `Buka QR Menu` is disabled and the QR dialog warns; with it set, the button opens `${VITE_QR_MENU_URL}/?meja=<qr_token>` in a new tab.
 - Settings `is_open` off disables `CreateOrderDialog` (existing behavior re-verified).

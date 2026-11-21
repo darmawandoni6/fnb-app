@@ -225,9 +225,16 @@ func (u *SchedulerUsecase) applyItemMoves(ctx context.Context, moves []domain.It
 		updated.Items = make([]domain.OrderItem, len(snapshot.Items))
 		copy(updated.Items, snapshot.Items)
 		updated.Status = domain.AggregateOrderStatus(updated.Items, snapshot.PaymentStatus, snapshot.CanceledAt != nil)
+		now := u.clock()
 		for i := range updated.Items {
 			if updated.Items[i].ID == mv.ItemID {
 				updated.Items[i].Status = to
+				if to == domain.OrderItemStatusDelivered {
+					updated.Items[i].DeliveredAt = &now
+				}
+				if to == domain.OrderItemStatusCompleted {
+					updated.Items[i].CompletedAt = &now
+				}
 			}
 		}
 		u.publishOrder(ctx, &updated, "item.updated")

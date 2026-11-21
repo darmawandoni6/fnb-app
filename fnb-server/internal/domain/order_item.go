@@ -15,6 +15,7 @@ type OrderItem struct {
 	Note             *string         `json:"note,omitempty"`
 	Price            int64           `gorm:"not null" json:"price"`
 	Status           OrderItemStatus `gorm:"type:order_item_status;not null" json:"status"`
+	ReadyAt          *time.Time      `gorm:"type:timestamptz" json:"ready_at,omitempty"`
 	DeliveredAt      *time.Time      `gorm:"type:timestamptz" json:"delivered_at,omitempty"`
 	CompletedAt      *time.Time      `gorm:"type:timestamptz" json:"completed_at,omitempty"`
 	CancelledAt      *time.Time      `json:"cancelled_at,omitempty"`

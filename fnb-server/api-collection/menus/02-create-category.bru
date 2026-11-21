@@ -20,6 +20,12 @@ body:json {
     "sort_order": 1
   }
 }
+script:post-response {
+  if (res.status < 300 && res.body.success === true) {
+    bru.setVar("categoryId", res.body.data.id);
+  }
+}
+
 tests {
   test("creates category", function() {
     expect(res.status).to.equal(201);

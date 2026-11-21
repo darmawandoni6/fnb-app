@@ -410,16 +410,17 @@ Everything except a signature failure returns `200`, so Midtrans stops retrying.
 This draft is the source for the Bruno collection:
 
 ```text
-bruno/
+api-collection/
 ├── collection.bru
 ├── environments/local.bru
 ├── auth/
 ├── public/
 ├── orders/
-├── tables/
-├── menus/
-├── stock/
-└── users/
+├── menus/        # categories, menus, tables, table sessions
+├── stock/        # ingredients, restock, adjust, movements, recipes
+└── users/        # users, settings, audit log
 ```
+
+`order_number` is `DI-YYYYMMDD-SSS` for dine-in and `TA-YYYYMMDD-SSS` for take away; `SSS` is the daily sequence, zero-padded.
 
 Request bodies, headers, environment variables, and response assertions follow this document and `api-response.md`.

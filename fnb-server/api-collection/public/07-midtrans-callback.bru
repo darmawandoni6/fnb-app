@@ -37,3 +37,10 @@ docs {
 
   Expect `200` for every payload except a bad signature (`401`).
 }
+
+tests {
+  test("acknowledges callback", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+  });
+}

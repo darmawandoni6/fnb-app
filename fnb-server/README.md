@@ -48,3 +48,11 @@ Health check: `http://localhost:8081/health`
 ```
 
 `.env` is local-only and ignored by Git. Copy `.env.example` when creating a new environment.
+
+## Features
+
+- Public QR menu with table sessions and cash or online payment.
+- Internal order board for `OWNER`, `CASHIER`, and `KITCHEN`.
+- WebSocket updates on `GET /ws` (`order:<id>`, `session:<token>`), with polling as the fallback.
+- Minute scheduler: cash timeout cancel, auto-deliver, auto-complete, idle session close.
+- Admin CRUD, stock opname, settings, and audit log.

@@ -37,6 +37,8 @@ script:post-response {
   if (res.status === 201 && res.body.success === true) {
     bru.setVar("orderId", res.body.data.id);
     bru.setVar("orderItemId", res.body.data.items[0].id);
+    bru.setVar("itemId", res.body.data.items[0].id);
+    bru.setVar("orderNumber", res.body.data.order_number);
   }
 }
 

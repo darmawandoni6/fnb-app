@@ -19,6 +19,7 @@ fnb-server/
 │       │   ├── router.go           # Echo setup, middleware, and route registration
 │       │   ├── *_middleware.go     # HTTP middleware by feature
 │       │   └── dto/                # HTTP request and response DTOs by feature
+│       ├── worker/                 # Background job loops (scheduler ticker)
 │       └── kafka/                  # Kafka event consumers; thin adapters
 ├── pkg/                            # Reusable public helpers
 │   ├── kafka/                      # Kafka transport wrapper

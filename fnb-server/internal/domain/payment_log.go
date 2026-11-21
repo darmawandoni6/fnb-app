@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
+func (PaymentLog) TableName() string { return "payment_log" }
+
 type PaymentLog struct {
 	ID            uuid.UUID        `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	OrderID       uuid.UUID        `gorm:"type:uuid;not null;index" json:"order_id"`

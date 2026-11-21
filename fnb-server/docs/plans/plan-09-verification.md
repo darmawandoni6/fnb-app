@@ -1,5 +1,15 @@
 # Plan 09 — Verification and rollout
 
+> **Status:** DONE (Completed on 2026-11-21)
+> - Migrations applied to the local database: `000004_scheduler_indexes` needed `delivered_at` (the `READY → DELIVERED` job keys off it, not `updated_at`, which `order_items` does not have); repository query fixed to match.
+> - Startup crash found by the smoke run: `AuditLog`, `PaymentLog`, and `OrderSequence` had no `TableName()`, so GORM queried `audit_logs`/`payment_logs`/`order_sequences` while migrations create singular tables. Fixed and guarded by `internal/domain/table_names_test.go`.
+> - `scripts/seed.sql` updated to `service_rate`/`tax_rate`/four timers and re-run successfully.
+> - Bruno collection reorganised: `tables/` (list, create, update, deactivate, get-session, close-session), `audit/01-list`, `menus/09-toggle-menu-availability`, stock adjust + movements; `script:post-response` now saves `categoryId`, `adminMenuId`, `tableId`, `ingredientId`, `recipeItemId`, `itemId`, `orderNumber`, `sessionToken`; every request asserts the envelope.
+> - Docs synced: `api.md` (Bruno path, order-number format, stock opname and audit responses, soft delete), `tech-stack.md`, `rules.md`, `structure.md`, `concurrency.md`, `AGENTS.md`, `README.md`, `.env.example` (`OUTLET_TIMEZONE`).
+> - Manual smoke on a live stack passed: owner login, QR session, menu, cash order `DI-20261121-001`, cash confirm, item walk `COOKING → READY → DELIVERED → COMPLETED` with aggregate `SELESAI`, take-away `TA-` order, order cancel with exact stock restore, stock opname with signed `ADJUSTMENT`, movement ordering, audit filters, cashier availability toggle and `403` on menu create, `STORE_CLOSED` recipe gate, settings cross-field `400`s, `GET /tables/:id/session` and close with `session.closed` received over `GET /ws`.
+> - `go test -race` is not runnable in this environment (no C compiler); it remains a CI step.
+
+
 Closes the milestone: tests, API collection, documentation sync, and the commit gate.
 
 Depends on: 01–08 in this order, though tests for a plan land with that plan.

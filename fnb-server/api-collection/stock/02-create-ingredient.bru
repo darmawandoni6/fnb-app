@@ -21,6 +21,12 @@ body:json {
     "min_stock": 1
   }
 }
+script:post-response {
+  if (res.status < 300 && res.body.success === true) {
+    bru.setVar("ingredientId", res.body.data.id);
+  }
+}
+
 tests {
   test("creates ingredient", function() {
     expect(res.status).to.equal(201);

@@ -27,6 +27,8 @@ Verification order before commit: `go test ./... && go build ./...`
 - `docker/postgres/init.sql` runs only on first volume creation. Role changes need `make reset`, which deletes DB data — confirm first.
 - `SEED_OWNER_EMAIL` and `SEED_OWNER_PASSWORD` seed the initial `OWNER` on startup if `users` is empty. In production, missing credentials prevent startup.
 - `MIDTRANS_SERVER_KEY`, `MIDTRANS_CLIENT_KEY`, and `MIDTRANS_IS_PRODUCTION` configure online payments. In production, `MIDTRANS_SERVER_KEY` is required.
+- `OUTLET_TIMEZONE` (default `Asia/Jakarta`) sets the order-number day boundary and outlet-local timestamps.
+- `X-Session-Token` carries the QR-menu table session. Treat it as a secret: never log it or echo it in responses; `401` on missing, unknown, or closed sessions.
 - `.env` is gitignored. Never commit it, `bin/`, credentials, or tokens.
 
 ## Architecture
@@ -37,7 +39,9 @@ Verification order before commit: `go test ./... && go build ./...`
 - Responses: envelope `{success, data}` / `{success, error{code, message}}`. Success only via `httpDelivery.Success`; errors via `domain.NewError` with codes from `internal/domain/error_codes.go`. Details: `../docs/api-response.md`.
 - Validation: `validate` struct tags + custom binder at delivery boundary. Business rules stay in usecases. Details: `docs/validation.md`.
 - Logging: one injected `*slog.Logger` created in main (`pkg/logger`). No `fmt.Print*`, no package `log`. Production logs JSON to stderr. Details: `docs/logging.md`.
-- Packages planned in `docs/structure.md` but not yet created (`repository`, `usecase`, `delivery/kafka`, `migrations`). Create only when real code lands.
+- Packages planned in `docs/structure.md` but not yet created (`delivery/kafka`, `pkg/kafka`). Create only when real code lands.
+- `internal/delivery/worker/scheduler.go` ticks `usecase.SchedulerUsecase` once per minute from `main`; it shares the signal-cancelled context and is joined with `sync.WaitGroup` on shutdown.
+- `internal/usecase/ws_hub.go` holds the single WebSocket hub and implements `domain.Publisher`; usecases publish after commit.
 
 ## Git
 

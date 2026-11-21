@@ -63,8 +63,8 @@ func TestCalcTotals(t *testing.T) {
 		{
 			name:        "Round half up check",
 			subtotal:    10,
-			serviceRate: 5,  // 10 * 0.05 = 0.5 -> 1
-			taxRate:     5,  // 11 * 0.05 = 0.55 -> 1
+			serviceRate: 5, // 10 * 0.05 = 0.5 -> 1
+			taxRate:     5, // 11 * 0.05 = 0.55 -> 1
 			want: Totals{
 				Subtotal: 10,
 				Service:  1,

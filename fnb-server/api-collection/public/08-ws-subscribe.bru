@@ -28,3 +28,9 @@ docs {
   Events arrive as `{"topic","event","data"}`; a refused topic returns
   `{"topic","event":"error","data":{"code":"FORBIDDEN"}}`.
 }
+
+tests {
+  test("receives socket messages", function() {
+    expect(res.status).to.equal(101);
+  });
+}

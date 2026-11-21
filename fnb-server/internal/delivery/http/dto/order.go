@@ -14,6 +14,7 @@ type OrderItemResponse struct {
 	Price       int64   `json:"price"`
 	Note        *string `json:"note"`
 	Status      string  `json:"status"`
+	ReadyAt     *string `json:"ready_at,omitempty"`
 	DeliveredAt *string `json:"delivered_at,omitempty"`
 	CompletedAt *string `json:"completed_at,omitempty"`
 	CancelledAt *string `json:"cancelled_at,omitempty"`
@@ -112,7 +113,11 @@ func OrderResponseFrom(o *domain.Order) OrderResponse {
 
 	items := make([]OrderItemResponse, 0, len(o.Items))
 	for _, it := range o.Items {
-		var deliveredAt, completedAt, cancelledAt *string
+		var readyAt, deliveredAt, completedAt, cancelledAt *string
+		if it.ReadyAt != nil {
+			s := it.ReadyAt.UTC().Format(time.RFC3339)
+			readyAt = &s
+		}
 		if it.DeliveredAt != nil {
 			s := it.DeliveredAt.UTC().Format(time.RFC3339)
 			deliveredAt = &s
@@ -137,6 +142,7 @@ func OrderResponseFrom(o *domain.Order) OrderResponse {
 			Price:       it.Price,
 			Note:        it.Note,
 			Status:      string(it.Status),
+			ReadyAt:     readyAt,
 			DeliveredAt: deliveredAt,
 			CompletedAt: completedAt,
 			CancelledAt: cancelledAt,

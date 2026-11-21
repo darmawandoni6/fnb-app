@@ -39,10 +39,10 @@ Out:
 | 5 | Each job opens its own transaction per order, not one giant transaction. | A single bad order must not block the tick. |
 | 6 | Cash timeout selects orders where `payment_status = BELUM`, `canceled_at IS NULL`, `payment_method = CASH`, and `created_at < now() - cash_timeout_minutes`. It calls the same `CancelOrder` helper as plan 04 with reason `cash timeout`. | BR-03, EC-01, one cancel path. |
 | 7 | Non-cash orders are **not** cancelled by the timer; Midtrans expiry drives that (plan 05). A cash order that was later confirmed is excluded by `payment_status`. | PRD §4.7 scenario B. |
-| 8 | Auto-deliver selects items `READY` where `updated_at < now() - ready_auto_deliver_minutes`, sets `DELIVERED`, `delivered_at = now()`. | BR-17, EC-12. |
+| 8 | Auto-deliver selects items `READY` where `ready_at < now() - ready_auto_deliver_minutes`, sets `DELIVERED`, `delivered_at = now()`. | BR-17, EC-12. |
 | 9 | Auto-complete selects items `DELIVERED` where `delivered_at < now() - delivered_auto_complete_minutes`, sets `COMPLETED`, `completed_at = now()`. Items already `COMPLETED` by a manual override are skipped by the status filter. | BR-14, EC-09, EC-13. |
 | 10 | The auto-deliver warning is not a job. It is a derived flag computed in `GET /orders` for the kitchen: `delivered_soon = ready_auto_deliver_minutes - ready_auto_deliver_warning_minutes` minutes after the item became `READY`. | PRD §7.3 wants a warning, not a state; no need to persist or broadcast it. |
-| 11 | `updated_at` on `order_items` is the trigger clock for `READY`. Set it on every status write (plan 04). | Simplest column that survives restarts. |
+| 11 | `ready_at` on `order_items` is the trigger clock for `READY`, written with every `→ READY` transition (migration `000004_scheduler_indexes`). Plan 09 renamed it from the planned `updated_at`, which `order_items` never had. | Simplest column that survives restarts. |
 | 12 | Session close job selects `OPEN` sessions with no order in `MENUNGGU`/`DIPROSES`, sets `CLOSED`, `ended_at`, `closed_by = NULL`, publishes `session.closed`. | PRD §4.6 step 3. |
 | 13 | Order aggregate is recomputed inside the same transaction as the item write. | Keeps `orders.status` consistent (PRD §5.3). |
 | 14 | The loop stops on `ctx.Done()`; in-flight work finishes first (no `context` cancellation mid-transaction). | `docs/concurrency.md` graceful shutdown. |

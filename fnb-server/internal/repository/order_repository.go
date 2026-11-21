@@ -114,6 +114,9 @@ func (r *OrderRepository) SetItemStatus(ctx context.Context, orderID, itemID uui
 		"status":     to,
 		"updated_by": actor,
 	}
+	if to == domain.OrderItemStatusReady {
+		updates["ready_at"] = now
+	}
 	if to == domain.OrderItemStatusDelivered {
 		updates["delivered_at"] = now
 	}
@@ -309,12 +312,12 @@ func (r *OrderRepository) ListCashTimeoutIDs(ctx context.Context, q domain.CashT
 }
 
 func (r *OrderRepository) ListItemMoves(ctx context.Context, q domain.ItemMoveQuery) ([]domain.ItemMove, error) {
-	column := "updated_at"
+	column := "ready_at"
 	if q.From == domain.OrderItemStatusDelivered {
 		column = "delivered_at"
 	}
 
-	query := r.db.WithContext(ctx).Model(&domain.OrderItem{}).Where("status = ?", q.From)
+	query := r.db.WithContext(ctx).Model(&domain.OrderItem{}).Where("status = ? AND "+column+" IS NOT NULL", q.From)
 	if q.Since != nil {
 		query = query.Where(column+" >= ?", *q.Since)
 	}

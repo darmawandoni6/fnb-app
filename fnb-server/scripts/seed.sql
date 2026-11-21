@@ -1,6 +1,16 @@
-INSERT INTO settings (id, cafe_name, tax_percent, is_open)
-VALUES ('00000000-0000-0000-0000-000000000001', 'Demo Cafe', 10, TRUE)
-ON CONFLICT (id) DO UPDATE SET cafe_name = EXCLUDED.cafe_name, tax_percent = EXCLUDED.tax_percent, is_open = EXCLUDED.is_open;
+INSERT INTO settings (id, cafe_name, service_rate, tax_rate, is_open,
+                      cash_timeout_minutes, delivered_auto_complete_minutes,
+                      ready_auto_deliver_minutes, ready_auto_deliver_warning_minutes)
+VALUES ('00000000-0000-0000-0000-000000000001', 'Demo Cafe', 5, 10, TRUE, 15, 5, 10, 2)
+ON CONFLICT (id) DO UPDATE SET
+  cafe_name = EXCLUDED.cafe_name,
+  service_rate = EXCLUDED.service_rate,
+  tax_rate = EXCLUDED.tax_rate,
+  is_open = EXCLUDED.is_open,
+  cash_timeout_minutes = EXCLUDED.cash_timeout_minutes,
+  delivered_auto_complete_minutes = EXCLUDED.delivered_auto_complete_minutes,
+  ready_auto_deliver_minutes = EXCLUDED.ready_auto_deliver_minutes,
+  ready_auto_deliver_warning_minutes = EXCLUDED.ready_auto_deliver_warning_minutes;
 
 INSERT INTO tables (table_number, qr_token)
 VALUES ('T01', 'demo-qr-token')

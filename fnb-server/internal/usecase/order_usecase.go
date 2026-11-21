@@ -196,6 +196,9 @@ func (u *OrderUsecase) UpdateItemStatus(
 		}
 		targetItem.Status = target
 		targetItem.UpdatedBy = &actorID
+		if target == domain.OrderItemStatusReady {
+			targetItem.ReadyAt = &now
+		}
 		if target == domain.OrderItemStatusDelivered {
 			targetItem.DeliveredAt = &now
 		}

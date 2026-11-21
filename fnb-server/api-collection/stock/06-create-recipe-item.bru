@@ -21,6 +21,12 @@ body:json {
     "qty_used": 0.02
   }
 }
+script:post-response {
+  if (res.status < 300 && res.body.success === true) {
+    bru.setVar("recipeItemId", res.body.data.id);
+  }
+}
+
 tests {
   test("creates recipe item", function() {
     expect(res.status).to.equal(201);

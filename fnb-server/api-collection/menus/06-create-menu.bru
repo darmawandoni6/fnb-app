@@ -23,6 +23,12 @@ body:json {
     "is_available": true
   }
 }
+script:post-response {
+  if (res.status < 300 && res.body.success === true) {
+    bru.setVar("adminMenuId", res.body.data.id);
+  }
+}
+
 tests {
   test("creates menu", function() {
     expect(res.status).to.equal(201);

@@ -35,5 +35,8 @@ Review every new package and dependency against these checks:
 - Do request DTOs use validator tags and the standard binder?
 - Do validation failures use `VALIDATION_ERROR`?
 - Do business validation rules remain in usecases?
+- Is `X-Session-Token` treated as a secret (never logged, never echoed in responses)?
+- Is order status derived from items and payment, never accepted from a request body or query?
+- Is order cancellation order-level only (no item-level cancel endpoint)?
 
 Reject changes that violate these rules unless architecture decision records document the exception.

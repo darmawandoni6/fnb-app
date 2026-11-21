@@ -6,6 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
+func (AuditLog) TableName() string { return "audit_log" }
+
 type AuditLog struct {
 	ID        uuid.UUID  `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	Entity    string     `gorm:"type:text;not null" json:"entity"`

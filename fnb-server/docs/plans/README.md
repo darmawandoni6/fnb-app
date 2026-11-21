@@ -72,7 +72,7 @@ graph LR
 | 06 | `plan-06-realtime.md` | WebSocket hub, topics, publish after commit | DONE |
 | 07 | `plan-07-scheduler.md` | Auto-cancel, auto-deliver, auto-complete, session close | DONE |
 | 08 | `plan-08-admin.md` | Remaining CRUD aligned with PRD, session endpoints, audit log | DONE |
-| 09 | `plan-09-verification.md` | Tests, Bruno collection, doc sync, commit gate | Pending |
+| 09 | `plan-09-verification.md` | Tests, Bruno collection, doc sync, commit gate | DONE |
 
 Each milestone ends in a state where `go test ./... && go build ./...` passes and the API matches `../../../docs/api.md` for the endpoints it owns.
 

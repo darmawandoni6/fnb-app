@@ -1,5 +1,5 @@
 meta {
-  name: Update payment
+  name: Confirm payment
   type: http
   seq: 4
 }
@@ -20,8 +20,9 @@ auth:bearer {
 
 body:json {
   {
-    "payment_status": "LUNAS",
-    "payment_method": "CASH"
+    "payment_method": "CASH",
+    "amount_received": 100000,
+    "change_amount": 42250
   }
 }
 
@@ -30,5 +31,6 @@ tests {
     expect(res.status).to.equal(200);
     expect(res.body.success).to.equal(true);
     expect(res.body.data.payment_status).to.equal("LUNAS");
+    expect(res.body.data.paid_at).to.be.a("string");
   });
 }

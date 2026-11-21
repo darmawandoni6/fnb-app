@@ -19,4 +19,5 @@ type OrderFilter struct {
 type OrderQueryRepository interface {
 	List(ctx context.Context, filter OrderFilter) ([]Order, error)
 	GetByID(ctx context.Context, id uuid.UUID) (*Order, error)
+	GetByOrderNumber(ctx context.Context, orderNumber string) (*Order, error)
 }

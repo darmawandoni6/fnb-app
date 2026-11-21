@@ -1,5 +1,13 @@
 # Plan 05 — Payment
 
+> **Status:** DONE (Completed on 2026-11-21)
+> - `PATCH /orders/:id/payment` replaced the old `UpdatePayment` with `OrderUsecase.ConfirmPayment`: idempotent on `LUNAS`, cash math validated and recomputed server-side, one `payment_log` (gateway `NULL` for cash).
+> - `POST /public/payments/midtrans/callback` verifies `sha512(order_id + status_code + gross_amount + server_key)`, then settles/expires the order's `PENDING` `payment_log` row in one transaction.
+> - Snap creation after the create transaction commits for `NON_CASH`; gateway failure logs a warning and leaves `payment_url`/`snap_token` null.
+> - `internal/repository/midtrans_client.go` hand-rolled over `net/http` (10 s timeout, one retry); no SDK.
+> - Config `MIDTRANS_SERVER_KEY`/`MIDTRANS_CLIENT_KEY`/`MIDTRANS_IS_PRODUCTION`; production requires the server key, development warns and skips Snap.
+> - Unit tests passing: `payment_usecase_test.go`, `payment_handler_test.go`.
+
 Cash confirmation and Midtrans Snap with an idempotent callback (PRD §4.3, §11.5; `api.md` Payment and Midtrans sections).
 
 Depends on: 04.

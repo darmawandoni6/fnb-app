@@ -222,13 +222,74 @@ func (r *OrderRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.Or
 	return &order, nil
 }
 
-func (r *OrderRepository) SetPayment(ctx context.Context, id uuid.UUID, status domain.PaymentStatus, method *domain.PaymentMethod) error {
-	updates := map[string]interface{}{
-		"payment_status": status,
-		"payment_method": method,
-		"updated_at":     time.Now().UTC(),
+func (r *OrderRepository) GetByOrderNumber(ctx context.Context, orderNumber string) (*domain.Order, error) {
+	var order domain.Order
+	err := r.db.WithContext(ctx).
+		Preload("Items.Menu").
+		Preload("Table").
+		Preload("TableSession").
+		First(&order, "order_number = ?", orderNumber).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
 	}
-	return r.db.WithContext(ctx).Model(&domain.Order{}).Where("id = ?", id).Updates(updates).Error
+	if err != nil {
+		return nil, fmt.Errorf("get order by order number: %w", err)
+	}
+	return &order, nil
+}
+
+func (r *OrderRepository) SetPaid(ctx context.Context, orderID uuid.UUID, method domain.PaymentMethod, ref *string, paidAt time.Time, amountReceived, changeAmount *int64) error {
+	updates := map[string]interface{}{
+		"payment_status":  domain.PaymentStatusPaid,
+		"payment_method":  method,
+		"payment_ref":     ref,
+		"paid_at":         paidAt,
+		"amount_received": amountReceived,
+		"change_amount":   changeAmount,
+		"updated_at":      time.Now().UTC(),
+	}
+	return r.db.WithContext(ctx).Model(&domain.Order{}).Where("id = ?", orderID).Updates(updates).Error
+}
+
+func (r *OrderRepository) CreatePaymentLog(ctx context.Context, log *domain.PaymentLog) error {
+	return r.db.WithContext(ctx).Create(log).Error
+}
+
+func (r *OrderRepository) GetPendingPaymentLog(ctx context.Context, orderID uuid.UUID) (*domain.PaymentLog, error) {
+	var log domain.PaymentLog
+	err := r.db.WithContext(ctx).First(&log, "order_id = ? AND status = ?", orderID, domain.PaymentLogStatusPending).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &log, nil
+}
+
+func (r *OrderRepository) GetPaymentLogByGatewayRef(ctx context.Context, ref string) (*domain.PaymentLog, error) {
+	var log domain.PaymentLog
+	err := r.db.WithContext(ctx).First(&log, "gateway_ref = ?", ref).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &log, nil
+}
+
+func (r *OrderRepository) UpdatePaymentLogStatus(ctx context.Context, id uuid.UUID, status domain.PaymentLogStatus, gatewayStatus *string, gatewayRef *string) error {
+	updates := map[string]interface{}{
+		"status": status,
+	}
+	if gatewayStatus != nil {
+		updates["gateway_status"] = *gatewayStatus
+	}
+	if gatewayRef != nil {
+		updates["gateway_ref"] = *gatewayRef
+	}
+	return r.db.WithContext(ctx).Model(&domain.PaymentLog{}).Where("id = ?", id).Updates(updates).Error
 }
 
 func clauseLocking() clause.Expression { return clause.Locking{Strength: "UPDATE"} }

@@ -106,6 +106,7 @@ Categories with no available menu are omitted. When `is_open` is `false`, the cl
 - `customer_phone` is optional.
 - `order_type` is `DINE_IN` for this endpoint; `table_id` and `table_session_id` come from the session.
 - `payment_method` is `CASH` or `NON_CASH`. For `NON_CASH` the response also carries `payment_url` and `snap_token`.
+- A Snap gateway failure never fails order creation: the order is still written, `payment_url` and `snap_token` come back `null`, and the server logs a warning (EC-05).
 - The server validates menu availability, recipes, and stock, then writes order, items, order number, snapshots, and `OUT` stock movements in one transaction.
 
 Response:
@@ -350,15 +351,18 @@ Events: `order.created`, `order.updated`, `item.updated`, `session.closed`. The 
 POST /public/payments/midtrans/callback
 ```
 
-Verifies `signature_key`, then is idempotent on `gateway_ref` and `order_id`:
+Verifies the SHA-512 signature `sha512(order_id + status_code + gross_amount + server_key)`; a mismatch is `401` and writes nothing. Accepts JSON or `application/x-www-form-urlencoded`.
 
 | Midtrans status | Effect |
 |---|---|
-| `settlement` | `payment_status` `LUNAS`, `paid_at`, `payment_ref`, `payment_log` `SETTLED`, order `DIPROSES` |
+| `settlement`, or `capture` with `fraud_status` `accept`/empty | `payment_status` `LUNAS`, `paid_at`, `payment_ref`, `payment_log` `SETTLED`, order `DIPROSES` |
 | `expire`, `deny`, `cancel` | Order `DIBATALKAN`, every item `CANCELLED`, stock restored |
 | anything else | `200`, no state change |
 
-A repeated callback with the same `gateway_ref` returns `200` and writes nothing.
+Idempotency keys on the order's `PENDING` `payment_log` row, which is created when the `NON_CASH` order is created. A replay finds it already `SETTLED` and returns `200` without writes, so `paid_at` never moves.
+
+Everything except a signature failure returns `200`, so Midtrans stops retrying.
+
 
 ## Error Codes
 

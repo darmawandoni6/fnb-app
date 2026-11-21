@@ -18,6 +18,12 @@ type OrderTx interface {
 	CancelOrder(ctx context.Context, orderID uuid.UUID, reason string, actor *uuid.UUID) error
 	UpdateAggregate(ctx context.Context, orderID uuid.UUID, status domain.OrderStatus) error
 	Audit(ctx context.Context, entry *domain.AuditLog) error
+
+	SetPaid(ctx context.Context, orderID uuid.UUID, method domain.PaymentMethod, ref *string, paidAt time.Time, amountReceived, changeAmount *int64) error
+	CreatePaymentLog(ctx context.Context, log *domain.PaymentLog) error
+	GetPendingPaymentLog(ctx context.Context, orderID uuid.UUID) (*domain.PaymentLog, error)
+	GetPaymentLogByGatewayRef(ctx context.Context, ref string) (*domain.PaymentLog, error)
+	UpdatePaymentLogStatus(ctx context.Context, id uuid.UUID, status domain.PaymentLogStatus, gatewayStatus *string, gatewayRef *string) error
 }
 
 type TxRunner func(context.Context, func(OrderTx) error) error

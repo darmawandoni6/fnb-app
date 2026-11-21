@@ -30,6 +30,10 @@ func (m *mockOrderQueryRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain
 	return nil, nil
 }
 
+func (m *mockOrderQueryRepo) GetByOrderNumber(ctx context.Context, orderNumber string) (*domain.Order, error) {
+	return nil, nil
+}
+
 type mockOrderMenuRepo struct {
 	menus map[uuid.UUID]domain.Menu
 }
@@ -78,6 +82,22 @@ func (t *mockOrderTx) UpdateAggregate(ctx context.Context, id uuid.UUID, s domai
 	return nil
 }
 func (t *mockOrderTx) Audit(ctx context.Context, entry *domain.AuditLog) error {
+	return nil
+}
+
+func (t *mockOrderTx) SetPaid(ctx context.Context, orderID uuid.UUID, method domain.PaymentMethod, ref *string, paidAt time.Time, amountReceived, changeAmount *int64) error {
+	return nil
+}
+func (t *mockOrderTx) CreatePaymentLog(ctx context.Context, log *domain.PaymentLog) error {
+	return nil
+}
+func (t *mockOrderTx) GetPendingPaymentLog(ctx context.Context, orderID uuid.UUID) (*domain.PaymentLog, error) {
+	return nil, nil
+}
+func (t *mockOrderTx) GetPaymentLogByGatewayRef(ctx context.Context, ref string) (*domain.PaymentLog, error) {
+	return nil, nil
+}
+func (t *mockOrderTx) UpdatePaymentLogStatus(ctx context.Context, id uuid.UUID, status domain.PaymentLogStatus, gatewayStatus *string, gatewayRef *string) error {
 	return nil
 }
 
@@ -168,7 +188,7 @@ func setupTestOrderApp(t *testing.T) (*echo.Echo, string, string, string, *domai
 		},
 	}
 	settingRepo := &mockOrderSettingRepo{}
-	orderUsecase := usecase.NewOrderUsecase(orderRepo, menuRepo, settingRepo, testOrderTxRunner, nil, nil)
+	orderUsecase := usecase.NewOrderUsecase(orderRepo, menuRepo, settingRepo, testOrderTxRunner, nil, nil, nil, nil)
 	orderHandler := NewOrderHandler(orderUsecase)
 	authHandler := NewAuthHandler(authUsecase, false)
 

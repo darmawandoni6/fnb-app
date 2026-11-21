@@ -96,7 +96,7 @@ func TestPublicHandler_Menu_ResponseShapeAndEmptyCategoryOmitted(t *testing.T) {
 	sessionRepo := &testSessionRepo{session: session}
 
 	sessionUsecase := usecase.NewTableSessionUsecase(sessionRepo, tableRepo, nil)
-	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, nil, nil, nil, nil)
+	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, nil, nil, nil, nil, nil, nil)
 	handler := NewPublicHandler(publicUsecase, sessionUsecase)
 
 	e.GET("/public/menu", handler.Menu, SessionMiddleware(sessionUsecase))
@@ -163,7 +163,7 @@ func TestPublicHandler_OpenSession_Success(t *testing.T) {
 	sessionRepo := &testSessionRepo{}
 
 	sessionUsecase := usecase.NewTableSessionUsecase(sessionRepo, tableRepo, nil)
-	publicUsecase := usecase.NewPublicUsecase(tableRepo, nil, nil, nil, nil, nil, nil)
+	publicUsecase := usecase.NewPublicUsecase(tableRepo, nil, nil, nil, nil, nil, nil, nil, nil)
 	handler := NewPublicHandler(publicUsecase, sessionUsecase)
 
 	e.POST("/public/tables/:qr_token/sessions", handler.OpenSession)
@@ -234,7 +234,7 @@ func TestPublicHandler_Orders_FullFlow(t *testing.T) {
 		return fn(tx)
 	}
 
-	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, orderRepo, txRunner, nil, nil)
+	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, orderRepo, txRunner, nil, nil, nil, nil)
 	handler := NewPublicHandler(publicUsecase, sessionUsecase)
 
 	sg := e.Group("/public", SessionMiddleware(sessionUsecase))
@@ -256,7 +256,7 @@ func TestPublicHandler_Orders_FullFlow(t *testing.T) {
 	}
 
 	var createRes struct {
-		Success bool                  `json:"success"`
+		Success bool                    `json:"success"`
 		Data    dto.PublicOrderResponse `json:"data"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &createRes); err != nil {

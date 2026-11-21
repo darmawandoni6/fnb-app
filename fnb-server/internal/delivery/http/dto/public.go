@@ -149,7 +149,7 @@ func PublicOrderResponseFrom(o *domain.Order) PublicOrderResponse {
 		ServiceAmount:  o.ServiceAmount,
 		TaxAmount:      o.TaxAmount,
 		TotalAmount:    o.TotalAmount,
-		PaymentURL:     nil, // Plan 05 wires Midtrans Snap
+		PaymentURL:     o.PaymentURL,
 		CancelReason:   cancelReason,
 		CanceledAt:     canceledAt,
 		CreatedAt:      o.CreatedAt.UTC().Format(time.RFC3339),

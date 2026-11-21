@@ -1,0 +1,39 @@
+meta {
+  name: Midtrans callback
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/public/payments/midtrans/callback
+  body: json
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "order_id": "{{orderNumber}}",
+    "status_code": "200",
+    "gross_amount": "57750.00",
+    "signature_key": "{{midtransSignature}}",
+    "transaction_status": "settlement",
+    "transaction_id": "trx-local-1",
+    "fraud_status": "accept"
+  }
+}
+
+docs {
+  # Midtrans callback
+
+  `signature_key` is `sha512(order_id + status_code + gross_amount + server_key)`.
+  Set `midtransSignature` in the environment, or compute it with:
+
+  ```bash
+  printf '%s' "$orderNumber""200""57750.00""$MIDTRANS_SERVER_KEY" | sha512sum | cut -d' ' -f1
+  ```
+
+  Expect `200` for every payload except a bad signature (`401`).
+}

@@ -49,4 +49,10 @@ vars {
 
   @description('''Internal user ID''')
   userId:
+
+  @description('''Order number (DI-/TA- prefix) returned by create-order''')
+  orderNumber:
+
+  @description('''sha512(order_id + status_code + gross_amount + server key)''')
+  midtransSignature:
 }

@@ -70,6 +70,8 @@ Do not add these for MVP:
 - Redis
 - WebSocket or SSE
 - Payment gateway SDK
+
+Midtrans is reached with a hand-rolled `net/http` client (`internal/repository/midtrans_client.go`): Basic auth with the server key, 10 s timeout, one retry. Keep it that way; no SDK.
 - Dependency-injection framework
 - Swagger code generation
 - Zap or Zerolog

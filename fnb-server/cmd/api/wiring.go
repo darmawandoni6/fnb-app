@@ -1,11 +1,9 @@
 package main
 
 import (
-	"context"
 	"log/slog"
 
 	"fnb-server/internal/config"
-	"fnb-server/internal/database"
 	httpDelivery "fnb-server/internal/delivery/http"
 	"fnb-server/internal/domain"
 	"fnb-server/internal/repository"
@@ -15,22 +13,23 @@ import (
 )
 
 func newRouter(db *gorm.DB, cfg *config.Config, log *slog.Logger) *echo.Echo {
-	handlers, authUsecase, sessionUsecase := newHandlers(db, cfg)
+	handlers, authUsecase, sessionUsecase := newHandlers(db, cfg, log)
 	return httpDelivery.NewRouterWithUpload(handlers, authUsecase, sessionUsecase, cfg.UploadDir, cfg.IsDevelopment(), log)
 }
 
-func newHandlers(db *gorm.DB, cfg *config.Config) (httpDelivery.Handlers, *usecase.AuthUsecase, *usecase.TableSessionUsecase) {
+func newHandlers(db *gorm.DB, cfg *config.Config, log *slog.Logger) (httpDelivery.Handlers, *usecase.AuthUsecase, *usecase.TableSessionUsecase) {
 	authUsecase := newAuthUsecase(db, cfg)
 	sessionUsecase := newTableSessionUsecase(db)
 	categoryRepo := repository.NewMenuCategoryRepository(db)
 	adminHandler := newAdminHandler(db, categoryRepo, cfg)
 	handlers := httpDelivery.Handlers{
-		Auth:   newAuthHandler(authUsecase, cfg),
-		Public: newPublicHandler(db, sessionUsecase, cfg),
-		Order:  newOrderHandler(db, cfg),
-		Admin:  adminHandler,
-		Stock:  newStockHandler(db),
-		Users:  newUsersSettingsHandler(db),
+		Auth:    newAuthHandler(authUsecase, cfg),
+		Public:  newPublicHandler(db, sessionUsecase, cfg),
+		Order:   newOrderHandler(db, cfg, log),
+		Payment: newPaymentHandler(db, cfg, log),
+		Admin:   adminHandler,
+		Stock:   newStockHandler(db),
+		Users:   newUsersSettingsHandler(db),
 	}
 	return handlers, authUsecase, sessionUsecase
 }
@@ -79,24 +78,14 @@ func newPublicHandler(db *gorm.DB, sessionUsecase *usecase.TableSessionUsecase, 
 	menuRepo := repository.NewMenuRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
 	orderRepo := repository.NewOrderRepository(db)
-	withTx := func(ctx context.Context, fn func(usecase.OrderTx) error) error {
-		return database.WithTx(ctx, db, func(tx *gorm.DB) error {
-			return fn(repository.NewOrderRepository(tx))
-		})
-	}
-	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, orderRepo, withTx, nil, cfg.Location())
+	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, orderRepo, newOrderTxRunner(db), nil, newSnapGateway(cfg), nil, cfg.Location())
 	return httpDelivery.NewPublicHandler(publicUsecase, sessionUsecase)
 }
 
-func newOrderHandler(db *gorm.DB, cfg *config.Config) *httpDelivery.OrderHandler {
+func newOrderHandler(db *gorm.DB, cfg *config.Config, log *slog.Logger) *httpDelivery.OrderHandler {
 	orderRepo := repository.NewOrderRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
-	withTx := func(ctx context.Context, fn func(usecase.OrderTx) error) error {
-		return database.WithTx(ctx, db, func(tx *gorm.DB) error {
-			return fn(repository.NewOrderRepository(tx))
-		})
-	}
-	orderUsecase := usecase.NewOrderUsecase(orderRepo, menuRepo, settingRepo, withTx, nil, cfg.Location())
+	orderUsecase := usecase.NewOrderUsecase(orderRepo, menuRepo, settingRepo, newOrderTxRunner(db), nil, newSnapGateway(cfg), log, cfg.Location())
 	return httpDelivery.NewOrderHandler(orderUsecase)
 }

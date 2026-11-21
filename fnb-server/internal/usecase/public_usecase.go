@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -16,6 +17,8 @@ type PublicUsecase struct {
 	orderRepo   domain.OrderQueryRepository
 	withTx      TxRunner
 	publisher   domain.Publisher
+	gateway     domain.SnapGateway
+	logger      *slog.Logger
 	loc         *time.Location
 }
 
@@ -26,6 +29,8 @@ func NewPublicUsecase(
 	o domain.OrderQueryRepository,
 	withTx TxRunner,
 	p domain.Publisher,
+	gateway domain.SnapGateway,
+	logger *slog.Logger,
 	loc *time.Location,
 ) *PublicUsecase {
 	if loc == nil {
@@ -38,6 +43,8 @@ func NewPublicUsecase(
 		orderRepo:   o,
 		withTx:      withTx,
 		publisher:   p,
+		gateway:     gateway,
+		logger:      logger,
 		loc:         loc,
 	}
 }
@@ -129,7 +136,13 @@ func (u *PublicUsecase) CreateOrder(ctx context.Context, session *domain.TableSe
 			Action:   "order_created",
 			ToValue:  &statusStr,
 		}
-		return tx.Audit(ctx, audit)
+		if err := tx.Audit(ctx, audit); err != nil {
+			return err
+		}
+		if log := pendingPaymentLog(order); log != nil {
+			return tx.CreatePaymentLog(ctx, log)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -138,6 +151,7 @@ func (u *PublicUsecase) CreateOrder(ctx context.Context, session *domain.TableSe
 	order.Items = items
 	order.Table = &session.Table
 	order.TableSession = session
+	attachSnap(ctx, u.gateway, order, items, u.logger)
 
 	if u.publisher != nil {
 		u.publisher.PublishOrder(ctx, domain.OrderEvent{Event: "order.created", Order: order})

@@ -10,12 +10,13 @@ import (
 )
 
 type Handlers struct {
-	Auth   *AuthHandler
-	Public *PublicHandler
-	Order  *OrderHandler
-	Admin  *AdminHandler
-	Stock  *StockHandler
-	Users  *UsersSettingsHandler
+	Auth    *AuthHandler
+	Public  *PublicHandler
+	Order   *OrderHandler
+	Payment *PaymentHandler
+	Admin   *AdminHandler
+	Stock   *StockHandler
+	Users   *UsersSettingsHandler
 }
 
 func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, sessionUsecase *usecase.TableSessionUsecase, isDevelopment bool, log *slog.Logger) *echo.Echo {
@@ -70,6 +71,7 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 
 	publicGroup := e.Group("/public")
 	publicGroup.POST("/tables/:qr_token/sessions", h.Public.OpenSession, qrRateLimit(20, 20))
+	publicGroup.POST("/payments/midtrans/callback", h.Payment.MidtransCallback)
 
 	sessionGroup := e.Group("/public", SessionMiddleware(sessionUsecase))
 	sessionGroup.GET("/menu", h.Public.Menu, sessionRateLimit(60, 60))
@@ -82,7 +84,7 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	orders.GET("", h.Order.List, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier, domain.UserRoleKitchen))
 	orders.GET("/:id", h.Order.Get, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier, domain.UserRoleKitchen))
 	orders.POST("/manual", h.Order.CreateManual, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
-	orders.PATCH("/:id/payment", h.Order.UpdatePayment, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
+	orders.PATCH("/:id/payment", h.Order.ConfirmPayment, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
 	orders.PATCH("/:id/items/:item_id/status", h.Order.UpdateItemStatus, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier, domain.UserRoleKitchen))
 	orders.POST("/:id/cancel", h.Order.CancelOrder, RequireRoles(domain.UserRoleOwner))
 

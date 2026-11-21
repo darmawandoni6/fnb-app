@@ -46,6 +46,20 @@ func (m *mockOrderQueryRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain
 	return nil, nil
 }
 
+func (m *mockOrderQueryRepo) GetByOrderNumber(ctx context.Context, orderNumber string) (*domain.Order, error) {
+	for _, o := range m.byID {
+		if o.OrderNumber == orderNumber {
+			return o, nil
+		}
+	}
+	for i := range m.orders {
+		if m.orders[i].OrderNumber == orderNumber {
+			return &m.orders[i], nil
+		}
+	}
+	return nil, nil
+}
+
 type mockMenuRepo struct {
 	menus map[uuid.UUID]domain.Menu
 }
@@ -73,19 +87,31 @@ func (m *mockSettingRepo) GetFirst(ctx context.Context) (*domain.Setting, error)
 }
 
 type mockTx struct {
-	createdOrder     *domain.Order
-	createdItems     []domain.OrderItem
-	stockConsumed    bool
-	stockRestored    bool
-	cancelledOrder   uuid.UUID
-	cancelReason     string
-	updatedStatus    domain.OrderStatus
-	updatedItemOrder uuid.UUID
-	updatedItemID    uuid.UUID
-	updatedItemFrom  domain.OrderItemStatus
-	updatedItemTo    domain.OrderItemStatus
-	lastSeq          int
-	failStock        bool
+	createdOrder         *domain.Order
+	createdItems         []domain.OrderItem
+	stockConsumed        bool
+	stockRestored        bool
+	cancelledOrder       uuid.UUID
+	cancelReason         string
+	updatedStatus        domain.OrderStatus
+	updatedItemOrder     uuid.UUID
+	updatedItemID        uuid.UUID
+	updatedItemFrom      domain.OrderItemStatus
+	updatedItemTo        domain.OrderItemStatus
+	lastSeq              int
+	failStock            bool
+	paidMethod           domain.PaymentMethod
+	paidRef              *string
+	paidAt               time.Time
+	paidAmountReceived   *int64
+	paidChangeAmount     *int64
+	paymentLogs          []domain.PaymentLog
+	pendingLog           *domain.PaymentLog
+	updatedLogStatus     domain.PaymentLogStatus
+	updatedLogGatewayRef *string
+	paymentLogUpdates    int
+	restoreCount         int
+	auditActions         []string
 }
 
 func (t *mockTx) NextOrderNumber(ctx context.Context, oType domain.OrderType, day time.Time) (string, error) {
@@ -113,6 +139,7 @@ func (t *mockTx) ConsumeStock(ctx context.Context, order *domain.Order, items []
 
 func (t *mockTx) RestoreStock(ctx context.Context, order *domain.Order, items []domain.OrderItem) error {
 	t.stockRestored = true
+	t.restoreCount++
 	return nil
 }
 
@@ -136,6 +163,60 @@ func (t *mockTx) UpdateAggregate(ctx context.Context, id uuid.UUID, s domain.Ord
 }
 
 func (t *mockTx) Audit(ctx context.Context, entry *domain.AuditLog) error {
+	t.auditActions = append(t.auditActions, entry.Action)
+	return nil
+}
+
+func (t *mockTx) SetPaid(ctx context.Context, orderID uuid.UUID, method domain.PaymentMethod, ref *string, paidAt time.Time, amountReceived, changeAmount *int64) error {
+	t.paidMethod = method
+	t.paidRef = ref
+	t.paidAt = paidAt
+	t.paidAmountReceived = amountReceived
+	t.paidChangeAmount = changeAmount
+	return nil
+}
+func (t *mockTx) CreatePaymentLog(ctx context.Context, log *domain.PaymentLog) error {
+	if log.ID == uuid.Nil {
+		log.ID = uuid.New()
+	}
+	t.paymentLogs = append(t.paymentLogs, *log)
+	return nil
+}
+func (t *mockTx) GetPendingPaymentLog(ctx context.Context, orderID uuid.UUID) (*domain.PaymentLog, error) {
+	if t.pendingLog != nil {
+		return t.pendingLog, nil
+	}
+	for i := range t.paymentLogs {
+		if t.paymentLogs[i].OrderID == orderID && t.paymentLogs[i].Status == domain.PaymentLogStatusPending {
+			return &t.paymentLogs[i], nil
+		}
+	}
+	return nil, nil
+}
+func (t *mockTx) GetPaymentLogByGatewayRef(ctx context.Context, ref string) (*domain.PaymentLog, error) {
+	for i := range t.paymentLogs {
+		if t.paymentLogs[i].GatewayRef != nil && *t.paymentLogs[i].GatewayRef == ref {
+			return &t.paymentLogs[i], nil
+		}
+	}
+	return nil, nil
+}
+func (t *mockTx) UpdatePaymentLogStatus(ctx context.Context, id uuid.UUID, status domain.PaymentLogStatus, gatewayStatus *string, gatewayRef *string) error {
+	t.updatedLogStatus = status
+	t.updatedLogGatewayRef = gatewayRef
+	t.paymentLogUpdates++
+	for i := range t.paymentLogs {
+		if t.paymentLogs[i].ID != id {
+			continue
+		}
+		t.paymentLogs[i].Status = status
+		if gatewayStatus != nil {
+			t.paymentLogs[i].GatewayStatus = gatewayStatus
+		}
+		if gatewayRef != nil {
+			t.paymentLogs[i].GatewayRef = gatewayRef
+		}
+	}
 	return nil
 }
 
@@ -152,7 +233,7 @@ func TestOrderUsecase_List_ForcesPaidOnlyForKitchen(t *testing.T) {
 	repo := &mockOrderQueryRepo{
 		orders: []domain.Order{unpaid, paid},
 	}
-	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil)
+	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil, nil, nil)
 
 	// Kitchen role
 	res, err := u.List(context.Background(), domain.OrderFilter{}, domain.UserRoleKitchen)
@@ -182,7 +263,7 @@ func TestOrderUsecase_Get_KitchenUnpaidReturnsNotFound(t *testing.T) {
 			paidID:   {ID: paidID, PaymentStatus: domain.PaymentStatusPaid},
 		},
 	}
-	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil)
+	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := u.Get(context.Background(), unpaidID, domain.UserRoleKitchen)
 	if err == nil {
@@ -201,7 +282,7 @@ func TestOrderUsecase_Get_KitchenUnpaidReturnsNotFound(t *testing.T) {
 
 func TestOrderUsecase_CreateManual_StoreClosed(t *testing.T) {
 	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: false}}
-	u := NewOrderUsecase(nil, nil, settingRepo, nil, nil, nil)
+	u := NewOrderUsecase(nil, nil, settingRepo, nil, nil, nil, nil, nil)
 
 	in := OrderInput{
 		CustomerName:  "Budi",
@@ -220,7 +301,7 @@ func TestOrderUsecase_CreateManual_StoreClosed(t *testing.T) {
 
 func TestOrderUsecase_CreateManual_ValidationRejects(t *testing.T) {
 	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: true}}
-	u := NewOrderUsecase(nil, nil, settingRepo, nil, nil, nil)
+	u := NewOrderUsecase(nil, nil, settingRepo, nil, nil, nil, nil, nil)
 
 	// Blank customer_name
 	in := OrderInput{
@@ -261,7 +342,7 @@ func TestOrderUsecase_CreateManual_UnavailableMenu(t *testing.T) {
 	menuID := uuid.New()
 	menuRepo := &mockMenuRepo{menus: map[uuid.UUID]domain.Menu{}}
 	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: true}}
-	u := NewOrderUsecase(nil, menuRepo, settingRepo, nil, nil, nil)
+	u := NewOrderUsecase(nil, menuRepo, settingRepo, nil, nil, nil, nil, nil)
 
 	in := OrderInput{
 		CustomerName:  "Budi",
@@ -284,7 +365,7 @@ func TestOrderUsecase_CreateManual_InsufficientStock(t *testing.T) {
 	}
 	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: true}}
 	tx := &mockTx{failStock: true}
-	u := NewOrderUsecase(nil, menuRepo, settingRepo, newTestTxRunner(tx), nil, nil)
+	u := NewOrderUsecase(nil, menuRepo, settingRepo, newTestTxRunner(tx), nil, nil, nil, nil)
 
 	in := OrderInput{
 		CustomerName:  "Budi",
@@ -308,7 +389,7 @@ func TestOrderUsecase_CreateManual_TotalsAndSnapshots(t *testing.T) {
 	setting := &domain.Setting{IsOpen: true, ServiceRate: 5, TaxRate: 10}
 	settingRepo := &mockSettingRepo{setting: setting}
 	tx := &mockTx{}
-	u := NewOrderUsecase(nil, menuRepo, settingRepo, newTestTxRunner(tx), nil, nil)
+	u := NewOrderUsecase(nil, menuRepo, settingRepo, newTestTxRunner(tx), nil, nil, nil, nil)
 
 	actorID := uuid.New()
 	phone := "08123456789"
@@ -376,7 +457,7 @@ func TestOrderUsecase_UpdateItemStatus_Matrix(t *testing.T) {
 	}
 	repo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{orderID: order}}
 	tx := &mockTx{}
-	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx), nil, nil)
+	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx), nil, nil, nil, nil)
 
 	// Kitchen on unpaid -> 404 NOT_FOUND (Decision 17)
 	_, err := u.UpdateItemStatus(context.Background(), orderID, itemID, domain.OrderItemStatusCooking, actorID, domain.UserRoleKitchen)
@@ -461,7 +542,7 @@ func TestOrderUsecase_CancelOrder_UnpaidRestoresStock(t *testing.T) {
 	}
 	repo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{orderID: order}}
 	tx := &mockTx{}
-	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx), nil, nil)
+	u := NewOrderUsecase(repo, nil, nil, newTestTxRunner(tx), nil, nil, nil, nil)
 
 	cancelled, err := u.CancelOrder(context.Background(), orderID, "Customer left", &actorID, &role)
 	if err != nil {
@@ -497,7 +578,7 @@ func TestOrderUsecase_CancelOrder_PaidOrderRejected(t *testing.T) {
 		Status:        domain.OrderStatusProcessing,
 	}
 	repo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{orderID: order}}
-	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil)
+	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil, nil, nil)
 
 	_, err := u.CancelOrder(context.Background(), orderID, "paid cancel", nil, nil)
 	var appErr *domain.AppError
@@ -540,7 +621,7 @@ func TestPublicUsecase_OrdersIsolation(t *testing.T) {
 			orderB.ID: &orderB,
 		},
 	}
-	pu := NewPublicUsecase(nil, nil, nil, repo, nil, nil, nil)
+	pu := NewPublicUsecase(nil, nil, nil, repo, nil, nil, nil, nil, nil)
 
 	// List orders for Session A -> only orderA
 	orders, err := pu.ListOrders(context.Background(), sessionA)

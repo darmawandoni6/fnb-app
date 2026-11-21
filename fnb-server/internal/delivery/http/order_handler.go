@@ -107,24 +107,27 @@ func (h *OrderHandler) CreateManual(c echo.Context) error {
 	return Success(c, http.StatusCreated, dto.OrderResponseFrom(order))
 }
 
-func (h *OrderHandler) UpdatePayment(c echo.Context) error {
+func (h *OrderHandler) ConfirmPayment(c echo.Context) error {
+	role, _ := GetCurrentUserRole(c)
+	actorID, _ := GetCurrentUserID(c)
+
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		return domain.NewError(domain.CodeValidationError, "invalid order id", http.StatusBadRequest, nil)
 	}
 
-	var req dto.UpdatePaymentRequest
+	var req dto.ConfirmPaymentRequest
 	if err := c.Bind(&req); err != nil {
 		return err
 	}
 
-	var method *domain.PaymentMethod
-	if req.PaymentMethod != nil {
-		m := domain.PaymentMethod(*req.PaymentMethod)
-		method = &m
+	in := usecase.ConfirmPaymentInput{
+		Method:         domain.PaymentMethod(req.PaymentMethod),
+		AmountReceived: req.AmountReceived,
+		ChangeAmount:   req.ChangeAmount,
 	}
 
-	order, err := h.orderUsecase.UpdatePayment(c.Request().Context(), id, domain.PaymentStatus(req.PaymentStatus), method)
+	order, err := h.orderUsecase.ConfirmPayment(c.Request().Context(), id, in, actorID, role)
 	if err != nil {
 		return err
 	}

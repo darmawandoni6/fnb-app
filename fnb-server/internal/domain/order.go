@@ -33,6 +33,8 @@ type Order struct {
 	ChangeAmount        *int64         `json:"change_amount,omitempty"`
 	CancelReason        *string        `gorm:"type:text" json:"cancel_reason,omitempty"`
 	CanceledAt          *time.Time     `gorm:"type:timestamptz" json:"canceled_at,omitempty"`
+	PaymentURL          *string        `gorm:"-" json:"payment_url,omitempty"`
+	SnapToken           *string        `gorm:"-" json:"snap_token,omitempty"`
 	Items               []OrderItem    `gorm:"foreignKey:OrderID" json:"items"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`

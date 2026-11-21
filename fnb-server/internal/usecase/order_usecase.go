@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -15,6 +16,8 @@ type OrderUsecase struct {
 	settingRepo domain.SettingRepository
 	withTx      TxRunner
 	publisher   domain.Publisher
+	gateway     domain.SnapGateway
+	logger      *slog.Logger
 	loc         *time.Location
 }
 
@@ -24,6 +27,8 @@ func NewOrderUsecase(
 	settingRepo domain.SettingRepository,
 	withTx TxRunner,
 	publisher domain.Publisher,
+	gateway domain.SnapGateway,
+	logger *slog.Logger,
 	loc *time.Location,
 ) *OrderUsecase {
 	if loc == nil {
@@ -35,6 +40,8 @@ func NewOrderUsecase(
 		settingRepo: settingRepo,
 		withTx:      withTx,
 		publisher:   publisher,
+		gateway:     gateway,
+		logger:      logger,
 		loc:         loc,
 	}
 }
@@ -100,13 +107,20 @@ func (u *OrderUsecase) CreateManual(ctx context.Context, actorID uuid.UUID, in O
 			ActorID:   &actorID,
 			ActorRole: &actorRole,
 		}
-		return tx.Audit(ctx, audit)
+		if err := tx.Audit(ctx, audit); err != nil {
+			return err
+		}
+		if log := pendingPaymentLog(order); log != nil {
+			return tx.CreatePaymentLog(ctx, log)
+		}
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
 
 	order.Items = items
+	attachSnap(ctx, u.gateway, order, items, u.logger)
 	if u.publisher != nil {
 		u.publisher.PublishOrder(ctx, domain.OrderEvent{Event: "order.created", Order: order})
 	}
@@ -233,42 +247,106 @@ func (u *OrderUsecase) CancelOrder(ctx context.Context, orderID uuid.UUID, reaso
 	return cancelOrderHelper(ctx, u.orderRepo, u.withTx, u.publisher, orderID, reason, actorID, actorRole)
 }
 
-func (u *OrderUsecase) UpdatePayment(ctx context.Context, id uuid.UUID, status domain.PaymentStatus, method *domain.PaymentMethod) (*domain.Order, error) {
-	if status != domain.PaymentStatusPaid {
-		return nil, domain.NewError(domain.CodeInvalidTransition, "only payment status LUNAS is supported", http.StatusConflict, nil)
-	}
-	if method == nil || (*method != domain.PaymentMethodCash && *method != domain.PaymentMethodNonCash) {
-		return nil, domain.NewError(domain.CodeValidationError, "valid payment method is required (CASH or NON_CASH)", http.StatusBadRequest, nil)
-	}
+type ConfirmPaymentInput struct {
+	Method         domain.PaymentMethod
+	AmountReceived *int64
+	ChangeAmount   *int64
+}
 
-	order, err := u.orderRepo.GetByID(ctx, id)
+func (u *OrderUsecase) ConfirmPayment(ctx context.Context, orderID uuid.UUID, in ConfirmPaymentInput, actorID uuid.UUID, actorRole domain.UserRole) (*domain.Order, error) {
+	order, err := u.orderRepo.GetByID(ctx, orderID)
 	if err != nil {
 		return nil, err
 	}
 	if order == nil {
 		return nil, domain.NewError(domain.CodeNotFound, "order not found", http.StatusNotFound, nil)
 	}
+
 	if order.PaymentStatus == domain.PaymentStatusPaid {
-		return nil, domain.NewError(domain.CodeInvalidTransition, "order is already paid", http.StatusConflict, nil)
+		return order, nil
+	}
+
+	if order.CanceledAt != nil {
+		return nil, domain.NewError(domain.CodeInvalidTransition, "cannot confirm payment for a cancelled order", http.StatusConflict, nil)
+	}
+
+	if !in.Method.Valid() {
+		return nil, domain.NewError(domain.CodeValidationError, "valid payment method is required (CASH or NON_CASH)", http.StatusBadRequest, nil)
 	}
 
 	now := time.Now().UTC()
+	var amountReceived, changeAmount *int64
+
+	if in.Method == domain.PaymentMethodCash {
+		if in.AmountReceived == nil || *in.AmountReceived < order.TotalAmount {
+			return nil, domain.NewError(domain.CodeValidationError, "amount_received must be >= total_amount for CASH payment", http.StatusBadRequest, nil)
+		}
+		change := *in.AmountReceived - order.TotalAmount
+		if in.ChangeAmount != nil && *in.ChangeAmount != change {
+			return nil, domain.NewError(domain.CodeValidationError, "change_amount does not match amount_received - total_amount", http.StatusBadRequest, nil)
+		}
+		amountReceived = in.AmountReceived
+		changeAmount = &change
+	}
+
 	err = u.withTx(ctx, func(tx OrderTx) error {
-		newStatus := domain.AggregateOrderStatus(order.Items, status, order.CanceledAt != nil)
+		if err := tx.SetPaid(ctx, order.ID, in.Method, nil, now, amountReceived, changeAmount); err != nil {
+			return err
+		}
+
+		pending, err := tx.GetPendingPaymentLog(ctx, order.ID)
+		if err != nil {
+			return err
+		}
+		if pending != nil {
+			if err := tx.UpdatePaymentLogStatus(ctx, pending.ID, domain.PaymentLogStatusSettled, nil, nil); err != nil {
+				return err
+			}
+		} else {
+			pLog := &domain.PaymentLog{
+				OrderID: order.ID,
+				Method:  in.Method,
+				Amount:  order.TotalAmount,
+				Status:  domain.PaymentLogStatusSettled,
+			}
+			if err := tx.CreatePaymentLog(ctx, pLog); err != nil {
+				return err
+			}
+		}
+
+		newStatus := domain.AggregateOrderStatus(order.Items, domain.PaymentStatusPaid, false)
 		if newStatus != order.Status {
 			if err := tx.UpdateAggregate(ctx, order.ID, newStatus); err != nil {
 				return err
 			}
 			order.Status = newStatus
 		}
-		return nil
+
+		audit := &domain.AuditLog{
+			Entity:    "order",
+			EntityID:  order.ID,
+			Action:    "payment_confirmed",
+			ActorID:   &actorID,
+			ActorRole: &actorRole,
+		}
+		return tx.Audit(ctx, audit)
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	order.PaymentStatus = status
-	order.PaymentMethod = method
+	order.PaymentStatus = domain.PaymentStatusPaid
+	order.PaymentMethod = &in.Method
 	order.PaidAt = &now
+	order.AmountReceived = amountReceived
+	order.ChangeAmount = changeAmount
+
+	if u.publisher != nil {
+		u.publisher.PublishOrder(ctx, domain.OrderEvent{Event: "order.updated", Order: order})
+		if order.TableSession != nil && order.TableSession.SessionToken != "" {
+			u.publisher.PublishSession(ctx, order.TableSession.SessionToken, domain.OrderEvent{Event: "order.updated", Order: order})
+		}
+	}
+
 	return order, nil
 }

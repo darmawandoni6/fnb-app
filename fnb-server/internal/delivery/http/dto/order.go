@@ -31,6 +31,12 @@ type OrderResponse struct {
 	Status         string              `json:"status"`
 	PaymentStatus  string              `json:"payment_status"`
 	PaymentMethod  *string             `json:"payment_method,omitempty"`
+	PaymentRef     *string             `json:"payment_ref,omitempty"`
+	PaidAt         *string             `json:"paid_at,omitempty"`
+	AmountReceived *int64              `json:"amount_received,omitempty"`
+	ChangeAmount   *int64              `json:"change_amount,omitempty"`
+	PaymentURL     *string             `json:"payment_url,omitempty"`
+	SnapToken      *string             `json:"snap_token,omitempty"`
 	SubtotalAmount int64               `json:"subtotal_amount"`
 	ServiceAmount  int64               `json:"service_amount"`
 	TaxAmount      int64               `json:"tax_amount"`
@@ -65,13 +71,15 @@ type UpdateItemStatusRequest struct {
 	Status string `json:"status" validate:"required,oneof=COOKING READY DELIVERED COMPLETED"`
 }
 
-type UpdatePaymentRequest struct {
-	PaymentStatus string  `json:"payment_status" validate:"required,oneof=LUNAS"`
-	PaymentMethod *string `json:"payment_method" validate:"omitempty,oneof=CASH NON_CASH"`
+type ConfirmPaymentRequest struct {
+	PaymentMethod  string `json:"payment_method" validate:"required,oneof=CASH NON_CASH"`
+	AmountReceived *int64 `json:"amount_received" validate:"omitempty,min=0"`
+	ChangeAmount   *int64 `json:"change_amount" validate:"omitempty,min=0"`
 }
 
 func OrderResponseFrom(o *domain.Order) OrderResponse {
 	var tableID, tableNumber, createdBy, paymentMethod, cancelReason, canceledAt *string
+	var paymentRef, paidAt *string
 	if o.TableID != nil {
 		s := o.TableID.String()
 		tableID = &s
@@ -93,6 +101,13 @@ func OrderResponseFrom(o *domain.Order) OrderResponse {
 	if o.CanceledAt != nil {
 		s := o.CanceledAt.UTC().Format(time.RFC3339)
 		canceledAt = &s
+	}
+	if o.PaymentRef != nil {
+		paymentRef = o.PaymentRef
+	}
+	if o.PaidAt != nil {
+		s := o.PaidAt.UTC().Format(time.RFC3339)
+		paidAt = &s
 	}
 
 	items := make([]OrderItemResponse, 0, len(o.Items))
@@ -140,6 +155,12 @@ func OrderResponseFrom(o *domain.Order) OrderResponse {
 		Status:         string(o.Status),
 		PaymentStatus:  string(o.PaymentStatus),
 		PaymentMethod:  paymentMethod,
+		PaymentRef:     paymentRef,
+		PaidAt:         paidAt,
+		AmountReceived: o.AmountReceived,
+		ChangeAmount:   o.ChangeAmount,
+		PaymentURL:     o.PaymentURL,
+		SnapToken:      o.SnapToken,
 		SubtotalAmount: o.SubtotalAmount,
 		ServiceAmount:  o.ServiceAmount,
 		TaxAmount:      o.TaxAmount,

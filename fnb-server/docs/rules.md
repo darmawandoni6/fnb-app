@@ -3,6 +3,7 @@
 Canonical architecture rules live in [`docs/structure.md`](docs/structure.md).
 API response rules live in [`../../docs/api-response.md`](../../docs/api-response.md).
 Constants rules live in [`docs/constants.md`](docs/constants.md).
+Concurrency rules live in [`docs/concurrency.md`](docs/concurrency.md).
 Git commit and push rules live in [`../../docs/git.md`](../../docs/git.md).
 Logging rules live in [`docs/logging.md`](docs/logging.md).
 Validation rules live in [`docs/validation.md`](docs/validation.md).

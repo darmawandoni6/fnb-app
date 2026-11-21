@@ -32,15 +32,15 @@ func cancelOrderItem(
 		return nil, domain.NewError(domain.CodeInvalidTransition, "item cannot be cancelled", http.StatusConflict, nil)
 	}
 
-	refund := (*domain.Refund)(nil)
+	refund := (*Refund)(nil)
 	if order.PaymentStatus == domain.PaymentStatusPaid {
 		paymentMethod := domain.PaymentMethodCash
 		if order.PaymentMethod != nil {
 			paymentMethod = *order.PaymentMethod
 		}
 		subtotal := target.Price * int64(target.Qty)
-		tax := domain.CalcTax(subtotal, order.TaxPercent)
-		refund = &domain.Refund{
+		tax := domain.CalcTax(subtotal, order.TaxRateSnapshot)
+		refund = &Refund{
 			Reason:         reason,
 			SubtotalAmount: subtotal,
 			TaxAmount:      tax,

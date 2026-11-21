@@ -98,7 +98,7 @@ func (u *OrderUsecase) UpdatePayment(ctx context.Context, id uuid.UUID, status d
 		if err := tx.SetPayment(ctx, order.ID, status, method); err != nil {
 			return err
 		}
-		newStatus := domain.AggregateOrderStatus(order.Items, status)
+		newStatus := domain.AggregateOrderStatus(order.Items, status, order.CanceledAt != nil)
 		if newStatus != order.Status {
 			if err := tx.UpdateAggregate(ctx, order.ID, newStatus); err != nil {
 				return err
@@ -163,7 +163,7 @@ func (u *OrderUsecase) UpdateItemStatus(ctx context.Context, orderID, itemID uui
 			return err
 		}
 		targetItem.Status = target
-		newStatus := domain.AggregateOrderStatus(order.Items, order.PaymentStatus)
+		newStatus := domain.AggregateOrderStatus(order.Items, order.PaymentStatus, order.CanceledAt != nil)
 		if newStatus != order.Status {
 			if err := tx.UpdateAggregate(ctx, order.ID, newStatus); err != nil {
 				return err

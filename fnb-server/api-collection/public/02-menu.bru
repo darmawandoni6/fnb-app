@@ -1,0 +1,25 @@
+meta {
+  name: Get menu
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/public/menu
+  body: none
+  auth: none
+}
+
+headers {
+  X-Session-Token: {{sessionToken}}
+}
+
+tests {
+  test("returns menu with rates and categories", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data.categories).to.be.an("array");
+    expect(res.body.data.service_rate).to.be.a("number");
+    expect(res.body.data.tax_rate).to.be.a("number");
+  });
+}

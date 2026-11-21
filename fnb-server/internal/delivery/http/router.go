@@ -18,11 +18,11 @@ type Handlers struct {
 	Users  *UsersSettingsHandler
 }
 
-func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, isDevelopment bool, log *slog.Logger) *echo.Echo {
-	return NewRouterWithUpload(h, authUsecase, "./uploads", isDevelopment, log)
+func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, sessionUsecase *usecase.TableSessionUsecase, isDevelopment bool, log *slog.Logger) *echo.Echo {
+	return NewRouterWithUpload(h, authUsecase, sessionUsecase, "./uploads", isDevelopment, log)
 }
 
-func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, uploadDir string, isDevelopment bool, log *slog.Logger) *echo.Echo {
+func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUsecase *usecase.TableSessionUsecase, uploadDir string, isDevelopment bool, log *slog.Logger) *echo.Echo {
 	e := echo.New()
 	e.Binder = NewBinder()
 	e.HTTPErrorHandler = ErrorHandler(isDevelopment, log)
@@ -69,10 +69,10 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, uploadDir
 	authGroup.POST("/logout", h.Auth.Logout)
 
 	publicGroup := e.Group("/public")
-	publicGroup.GET("/tables/:qr_token/menu", h.Public.Menu, qrRateLimit(60, 60))
-	publicGroup.POST("/tables/:qr_token/orders", h.Public.CreateOrder, qrRateLimit(5, 5))
-	publicGroup.GET("/orders/:tracking_token", h.Public.OrderStatus, statusRateLimit(30, 30))
-	publicGroup.POST("/orders/:tracking_token/cancel", h.Public.CancelItem)
+	publicGroup.POST("/tables/:qr_token/sessions", h.Public.OpenSession, qrRateLimit(20, 20))
+
+	sessionGroup := e.Group("/public", SessionMiddleware(sessionUsecase))
+	sessionGroup.GET("/menu", h.Public.Menu, sessionRateLimit(60, 60))
 
 	orders := e.Group("/orders", JWTMiddleware(authUsecase))
 	orders.GET("", h.Order.List, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier, domain.UserRoleKitchen))

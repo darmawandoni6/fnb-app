@@ -35,6 +35,12 @@ type OrderResponse struct {
 	Items          []OrderItemResponse `json:"items"`
 }
 
+type CreateOrderItemRequest struct {
+	MenuID string  `json:"menu_id" validate:"required,uuid"`
+	Qty    int     `json:"qty" validate:"required,min=1,max=100"`
+	Note   *string `json:"note" validate:"omitempty,max=255"`
+}
+
 type ManualOrderRequest struct {
 	Items []CreateOrderItemRequest `json:"items" validate:"required,min=1,max=50,dive"`
 }
@@ -96,7 +102,7 @@ func OrderResponseFrom(o *domain.Order) OrderResponse {
 		PaymentStatus:  string(o.PaymentStatus),
 		PaymentMethod:  paymentMethod,
 		SubtotalAmount: o.SubtotalAmount,
-		TaxPercent:     o.TaxPercent,
+		TaxPercent:     o.TaxRateSnapshot,
 		TaxAmount:      o.TaxAmount,
 		TotalAmount:    o.TotalAmount,
 		CreatedAt:      o.CreatedAt.UTC().Format(time.RFC3339),

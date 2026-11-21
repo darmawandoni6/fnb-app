@@ -1,0 +1,26 @@
+meta {
+  name: Open table session
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/public/tables/{{qrToken}}/sessions
+  body: none
+  auth: none
+}
+
+script:post-response {
+  if (res.status === 200 && res.body.success === true) {
+    bru.setVar("sessionToken", res.body.data.session_token);
+  }
+}
+
+tests {
+  test("returns table session", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data.session_token).to.be.a("string");
+    expect(res.body.data.status).to.equal("OPEN");
+  });
+}

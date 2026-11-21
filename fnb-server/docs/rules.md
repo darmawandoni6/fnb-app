@@ -31,7 +31,7 @@ Review every new package and dependency against these checks:
 - Is concurrency used only for independent I/O, CPU-bound work, or background jobs?
 - Are GORM transactions confined to one goroutine and never shared across goroutines?
 - Is one injected `slog.Logger` used per process?
-- Are secrets excluded from logs?
+- Are secrets and session tokens (e.g., `X-Session-Token`, `Authorization`, cookies) excluded or masked in logs?
 - Do request DTOs use validator tags and the standard binder?
 - Do validation failures use `VALIDATION_ERROR`?
 - Do business validation rules remain in usecases?

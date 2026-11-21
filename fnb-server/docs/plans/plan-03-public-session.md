@@ -1,4 +1,4 @@
-# Plan 03 — Public customer session
+# Plan 03 — Public customer session (DONE)
 
 Replaces the `qr_token`-per-request + `tracking_token` model with table sessions and the `X-Session-Token` header (PRD §4.6, §11.2; `api.md` Public).
 

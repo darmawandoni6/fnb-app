@@ -68,7 +68,7 @@ func (m *mockSettingRepo) GetFirst(ctx context.Context) (*domain.Setting, error)
 type mockTx struct {
 	createdOrder     *domain.Order
 	createdItems     []domain.OrderItem
-	persistedRefund  *domain.Refund
+	persistedRefund  *Refund
 	updatedPayment   domain.PaymentStatus
 	updatedMethod    *domain.PaymentMethod
 	updatedStatus    domain.OrderStatus
@@ -89,8 +89,10 @@ func (t *mockTx) CreateItems(ctx context.Context, items []domain.OrderItem) erro
 func (t *mockTx) ConsumeStock(ctx context.Context, items []domain.OrderItem) error {
 	return nil
 }
-func (t *mockTx) PersistCancel(ctx context.Context, o *domain.Order, itemID uuid.UUID, r *domain.Refund) error {
-	t.persistedRefund = r
+func (t *mockTx) PersistCancel(ctx context.Context, o *domain.Order, itemID uuid.UUID, r interface{}) error {
+	if ref, ok := r.(*Refund); ok {
+		t.persistedRefund = ref
+	}
 	return nil
 }
 func (t *mockTx) SetPayment(ctx context.Context, id uuid.UUID, s domain.PaymentStatus, m *domain.PaymentMethod) error {
@@ -191,7 +193,7 @@ func TestOrderUsecase_CreateManual_Success(t *testing.T) {
 			menuID: {ID: menuID, Name: "Kopi", Price: 20000},
 		},
 	}
-	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: true, TaxPercent: 10}}
+	settingRepo := &mockSettingRepo{setting: &domain.Setting{IsOpen: true, TaxRate: 10}}
 	tx := &mockTx{}
 	u := NewOrderUsecase(nil, menuRepo, settingRepo, newTestTxRunner(tx))
 
@@ -209,9 +211,6 @@ func TestOrderUsecase_CreateManual_Success(t *testing.T) {
 	}
 	if order.TableID != nil {
 		t.Errorf("expected nil table_id, got %v", order.TableID)
-	}
-	if order.TrackingTokenHash != nil {
-		t.Errorf("expected nil tracking_token_hash, got %v", order.TrackingTokenHash)
 	}
 	if order.SubtotalAmount != 40000 || order.TaxAmount != 4000 || order.TotalAmount != 44000 {
 		t.Errorf("incorrect totals: subtotal=%d, tax=%d, total=%d", order.SubtotalAmount, order.TaxAmount, order.TotalAmount)
@@ -250,11 +249,11 @@ func TestOrderUsecase_UpdatePayment_RecomputesSelesaiWhenAllDelivered(t *testing
 	orderID := uuid.New()
 	order := &domain.Order{
 		ID:            orderID,
-		Status:        domain.OrderStatusDelivering,
+		Status:        domain.OrderStatusProcessing,
 		PaymentStatus: domain.PaymentStatusUnpaid,
 		Items: []domain.OrderItem{
-			{Status: domain.OrderItemStatusDelivered},
-			{Status: domain.OrderItemStatusDelivered},
+			{Status: domain.OrderItemStatusCompleted},
+			{Status: domain.OrderItemStatusCompleted},
 		},
 	}
 	repo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{orderID: order}}
@@ -322,9 +321,9 @@ func TestOrderUsecase_CancelItem_RefundAndTotals(t *testing.T) {
 		ID:             orderID,
 		PaymentStatus:  domain.PaymentStatusPaid,
 		PaymentMethod:  &method,
-		Status:         domain.OrderStatusWaiting,
-		TaxPercent:     10,
-		SubtotalAmount: 50000,
+		Status:          domain.OrderStatusWaiting,
+		TaxRateSnapshot: 10,
+		SubtotalAmount:  50000,
 		TaxAmount:      5000,
 		TotalAmount:    55000,
 		Items: []domain.OrderItem{

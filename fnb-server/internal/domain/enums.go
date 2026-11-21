@@ -61,6 +61,9 @@ type OrderType string
 const (
 	OrderTypeDineIn   OrderType = "DINE_IN"
 	OrderTypeTakeAway OrderType = "TAKE_AWAY"
+
+	OrderTypeQR     = OrderTypeDineIn
+	OrderTypeManual = OrderTypeTakeAway
 )
 
 func (s OrderType) Valid() bool { return s == OrderTypeDineIn || s == OrderTypeTakeAway }
@@ -84,6 +87,11 @@ const (
 	StockMovementTypeOut        StockMovementType = "OUT"
 	StockMovementTypeRestore    StockMovementType = "RESTORE"
 	StockMovementTypeAdjustment StockMovementType = "ADJUSTMENT"
+
+	StockMovementIn         = StockMovementTypeIn
+	StockMovementOut        = StockMovementTypeOut
+	StockMovementRestore    = StockMovementTypeRestore
+	StockMovementAdjustment = StockMovementTypeAdjustment
 )
 
 func (s StockMovementType) Valid() bool {

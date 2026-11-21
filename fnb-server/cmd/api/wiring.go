@@ -15,23 +15,24 @@ import (
 )
 
 func newRouter(db *gorm.DB, cfg *config.Config, log *slog.Logger) *echo.Echo {
-	handlers, authUsecase := newHandlers(db, cfg)
-	return httpDelivery.NewRouterWithUpload(handlers, authUsecase, cfg.UploadDir, cfg.IsDevelopment(), log)
+	handlers, authUsecase, sessionUsecase := newHandlers(db, cfg)
+	return httpDelivery.NewRouterWithUpload(handlers, authUsecase, sessionUsecase, cfg.UploadDir, cfg.IsDevelopment(), log)
 }
 
-func newHandlers(db *gorm.DB, cfg *config.Config) (httpDelivery.Handlers, *usecase.AuthUsecase) {
+func newHandlers(db *gorm.DB, cfg *config.Config) (httpDelivery.Handlers, *usecase.AuthUsecase, *usecase.TableSessionUsecase) {
 	authUsecase := newAuthUsecase(db, cfg)
+	sessionUsecase := newTableSessionUsecase(db)
 	categoryRepo := repository.NewMenuCategoryRepository(db)
 	adminHandler := newAdminHandler(db, categoryRepo, cfg)
 	handlers := httpDelivery.Handlers{
 		Auth:   newAuthHandler(authUsecase, cfg),
-		Public: newPublicHandler(db),
+		Public: newPublicHandler(db, sessionUsecase),
 		Order:  newOrderHandler(db),
 		Admin:  adminHandler,
 		Stock:  newStockHandler(db),
 		Users:  newUsersSettingsHandler(db),
 	}
-	return handlers, authUsecase
+	return handlers, authUsecase, sessionUsecase
 }
 
 func newAdminHandler(db *gorm.DB, categoryRepo domain.MenuCategoryRepository, cfg *config.Config) *httpDelivery.AdminHandler {
@@ -66,18 +67,19 @@ func newAuthHandler(authUsecase *usecase.AuthUsecase, cfg *config.Config) *httpD
 	return httpDelivery.NewAuthHandler(authUsecase, !cfg.IsDevelopment())
 }
 
-func newPublicHandler(db *gorm.DB) *httpDelivery.PublicHandler {
+func newTableSessionUsecase(db *gorm.DB) *usecase.TableSessionUsecase {
+	sessionRepo := repository.NewTableSessionRepository(db)
+	tableRepo := repository.NewTableRepository(db)
+	auditRepo := repository.NewAuditRepository(db)
+	return usecase.NewTableSessionUsecase(sessionRepo, tableRepo, auditRepo)
+}
+
+func newPublicHandler(db *gorm.DB, sessionUsecase *usecase.TableSessionUsecase) *httpDelivery.PublicHandler {
 	tableRepo := repository.NewTableRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
-	orderRepo := repository.NewOrderRepository(db)
-	withTx := func(ctx context.Context, fn func(usecase.OrderTx) error) error {
-		return database.WithTx(ctx, db, func(tx *gorm.DB) error {
-			return fn(repository.NewOrderRepository(tx))
-		})
-	}
-	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo, orderRepo, withTx)
-	return httpDelivery.NewPublicHandler(publicUsecase)
+	publicUsecase := usecase.NewPublicUsecase(tableRepo, menuRepo, settingRepo)
+	return httpDelivery.NewPublicHandler(publicUsecase, sessionUsecase)
 }
 
 func newOrderHandler(db *gorm.DB) *httpDelivery.OrderHandler {

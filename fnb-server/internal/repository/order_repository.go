@@ -133,7 +133,7 @@ func (r *OrderRepository) ConsumeStock(ctx context.Context, items []domain.Order
 	return nil
 }
 
-func (r *OrderRepository) PersistCancel(ctx context.Context, order *domain.Order, itemID uuid.UUID, refund *domain.Refund) error {
+func (r *OrderRepository) PersistCancel(ctx context.Context, order *domain.Order, itemID uuid.UUID, refund interface{}) error {
 	var item domain.OrderItem
 	if err := r.db.WithContext(ctx).Clauses(clauseLocking()).First(&item, "id = ? AND order_id = ?", itemID, order.ID).Error; err != nil {
 		return err
@@ -154,16 +154,6 @@ func (r *OrderRepository) PersistCancel(ctx context.Context, order *domain.Order
 		orderID, itemID := item.OrderID, item.ID
 		movement := domain.StockMovement{IngredientID: recipe.IngredientID, OrderID: &orderID, OrderItemID: &itemID, Qty: demand, Type: domain.StockMovementRestore}
 		if err := r.db.WithContext(ctx).Create(&movement).Error; err != nil {
-			return err
-		}
-	}
-	if refund != nil {
-		refund.OrderID = order.ID
-		if err := r.db.WithContext(ctx).Create(refund).Error; err != nil {
-			return err
-		}
-		refundItem := domain.RefundItem{RefundID: refund.ID, OrderItemID: item.ID, Qty: item.Qty, SubtotalAmount: refund.SubtotalAmount, TaxAmount: refund.TaxAmount, TotalAmount: refund.TotalAmount}
-		if err := r.db.WithContext(ctx).Create(&refundItem).Error; err != nil {
 			return err
 		}
 	}

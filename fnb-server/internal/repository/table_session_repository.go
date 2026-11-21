@@ -3,10 +3,12 @@ package repository
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"fnb-server/internal/domain"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgconn"
 	"gorm.io/gorm"
 )
 
@@ -49,7 +51,14 @@ func (r *TableSessionRepository) GetBySessionToken(ctx context.Context, token st
 }
 
 func (r *TableSessionRepository) Create(ctx context.Context, session *domain.TableSession) error {
-	return r.db.WithContext(ctx).Create(session).Error
+	err := r.db.WithContext(ctx).Create(session).Error
+	if err != nil {
+		if isUniqueViolation(err) {
+			return domain.ErrSessionAlreadyOpen
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *TableSessionRepository) Close(ctx context.Context, id uuid.UUID, closedBy *uuid.UUID) error {
@@ -66,4 +75,16 @@ func (r *TableSessionRepository) Close(ctx context.Context, id uuid.UUID, closed
 		Model(&domain.TableSession{}).
 		Where("id = ? AND status = ?", id, domain.TableSessionStatusOpen).
 		Updates(updates).Error
+}
+
+func isUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return true
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "duplicate key") || strings.Contains(msg, "unique constraint")
 }

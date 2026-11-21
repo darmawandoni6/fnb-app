@@ -51,7 +51,7 @@ func (m *mockOrderMenuRepo) ListAvailableByIDs(ctx context.Context, ids []uuid.U
 type mockOrderSettingRepo struct{}
 
 func (m *mockOrderSettingRepo) GetFirst(ctx context.Context) (*domain.Setting, error) {
-	return &domain.Setting{IsOpen: true, TaxPercent: 10}, nil
+	return &domain.Setting{IsOpen: true, TaxRate: 10}, nil
 }
 
 type mockOrderTx struct{}
@@ -61,7 +61,7 @@ func (t *mockOrderTx) CreateItems(ctx context.Context, items []domain.OrderItem)
 	return nil
 }
 func (t *mockOrderTx) ConsumeStock(ctx context.Context, items []domain.OrderItem) error { return nil }
-func (t *mockOrderTx) PersistCancel(ctx context.Context, o *domain.Order, itemID uuid.UUID, r *domain.Refund) error {
+func (t *mockOrderTx) PersistCancel(ctx context.Context, o *domain.Order, itemID uuid.UUID, r interface{}) error {
 	return nil
 }
 func (t *mockOrderTx) SetPayment(ctx context.Context, id uuid.UUID, s domain.PaymentStatus, m *domain.PaymentMethod) error {
@@ -129,7 +129,7 @@ func setupTestOrderApp(t *testing.T) (*echo.Echo, string, string, string, *domai
 		Status:         domain.OrderStatusWaiting,
 		PaymentStatus:  domain.PaymentStatusUnpaid,
 		SubtotalAmount: 20000,
-		TaxPercent:     10,
+		TaxRateSnapshot: 10,
 		TaxAmount:      2000,
 		TotalAmount:    22000,
 		CreatedAt:      time.Now().UTC(),
@@ -166,7 +166,7 @@ func setupTestOrderApp(t *testing.T) (*echo.Echo, string, string, string, *domai
 		Public: &PublicHandler{},
 		Order:  orderHandler,
 	}
-	e := NewRouter(handlers, authUsecase, false, nil)
+	e := NewRouter(handlers, authUsecase, nil, false, nil)
 
 	return e, ownerRes.AccessToken, cashierRes.AccessToken, kitchenRes.AccessToken, order, menuID
 }

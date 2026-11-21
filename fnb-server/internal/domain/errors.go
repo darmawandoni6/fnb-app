@@ -1,6 +1,11 @@
 package domain
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
+
+var ErrSessionAlreadyOpen = errors.New("session already open for table")
 
 type AppError struct {
 	Code       string

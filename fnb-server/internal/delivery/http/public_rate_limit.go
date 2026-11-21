@@ -20,9 +20,17 @@ func publicRateLimit(perSecond rate.Limit, burst int, identifier middleware.Extr
 }
 
 func qrRateLimit(ratePerMinute float64, burst int) echo.MiddlewareFunc {
-	return publicRateLimit(rate.Limit(ratePerMinute/60), burst, func(c echo.Context) (string, error) { return "qr:" + c.Param("qr_token"), nil })
+	return publicRateLimit(rate.Limit(ratePerMinute/60), burst, func(c echo.Context) (string, error) {
+		return "qr:" + c.Param("qr_token"), nil
+	})
 }
 
-func statusRateLimit(ratePerMinute float64, burst int) echo.MiddlewareFunc {
-	return publicRateLimit(rate.Limit(ratePerMinute/60), burst, func(c echo.Context) (string, error) { return "ip:" + c.RealIP(), nil })
+func sessionRateLimit(ratePerMinute float64, burst int) echo.MiddlewareFunc {
+	return publicRateLimit(rate.Limit(ratePerMinute/60), burst, func(c echo.Context) (string, error) {
+		token := c.Request().Header.Get("X-Session-Token")
+		if token == "" {
+			return "session:" + c.RealIP(), nil
+		}
+		return "session:" + token, nil
+	})
 }

@@ -7,6 +7,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type CreateOrderItem struct {
+	MenuID uuid.UUID
+	Qty    int
+	Note   *string
+}
+
 func buildOrder(
 	ctx context.Context,
 	menuRepo domain.MenuRepository,
@@ -59,20 +65,20 @@ func buildOrder(
 
 	tax := float64(0)
 	if s != nil {
-		tax = s.TaxPercent
+		tax = s.TaxRate
 	}
 	taxAmt := domain.CalcTax(sub, tax)
 
 	order := &domain.Order{
-		OrderType:      orderType,
-		TableID:        tableID,
-		CreatedBy:      createdBy,
-		Status:         domain.OrderStatusWaiting,
-		SubtotalAmount: sub,
-		TaxPercent:     tax,
-		TaxAmount:      taxAmt,
-		TotalAmount:    sub + taxAmt,
-		PaymentStatus:  domain.PaymentStatusUnpaid,
+		OrderType:           orderType,
+		TableID:             tableID,
+		CreatedBy:           createdBy,
+		Status:              domain.OrderStatusWaiting,
+		SubtotalAmount:      sub,
+		TaxRateSnapshot:     tax,
+		TaxAmount:           taxAmt,
+		TotalAmount:         sub + taxAmt,
+		PaymentStatus:       domain.PaymentStatusUnpaid,
 	}
 
 	return order, items, nil

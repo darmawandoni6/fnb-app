@@ -1,4 +1,4 @@
-.PHONY: help install run test build up down logs reset migrate migrate-down seed db-check api-check run-db db-up
+.PHONY: help install run test test-race build up down logs reset migrate migrate-down seed db-check api-check run-db db-up
 
 COMPOSE ?= podman-compose
 
@@ -13,6 +13,7 @@ help:
 		'migrate    Apply SQL migrations' \
 		'migrate-down Roll back initial SQL migration' \
 		'test       Run Go tests' \
+		'test-race  Run Go tests with the race detector' \
 		'build      Build API binary' \
 		'db-check   Check PostgreSQL' \
 		'api-check  Check API port'
@@ -52,6 +53,9 @@ pull:
 
 test:
 	go test ./...
+
+test-race:
+	go test -race ./...
 
 build:
 	set -a; . ./.env; set +a; go build -o bin/api ./cmd/api

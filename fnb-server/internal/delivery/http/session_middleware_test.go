@@ -38,6 +38,13 @@ func (r *testSessionRepo) GetBySessionToken(ctx context.Context, token string) (
 	return nil, nil
 }
 
+func (r *testSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.TableSession, error) {
+	if r.session != nil && r.session.ID == id {
+		return r.session, nil
+	}
+	return nil, nil
+}
+
 func (r *testSessionRepo) ListIdleOpen(context.Context, domain.IdleSessionQuery) ([]domain.TableSession, error) {
 	return nil, nil
 }

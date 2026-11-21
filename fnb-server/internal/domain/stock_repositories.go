@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -19,6 +20,17 @@ type RecipeItemRepository interface {
 	Create(ctx context.Context, item *RecipeItem) error
 	Update(ctx context.Context, item *RecipeItem) error
 	Delete(ctx context.Context, id uuid.UUID) error
+}
+
+type StockMovementFilter struct {
+	IngredientID *uuid.UUID
+	Type         *StockMovementType
+	From         *time.Time
+	To           *time.Time
+}
+
+type StockMovementRepository interface {
+	List(ctx context.Context, filter StockMovementFilter, limit int) ([]StockMovement, error)
 }
 
 type MenuLookupRepository interface {

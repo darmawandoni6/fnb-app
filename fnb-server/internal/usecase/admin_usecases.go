@@ -115,7 +115,18 @@ func (u *MenuUsecase) Delete(ctx context.Context, id uuid.UUID) error {
 	if m == nil {
 		return notFound("menu")
 	}
-	return u.repo.Delete(ctx, id)
+	return u.repo.SetAvailability(ctx, id, false)
+}
+
+func (u *MenuUsecase) SetAvailability(ctx context.Context, id uuid.UUID, available bool) error {
+	m, err := u.repo.GetByID(ctx, id)
+	if err != nil {
+		return err
+	}
+	if m == nil {
+		return notFound("menu")
+	}
+	return u.repo.SetAvailability(ctx, id, available)
 }
 
 type TableUsecase struct{ repo domain.AdminTableRepository }
@@ -171,4 +182,12 @@ func (u *TableUsecase) Delete(ctx context.Context, id uuid.UUID) error {
 		return notFound("table")
 	}
 	return u.repo.Delete(ctx, id)
+}
+
+type AuditUsecase struct{ repo domain.AuditRepository }
+
+func NewAuditUsecase(repo domain.AuditRepository) *AuditUsecase { return &AuditUsecase{repo: repo} }
+
+func (u *AuditUsecase) List(ctx context.Context, filter domain.AuditFilter) ([]domain.AuditLog, error) {
+	return u.repo.List(ctx, filter, 200)
 }

@@ -1,6 +1,8 @@
 package http
 
 import (
+	"bytes"
+	"encoding/json"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -22,11 +24,44 @@ type AdminHandler struct {
 	categories *usecase.MenuCategoryUsecase
 	menus      *usecase.MenuUsecase
 	tables     *usecase.TableUsecase
+	sessions   *usecase.TableSessionUsecase
+	publisher  domain.Publisher
 	uploadDir  string
 }
 
-func NewAdminHandler(c *usecase.MenuCategoryUsecase, m *usecase.MenuUsecase, t *usecase.TableUsecase, uploadDir string) *AdminHandler {
-	return &AdminHandler{categories: c, menus: m, tables: t, uploadDir: uploadDir}
+func NewAdminHandler(c *usecase.MenuCategoryUsecase, m *usecase.MenuUsecase, t *usecase.TableUsecase, s *usecase.TableSessionUsecase, p domain.Publisher, uploadDir string) *AdminHandler {
+	return &AdminHandler{categories: c, menus: m, tables: t, sessions: s, publisher: p, uploadDir: uploadDir}
+}
+
+func (h *AdminHandler) GetSession(c echo.Context) error {
+	tableID, e := id(c, "table")
+	if e != nil {
+		return e
+	}
+	v, e := h.sessions.GetOpenByTable(c.Request().Context(), tableID)
+	if e != nil {
+		return e
+	}
+	return Success(c, 200, v)
+}
+
+func (h *AdminHandler) CloseSession(c echo.Context) error {
+	tableID, e := id(c, "table")
+	if e != nil {
+		return e
+	}
+	ctx := c.Request().Context()
+	actorID, ok := GetCurrentUserID(c)
+	var actor *uuid.UUID
+	if ok {
+		actor = &actorID
+	}
+	role, _ := GetCurrentUserRole(c)
+	v, e := h.sessions.CloseByTable(ctx, tableID, actor, &role, h.publisher)
+	if e != nil {
+		return e
+	}
+	return Success(c, 200, v)
 }
 func id(c echo.Context, name string) (uuid.UUID, error) {
 	v, e := uuid.Parse(c.Param("id"))
@@ -107,7 +142,23 @@ func (h *AdminHandler) menuRequest(c echo.Context) (dto.MenuRequest, *multipart.
 		}
 		return request, file, nil
 	}
+	raw, err := io.ReadAll(c.Request().Body)
+	if err != nil {
+		return dto.MenuRequest{}, nil, err
+	}
+	c.Request().Body = io.NopCloser(bytes.NewReader(raw))
 	var request dto.MenuRequest
+	var bound map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &bound); err != nil {
+		return request, nil, domain.NewError(domain.CodeValidationError, "invalid request body", 400, err)
+	}
+	if isAvailable, ok := bound["is_available"]; ok {
+		var available bool
+		if err := json.Unmarshal(isAvailable, &available); err != nil {
+			return request, nil, domain.NewError(domain.CodeValidationError, "is_available must be a boolean", 400, err)
+		}
+		request.IsAvailable = &available
+	}
 	if err := c.Bind(&request); err != nil {
 		return request, nil, err
 	}
@@ -196,6 +247,9 @@ func (h *AdminHandler) UpdateMenu(c echo.Context) error {
 	if e != nil {
 		return e
 	}
+	if role, _ := GetCurrentUserRole(c); role == domain.UserRoleCashier {
+		return h.updateAvailability(c, menuID)
+	}
 	r, file, e := h.menuRequest(c)
 	if e != nil {
 		return e
@@ -220,6 +274,16 @@ func (h *AdminHandler) UpdateMenu(c echo.Context) error {
 		return e
 	}
 	return Success(c, 200, v)
+}
+func (h *AdminHandler) updateAvailability(c echo.Context, menuID uuid.UUID) error {
+	var r dto.MenuAvailabilityRequest
+	if e := c.Bind(&r); e != nil {
+		return e
+	}
+	if e := h.menus.SetAvailability(c.Request().Context(), menuID, *r.IsAvailable); e != nil {
+		return e
+	}
+	return Success(c, 200, map[string]interface{}{"id": menuID, "is_available": *r.IsAvailable})
 }
 func (h *AdminHandler) DeleteMenu(c echo.Context) error {
 	id, e := id(c, "menu")

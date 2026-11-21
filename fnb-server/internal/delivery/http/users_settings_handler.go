@@ -73,13 +73,28 @@ func (h *UsersSettingsHandler) UpdateSettings(c echo.Context) error {
 	if r.CafeName != nil {
 		old.CafeName = *r.CafeName
 	}
-	if r.TaxPercent != nil {
-		old.TaxRate = *r.TaxPercent
+	if r.ServiceRate != nil {
+		old.ServiceRate = *r.ServiceRate
+	}
+	if r.TaxRate != nil {
+		old.TaxRate = *r.TaxRate
 	}
 	if r.IsOpen != nil {
 		old.IsOpen = *r.IsOpen
 	}
-	v, e := h.settings.Update(c.Request().Context(), old.CafeName, old.TaxRate, old.IsOpen)
+	if r.CashTimeoutMinutes != nil {
+		old.CashTimeoutMinutes = *r.CashTimeoutMinutes
+	}
+	if r.DeliveredAutoCompleteMinutes != nil {
+		old.DeliveredAutoCompleteMinutes = *r.DeliveredAutoCompleteMinutes
+	}
+	if r.ReadyAutoDeliverMinutes != nil {
+		old.ReadyAutoDeliverMinutes = *r.ReadyAutoDeliverMinutes
+	}
+	if r.ReadyAutoDeliverWarningMinutes != nil {
+		old.ReadyAutoDeliverWarningMinutes = *r.ReadyAutoDeliverWarningMinutes
+	}
+	v, e := h.settings.Update(c.Request().Context(), old)
 	if e != nil {
 		return e
 	}

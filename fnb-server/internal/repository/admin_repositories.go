@@ -61,6 +61,9 @@ func (r *MenuRepository) Update(ctx context.Context, v *domain.Menu) error {
 func (r *MenuRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	return r.db.WithContext(ctx).Model(&domain.Menu{}).Where("id = ?", id).Update("is_available", false).Error
 }
+func (r *MenuRepository) SetAvailability(ctx context.Context, id uuid.UUID, available bool) error {
+	return r.db.WithContext(ctx).Model(&domain.Menu{}).Where("id = ?", id).Update("is_available", available).Error
+}
 func (r *MenuRepository) CountByCategory(ctx context.Context, id uuid.UUID) (int64, error) {
 	var n int64
 	err := r.db.WithContext(ctx).Model(&domain.Menu{}).Where("category_id = ?", id).Count(&n).Error

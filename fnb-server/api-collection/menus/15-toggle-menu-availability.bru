@@ -1,0 +1,33 @@
+meta {
+  name: Toggle menu availability
+  type: http
+  seq: 15
+}
+patch {
+  url: {{baseUrl}}/menus/{{adminMenuId}}
+  body: json
+  auth: bearer
+}
+headers {
+  Content-Type: application/json
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+body:json {
+  {
+    "is_available": true
+  }
+}
+docs {
+  # Cashier availability toggle
+
+  Works with a `CASHIER` or `OWNER` token. A cashier may only send
+  `is_available`; other fields are ignored.
+}
+tests {
+  test("toggles availability", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.data.is_available).to.equal(true);
+  });
+}

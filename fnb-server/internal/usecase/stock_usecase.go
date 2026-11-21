@@ -13,17 +13,20 @@ import (
 type StockTx interface {
 	UpdateStock(ctx context.Context, ingredientID uuid.UUID, delta float64) error
 	CreateMovement(ctx context.Context, movement *domain.StockMovement) error
+	CountStock(ctx context.Context, ingredientID uuid.UUID) (float64, error)
+	SetStock(ctx context.Context, ingredientID uuid.UUID, qty float64) error
 }
 
 type StockTxRunner func(context.Context, func(StockTx) error) error
 
 type IngredientUsecase struct {
-	repo  domain.IngredientRepository
-	txRun StockTxRunner
+	repo      domain.IngredientRepository
+	txRun     StockTxRunner
+	movements domain.StockMovementRepository
 }
 
-func NewIngredientUsecase(repo domain.IngredientRepository, txRun StockTxRunner) *IngredientUsecase {
-	return &IngredientUsecase{repo: repo, txRun: txRun}
+func NewIngredientUsecase(repo domain.IngredientRepository, txRun StockTxRunner, movements domain.StockMovementRepository) *IngredientUsecase {
+	return &IngredientUsecase{repo: repo, txRun: txRun, movements: movements}
 }
 
 func (u *IngredientUsecase) List(ctx context.Context) ([]domain.Ingredient, error) {
@@ -84,6 +87,46 @@ func (u *IngredientUsecase) Restock(ctx context.Context, id uuid.UUID, qty float
 	})
 }
 
+func (u *IngredientUsecase) Adjust(ctx context.Context, id uuid.UUID, stockQty float64, note *string) (float64, error) {
+	if stockQty < 0 {
+		return 0, domain.NewError(domain.CodeValidationError, "stock quantity cannot be negative", http.StatusBadRequest, nil)
+	}
+	i, err := u.repo.GetByID(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+	if i == nil {
+		return 0, notFound("ingredient")
+	}
+	var delta float64
+	err = u.txRun(ctx, func(tx StockTx) error {
+		current, err := tx.CountStock(ctx, id)
+		if err != nil {
+			return err
+		}
+		delta = stockQty - current
+		if delta == 0 {
+			return domain.NewError(domain.CodeValidationError, "counted stock equals current stock", http.StatusBadRequest, nil)
+		}
+		if err := tx.SetStock(ctx, id, stockQty); err != nil {
+			return err
+		}
+		return tx.CreateMovement(ctx, &domain.StockMovement{IngredientID: id, Qty: delta, Type: domain.StockMovementAdjustment, Note: note})
+	})
+	if err != nil {
+		return 0, err
+	}
+	return delta, nil
+}
+
+type stockSettings interface {
+	GetFirst(ctx context.Context) (*domain.Setting, error)
+}
+
+func (u *IngredientUsecase) Movements(ctx context.Context, filter domain.StockMovementFilter) ([]domain.StockMovement, error) {
+	return u.movements.List(ctx, filter, 200)
+}
+
 type menuLookup interface {
 	GetByID(ctx context.Context, id uuid.UUID) (*domain.Menu, error)
 }
@@ -92,10 +135,25 @@ type RecipeItemUsecase struct {
 	repo        domain.RecipeItemRepository
 	menus       menuLookup
 	ingredients domain.IngredientRepository
+	settings    stockSettings
 }
 
-func NewRecipeItemUsecase(repo domain.RecipeItemRepository, menus menuLookup, ingredients domain.IngredientRepository) *RecipeItemUsecase {
-	return &RecipeItemUsecase{repo: repo, menus: menus, ingredients: ingredients}
+func NewRecipeItemUsecase(repo domain.RecipeItemRepository, menus menuLookup, ingredients domain.IngredientRepository, settings stockSettings) *RecipeItemUsecase {
+	return &RecipeItemUsecase{repo: repo, menus: menus, ingredients: ingredients, settings: settings}
+}
+
+func (u *RecipeItemUsecase) requireClosed(ctx context.Context) error {
+	if u.settings == nil {
+		return nil
+	}
+	s, err := u.settings.GetFirst(ctx)
+	if err != nil {
+		return err
+	}
+	if s != nil && s.IsOpen {
+		return domain.NewError(domain.CodeStoreClosed, "recipe cannot be changed while the store is open", http.StatusConflict, nil)
+	}
+	return nil
 }
 
 func (u *RecipeItemUsecase) List(ctx context.Context) ([]domain.RecipeItem, error) {
@@ -103,6 +161,9 @@ func (u *RecipeItemUsecase) List(ctx context.Context) ([]domain.RecipeItem, erro
 }
 
 func (u *RecipeItemUsecase) Create(ctx context.Context, item *domain.RecipeItem) error {
+	if err := u.requireClosed(ctx); err != nil {
+		return err
+	}
 	if item.QtyUsed <= 0 {
 		return domain.NewError(domain.CodeValidationError, "recipe quantity must be greater than zero", http.StatusBadRequest, nil)
 	}
@@ -134,6 +195,9 @@ func (u *RecipeItemUsecase) Create(ctx context.Context, item *domain.RecipeItem)
 }
 
 func (u *RecipeItemUsecase) Update(ctx context.Context, item *domain.RecipeItem) error {
+	if err := u.requireClosed(ctx); err != nil {
+		return err
+	}
 	if item.QtyUsed <= 0 {
 		return domain.NewError(domain.CodeValidationError, "recipe quantity must be greater than zero", http.StatusBadRequest, nil)
 	}
@@ -156,6 +220,9 @@ func (u *RecipeItemUsecase) Update(ctx context.Context, item *domain.RecipeItem)
 }
 
 func (u *RecipeItemUsecase) Delete(ctx context.Context, id uuid.UUID) error {
+	if err := u.requireClosed(ctx); err != nil {
+		return err
+	}
 	item, err := u.repo.GetByID(ctx, id)
 	if err != nil {
 		return err

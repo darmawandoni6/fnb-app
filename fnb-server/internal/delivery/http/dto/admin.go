@@ -24,3 +24,7 @@ func CategoryFrom(r MenuCategoryRequest) domain.MenuCategory {
 func TableFrom(r TableRequest) domain.Table {
 	return domain.Table{TableNumber: r.TableNumber, QRToken: r.QRToken}
 }
+
+type MenuAvailabilityRequest struct {
+	IsAvailable *bool `json:"is_available" validate:"required"`
+}

@@ -1,0 +1,19 @@
+meta {
+  name: Close table session
+  type: http
+  seq: 14
+}
+post {
+  url: {{baseUrl}}/tables/{{tableId}}/session/close
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+tests {
+  test("closes the session", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.data.status).to.equal("CLOSED");
+  });
+}

@@ -32,6 +32,30 @@ func (r *IngredientRepository) Update(ctx context.Context, ingredient *domain.In
 	return r.db.WithContext(ctx).Save(ingredient).Error
 }
 
+type StockMovementRepository struct{ db *gorm.DB }
+
+func NewStockMovementRepository(db *gorm.DB) *StockMovementRepository {
+	return &StockMovementRepository{db: db}
+}
+func (r *StockMovementRepository) List(ctx context.Context, filter domain.StockMovementFilter, limit int) ([]domain.StockMovement, error) {
+	var movements []domain.StockMovement
+	q := r.db.WithContext(ctx).Model(&domain.StockMovement{})
+	if filter.IngredientID != nil {
+		q = q.Where("ingredient_id = ?", *filter.IngredientID)
+	}
+	if filter.Type != nil {
+		q = q.Where("type = ?", *filter.Type)
+	}
+	if filter.From != nil {
+		q = q.Where("created_at >= ?", *filter.From)
+	}
+	if filter.To != nil {
+		q = q.Where("created_at <= ?", *filter.To)
+	}
+	err := q.Order("created_at DESC").Limit(limit).Find(&movements).Error
+	return movements, err
+}
+
 type RecipeItemRepository struct{ db *gorm.DB }
 
 func NewRecipeItemRepository(db *gorm.DB) *RecipeItemRepository { return &RecipeItemRepository{db: db} }
@@ -65,6 +89,14 @@ func (t *stockTx) UpdateStock(ctx context.Context, id uuid.UUID, delta float64) 
 }
 func (t *stockTx) CreateMovement(ctx context.Context, movement *domain.StockMovement) error {
 	return t.db.WithContext(ctx).Create(movement).Error
+}
+func (t *stockTx) CountStock(ctx context.Context, ingredientID uuid.UUID) (float64, error) {
+	var qty float64
+	err := t.db.WithContext(ctx).Model(&domain.Ingredient{}).Where("id = ?", ingredientID).Select("stock_qty").Scan(&qty).Error
+	return qty, err
+}
+func (t *stockTx) SetStock(ctx context.Context, ingredientID uuid.UUID, qty float64) error {
+	return t.db.WithContext(ctx).Model(&domain.Ingredient{}).Where("id = ?", ingredientID).UpdateColumn("stock_qty", qty).Error
 }
 
 func NewStockTx(db *gorm.DB) usecase.StockTxRunner {

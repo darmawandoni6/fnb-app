@@ -1,0 +1,26 @@
+meta {
+  name: List audit log
+  type: http
+  seq: 6
+}
+get {
+  url: {{baseUrl}}/audit-log
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+params:query {
+  entity:
+  entity_id:
+  actor_id:
+  from:
+  to:
+}
+tests {
+  test("lists audit entries", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+  });
+}

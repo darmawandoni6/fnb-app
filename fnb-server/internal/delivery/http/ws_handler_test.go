@@ -49,6 +49,14 @@ func (r *wsTestSessionRepo) Create(context.Context, *domain.TableSession) error 
 func (r *wsTestSessionRepo) Close(context.Context, uuid.UUID, *uuid.UUID) error {
 	return nil
 }
+func (r *wsTestSessionRepo) GetByID(_ context.Context, id uuid.UUID) (*domain.TableSession, error) {
+	for _, s := range r.sessions {
+		if s.ID == id {
+			return s, nil
+		}
+	}
+	return nil, nil
+}
 func (r *wsTestSessionRepo) ListIdleOpen(context.Context, domain.IdleSessionQuery) ([]domain.TableSession, error) {
 	return nil, nil
 }

@@ -16,3 +16,8 @@ type RecipeItemRequest struct {
 	IngredientID string  `json:"ingredient_id" validate:"required"`
 	QtyUsed      float64 `json:"qty_used" validate:"gt=0"`
 }
+
+type AdjustStockRequest struct {
+	StockQty *float64 `json:"stock_qty" validate:"required,gte=0"`
+	Note     *string  `json:"note" validate:"omitempty,max=255"`
+}

@@ -12,4 +12,9 @@ type TableSessionRepository interface {
 	Create(ctx context.Context, session *TableSession) error
 	Close(ctx context.Context, id uuid.UUID, closedBy *uuid.UUID) error
 	ListIdleOpen(ctx context.Context, q IdleSessionQuery) ([]TableSession, error)
+	GetByID(ctx context.Context, id uuid.UUID) (*TableSession, error)
+}
+
+type TableLookupRepository interface {
+	GetByID(ctx context.Context, id uuid.UUID) (*Table, error)
 }

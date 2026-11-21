@@ -21,7 +21,7 @@ func newHandlers(db *gorm.DB, cfg *config.Config, hub *usecase.Hub, log *slog.Lo
 	authUsecase := newAuthUsecase(db, cfg)
 	sessionUsecase := newTableSessionUsecase(db)
 	categoryRepo := repository.NewMenuCategoryRepository(db)
-	adminHandler := newAdminHandler(db, categoryRepo, cfg)
+	adminHandler := newAdminHandler(db, categoryRepo, sessionUsecase, hub, cfg)
 	handlers := httpDelivery.Handlers{
 		Auth:    newAuthHandler(authUsecase, cfg),
 		Public:  newPublicHandler(db, sessionUsecase, hub, cfg),
@@ -31,22 +31,25 @@ func newHandlers(db *gorm.DB, cfg *config.Config, hub *usecase.Hub, log *slog.Lo
 		Stock:   newStockHandler(db),
 		Users:   newUsersSettingsHandler(db),
 		WS:      newWSHandler(db, hub, authUsecase, sessionUsecase),
+		Audit:   httpDelivery.NewAuditHandler(usecase.NewAuditUsecase(repository.NewAuditRepository(db))),
 	}
 	return handlers, authUsecase, sessionUsecase
 }
 
-func newAdminHandler(db *gorm.DB, categoryRepo domain.MenuCategoryRepository, cfg *config.Config) *httpDelivery.AdminHandler {
+func newAdminHandler(db *gorm.DB, categoryRepo domain.MenuCategoryRepository, sessionUsecase *usecase.TableSessionUsecase, hub *usecase.Hub, cfg *config.Config) *httpDelivery.AdminHandler {
 	menuRepo := repository.NewMenuRepository(db)
 	tableRepo := repository.NewTableRepository(db)
-	return httpDelivery.NewAdminHandler(usecase.NewMenuCategoryUsecase(categoryRepo), usecase.NewMenuUsecase(menuRepo, categoryRepo), usecase.NewTableUsecase(tableRepo), cfg.UploadDir)
+	return httpDelivery.NewAdminHandler(usecase.NewMenuCategoryUsecase(categoryRepo), usecase.NewMenuUsecase(menuRepo, categoryRepo), usecase.NewTableUsecase(tableRepo), sessionUsecase, hub, cfg.UploadDir)
 }
 
 func newStockHandler(db *gorm.DB) *httpDelivery.StockHandler {
 	ingredientRepo := repository.NewIngredientRepository(db)
 	recipeRepo := repository.NewRecipeItemRepository(db)
 	menuRepo := repository.NewMenuRepository(db)
-	ingredientUsecase := usecase.NewIngredientUsecase(ingredientRepo, repository.NewStockTx(db))
-	recipeUsecase := usecase.NewRecipeItemUsecase(recipeRepo, menuRepo, ingredientRepo)
+	movementRepo := repository.NewStockMovementRepository(db)
+	settingRepo := repository.NewSettingRepository(db)
+	ingredientUsecase := usecase.NewIngredientUsecase(ingredientRepo, repository.NewStockTx(db), movementRepo)
+	recipeUsecase := usecase.NewRecipeItemUsecase(recipeRepo, menuRepo, ingredientRepo, settingRepo)
 	return httpDelivery.NewStockHandler(ingredientUsecase, recipeUsecase)
 }
 

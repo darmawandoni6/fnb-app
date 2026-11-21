@@ -1,5 +1,15 @@
 # Plan 08 — Admin surface alignment
 
+> **Status:** DONE (Completed on 2026-11-21)
+> - Menus: `DELETE /menus/:id` deactivates via `SetAvailability`; `DELETE /menu-categories/:id` returns `409 INVALID_TRANSITION` while menus reference it.
+> - `PATCH /menus/:id` is routed for `OWNER` and `CASHIER`; the handler branches on the JWT role, so a cashier only reaches `MenuUsecase.SetAvailability` (`{ "is_available": bool }`) and never the menu fields.
+> - Tables: `GET /tables/:id/session` and `POST /tables/:id/session/close` (`TableSessionUsecase.GetOpenByTable`, `CloseByTable`), writing a `session_closed` audit row with the actor and publishing `session.closed`.
+> - Stock: `POST /ingredients/:id/adjust` replaces `stock_qty` inside the stock tx and writes a signed `ADJUSTMENT` (zero delta → `400`); `GET /stock-movements` filters `ingredient_id`, `type`, `from`, `to`, `created_at DESC`, `LIMIT 200`; recipe mutations return `409 STORE_CLOSED` while `settings.is_open`.
+> - Settings: `UpdateSettingsRequest` carries every PRD §10.16 field (`service_rate`, `tax_rate`, four timers, `is_open`); the usecase mirrors the DB constraints for clean `400`s, including `warning < deliver`.
+> - Audit: `GET /audit-log` for `OWNER` with `entity`, `entity_id`, `actor_id`, `from`, `to`.
+> - Tests passing: cashier availability toggle, category delete guard, stock opname deltas and no-op, recipe gate, settings cross-field validation, session close + second-close `404`.
+
+
 Brings the remaining CRUD and the missing admin endpoints in line with PRD §7.4, §9 and `api.md`. Most endpoints already exist; this plan fixes the fields, the role exceptions, and adds what is missing.
 
 Depends on: 01, 04.

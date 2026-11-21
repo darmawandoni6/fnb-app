@@ -1,0 +1,19 @@
+meta {
+  name: Get table session
+  type: http
+  seq: 13
+}
+get {
+  url: {{baseUrl}}/tables/{{tableId}}/session
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+tests {
+  test("returns the open session", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.data.status).to.equal("OPEN");
+  });
+}

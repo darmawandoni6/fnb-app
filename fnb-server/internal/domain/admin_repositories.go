@@ -12,6 +12,7 @@ type AdminMenuRepository interface {
 	Create(ctx context.Context, menu *Menu) error
 	Update(ctx context.Context, menu *Menu) error
 	Delete(ctx context.Context, id uuid.UUID) error
+	SetAvailability(ctx context.Context, id uuid.UUID, available bool) error
 	CountByCategory(ctx context.Context, categoryID uuid.UUID) (int64, error)
 }
 

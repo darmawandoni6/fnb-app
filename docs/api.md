@@ -247,7 +247,7 @@ Item status and payment responses return the full order with its items.
 | `GET` | `/tables/:id/session` | `CASHIER`, `OWNER` | Read the open session of a table |
 | `POST` | `/tables/:id/session/close` | `CASHIER`, `OWNER` | Close the open session manually |
 
-Closing a session does not touch its orders; they keep `table_session_id`. A closed session cannot be reopened.
+Closing a session does not touch its orders; they keep `table_session_id`. A closed session cannot be reopened. `GET /tables/:id/session` returns `404` when the table has no open session; `POST /tables/:id/session/close` records `closed_by` from the JWT and returns the closed session. A second close returns `404`.
 
 Table QR content:
 
@@ -272,9 +272,11 @@ Role: `OWNER`.
 | `GET` | `/menus` | List menus |
 | `POST` | `/menus` | Create menu; use multipart photo upload when needed |
 | `PATCH` | `/menus/:id` | Update menu |
-| `DELETE` | `/menus/:id` | Delete/deactivate menu |
+| `DELETE` | `/menus/:id` | Deactivate menu (`is_available = false`); the row is never deleted |
 
-Exception: `PATCH /menus/:id` is also allowed for `CASHIER`, but only the `is_available` field. Sending `name`, `price`, `image_url`, or `category_id` as a cashier returns `403 FORBIDDEN`.
+`DELETE /menu-categories/:id` returns `409 INVALID_TRANSITION` while the category still has menus.
+
+Exception: `PATCH /menus/:id` is also allowed for `CASHIER`, but only the `is_available` field. A cashier request body is read as `{ "is_available": bool }`; any other field is ignored, so a cashier cannot change `name`, `price`, `image_url`, or `category_id`.
 
 ## Internal — stock
 
@@ -294,6 +296,14 @@ Exception: `PATCH /menus/:id` is also allowed for `CASHIER`, but only the `is_av
 | `GET` | `/stock-movements` | List stock movements; query `ingredient_id`, `type`, `from`, `to` (ISO date) |
 
 `stock_movements.qty` is signed: positive for `IN` and `RESTORE`, negative for `OUT`. `ADJUSTMENT` stores the signed delta and is never zero. `order_id`/`order_item_id` are filled for `OUT` and `RESTORE`.
+
+Stock opname response:
+
+```json
+{ "success": true, "data": { "ingredient_id": "uuid", "stock_qty": 60, "delta": -40 } }
+```
+
+A count equal to the current stock returns `400 VALIDATION_ERROR`. `GET /stock-movements` returns `created_at DESC`, at most 200 rows.
 
 `POST`, `PATCH`, and `DELETE` on `/recipe-items` are rejected with `STORE_CLOSED` while `settings.is_open` is true (BR-23). Reading recipes stays allowed. Restock, opname, and ingredient CRUD are not gated by `is_open`.
 
@@ -323,7 +333,15 @@ Settings fields:
 }
 ```
 
-Every rate and timer is configurable. Changing a rate affects only new orders (BR-12).
+Every rate and timer is configurable. Changing a rate affects only new orders (BR-12). Timers must be at least 1 minute, and `ready_auto_deliver_warning_minutes` must be less than `ready_auto_deliver_minutes` (`400 VALIDATION_ERROR` otherwise).
+
+Audit log response:
+
+```json
+{ "success": true, "data": [ { "id": "uuid", "entity": "order_item", "entity_id": "uuid", "action": "auto_deliver", "from_value": "READY", "to_value": "DELIVERED", "actor_id": null, "actor_role": null, "created_at": "2026-11-21T12:00:00Z" } ] }
+```
+
+Entries are written by usecases only. `from`/`to` are ISO dates; `to` covers the whole day.
 
 ## WebSocket
 

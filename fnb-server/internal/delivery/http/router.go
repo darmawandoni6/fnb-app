@@ -18,6 +18,7 @@ type Handlers struct {
 	Stock   *StockHandler
 	Users   *UsersSettingsHandler
 	WS      *WSHandler
+	Audit   *AuditHandler
 }
 
 func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, sessionUsecase *usecase.TableSessionUsecase, isDevelopment bool, log *slog.Logger) *echo.Echo {
@@ -43,18 +44,24 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	admin.DELETE("/menu-categories/:id", h.Admin.DeleteCategory)
 	admin.GET("/menus", h.Admin.Menus)
 	admin.POST("/menus", h.Admin.CreateMenu)
-	admin.PATCH("/menus/:id", h.Admin.UpdateMenu)
 	admin.DELETE("/menus/:id", h.Admin.DeleteMenu)
 	admin.GET("/tables", h.Admin.Tables)
 	admin.POST("/tables", h.Admin.CreateTable)
 	admin.PATCH("/tables/:id", h.Admin.UpdateTable)
 	admin.DELETE("/tables/:id", h.Admin.DeleteTable)
 
+	sessions := e.Group("", JWTMiddleware(authUsecase), RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
+	sessions.PATCH("/menus/:id", h.Admin.UpdateMenu)
+	sessions.GET("/tables/:id/session", h.Admin.GetSession)
+	sessions.POST("/tables/:id/session/close", h.Admin.CloseSession)
+
 	stock := e.Group("", JWTMiddleware(authUsecase))
 	stock.GET("/ingredients", h.Stock.ListIngredients, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
 	stock.POST("/ingredients", h.Stock.CreateIngredient, RequireRoles(domain.UserRoleOwner))
 	stock.PATCH("/ingredients/:id", h.Stock.UpdateIngredient, RequireRoles(domain.UserRoleOwner))
 	stock.POST("/ingredients/:id/restock", h.Stock.Restock, RequireRoles(domain.UserRoleOwner))
+	stock.POST("/ingredients/:id/adjust", h.Stock.Adjust, RequireRoles(domain.UserRoleOwner))
+	stock.GET("/stock-movements", h.Stock.Movements, RequireRoles(domain.UserRoleOwner))
 	stock.GET("/recipe-items", h.Stock.ListRecipes, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
 	stock.POST("/recipe-items", h.Stock.CreateRecipe, RequireRoles(domain.UserRoleOwner))
 	stock.PATCH("/recipe-items/:id", h.Stock.UpdateRecipe, RequireRoles(domain.UserRoleOwner))
@@ -62,6 +69,7 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	admin.GET("/users", h.Users.ListUsers)
 	admin.POST("/users", h.Users.CreateUser)
 	admin.PATCH("/users/:id", h.Users.UpdateUser)
+	admin.GET("/audit-log", h.Audit.List)
 	admin.GET("/settings", h.Users.GetSettings)
 	admin.PATCH("/settings", h.Users.UpdateSettings)
 

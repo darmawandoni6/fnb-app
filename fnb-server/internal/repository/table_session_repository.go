@@ -78,6 +78,17 @@ func (r *TableSessionRepository) Close(ctx context.Context, id uuid.UUID, closed
 		Updates(updates).Error
 }
 
+func (r *TableSessionRepository) GetByID(ctx context.Context, id uuid.UUID) (*domain.TableSession, error) {
+	var session domain.TableSession
+	if err := r.db.WithContext(ctx).Preload("Table").First(&session, "id = ?", id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("get table session: %w", err)
+	}
+	return &session, nil
+}
+
 func isUniqueViolation(err error) bool {
 	if err == nil {
 		return false

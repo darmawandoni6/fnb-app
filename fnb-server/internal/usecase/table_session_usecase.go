@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"fnb-server/internal/domain"
+	"github.com/google/uuid"
 )
 
 type TableSessionUsecase struct {
@@ -113,6 +114,47 @@ func (u *TableSessionUsecase) RequireOpen(ctx context.Context, sessionToken stri
 		return nil, domain.NewError(domain.CodeUnauthorized, "table is inactive", http.StatusUnauthorized, nil)
 	}
 
+	return session, nil
+}
+
+func (u *TableSessionUsecase) GetOpenByTable(ctx context.Context, tableID uuid.UUID) (*domain.TableSession, error) {
+	session, err := u.sessionRepo.GetOpenByTableID(ctx, tableID)
+	if err != nil {
+		return nil, domain.NewError(domain.CodeInternalError, "failed to query session", http.StatusInternalServerError, err)
+	}
+	if session == nil {
+		return nil, domain.NewError(domain.CodeNotFound, "open session not found", http.StatusNotFound, nil)
+	}
+	return session, nil
+}
+
+func (u *TableSessionUsecase) CloseByTable(ctx context.Context, tableID uuid.UUID, actorID *uuid.UUID, actorRole *domain.UserRole, publisher domain.Publisher) (*domain.TableSession, error) {
+	session, err := u.GetOpenByTable(ctx, tableID)
+	if err != nil {
+		return nil, err
+	}
+	if err := u.sessionRepo.Close(ctx, session.ID, actorID); err != nil {
+		return nil, domain.NewError(domain.CodeInternalError, "failed to close session", http.StatusInternalServerError, err)
+	}
+	fromStr, toStr := string(session.Status), string(domain.TableSessionStatusClosed)
+	if u.auditRepo != nil {
+		_ = u.auditRepo.Create(ctx, &domain.AuditLog{
+			Entity:    "table_session",
+			EntityID:  session.ID,
+			Action:    "session_closed",
+			FromValue: &fromStr,
+			ToValue:   &toStr,
+			ActorID:   actorID,
+			ActorRole: actorRole,
+		})
+	}
+	if publisher != nil {
+		publisher.PublishSession(ctx, session.SessionToken, domain.OrderEvent{Event: "session.closed", Order: &domain.Order{ID: session.ID}})
+	}
+	now := time.Now().UTC()
+	session.Status = domain.TableSessionStatusClosed
+	session.EndedAt = &now
+	session.ClosedBy = actorID
 	return session, nil
 }
 

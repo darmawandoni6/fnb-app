@@ -39,12 +39,8 @@ Diverges from the PRD and must change (owned by the plans below):
 | No service charge; only `tax_percent` | 01, 04 |
 | No `customer_name`/`customer_phone` | 01, 04 |
 | Item-level cancel with `refunds`; PRD has order-level cancel and no refund | 01, 04 |
+| `order_status` enum carried unused `SIAP`/`DIANTAR` | 01 |
 | No `payment_log`, `audit_log`, `paid_at`, `payment_ref`, `amount_received` | 01, 04, 05 |
-| No Midtrans Snap + callback | 05 |
-| No WebSocket | 06 |
-| No scheduler | 07 |
-| `order_status` enum carries unused `SIAP`/`DIANTAR` | 01 |
-| No `/audit-log`, no table session endpoints | 08 |
 
 ## Milestones
 
@@ -75,7 +71,7 @@ graph LR
 | 05 | `plan-05-payment.md` | Cash confirmation, `payment_log`, Midtrans Snap and callback | DONE |
 | 06 | `plan-06-realtime.md` | WebSocket hub, topics, publish after commit | DONE |
 | 07 | `plan-07-scheduler.md` | Auto-cancel, auto-deliver, auto-complete, session close | DONE |
-| 08 | `plan-08-admin.md` | Remaining CRUD aligned with PRD, session endpoints, audit log | Pending |
+| 08 | `plan-08-admin.md` | Remaining CRUD aligned with PRD, session endpoints, audit log | DONE |
 | 09 | `plan-09-verification.md` | Tests, Bruno collection, doc sync, commit gate | Pending |
 
 Each milestone ends in a state where `go test ./... && go build ./...` passes and the API matches `../../../docs/api.md` for the endpoints it owns.

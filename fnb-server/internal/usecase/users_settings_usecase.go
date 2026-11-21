@@ -119,12 +119,30 @@ func (u *SettingsUsecase) Get(ctx context.Context) (*domain.Setting, error) {
 	}
 	return s, nil
 }
-func (u *SettingsUsecase) Update(ctx context.Context, cafe string, tax float64, open bool) (*domain.Setting, error) {
-	if strings.TrimSpace(cafe) == "" {
+func (u *SettingsUsecase) Update(ctx context.Context, in *domain.Setting) (*domain.Setting, error) {
+	if strings.TrimSpace(in.CafeName) == "" {
 		return nil, validation("cafe name is required")
 	}
-	if tax < 0 || tax > 100 {
-		return nil, validation("tax percent must be between 0 and 100")
+	if in.TaxRate < 0 || in.TaxRate > 100 {
+		return nil, validation("tax rate must be between 0 and 100")
+	}
+	if in.ServiceRate < 0 || in.ServiceRate > 100 {
+		return nil, validation("service rate must be between 0 and 100")
+	}
+	if in.CashTimeoutMinutes < 1 {
+		return nil, validation("cash timeout must be at least 1 minute")
+	}
+	if in.DeliveredAutoCompleteMinutes < 1 {
+		return nil, validation("delivered auto complete must be at least 1 minute")
+	}
+	if in.ReadyAutoDeliverMinutes < 1 {
+		return nil, validation("ready auto deliver must be at least 1 minute")
+	}
+	if in.ReadyAutoDeliverWarningMinutes < 0 {
+		return nil, validation("ready auto deliver warning cannot be negative")
+	}
+	if in.ReadyAutoDeliverWarningMinutes >= in.ReadyAutoDeliverMinutes {
+		return nil, validation("ready auto deliver warning must be less than ready auto deliver")
 	}
 	s, e := u.repo.GetFirst(ctx)
 	if e != nil {
@@ -133,9 +151,14 @@ func (u *SettingsUsecase) Update(ctx context.Context, cafe string, tax float64, 
 	if s == nil {
 		s = defaultSetting()
 	}
-	s.CafeName = cafe
-	s.TaxRate = tax
-	s.IsOpen = open
+	s.CafeName = in.CafeName
+	s.TaxRate = in.TaxRate
+	s.ServiceRate = in.ServiceRate
+	s.IsOpen = in.IsOpen
+	s.CashTimeoutMinutes = in.CashTimeoutMinutes
+	s.DeliveredAutoCompleteMinutes = in.DeliveredAutoCompleteMinutes
+	s.ReadyAutoDeliverMinutes = in.ReadyAutoDeliverMinutes
+	s.ReadyAutoDeliverWarningMinutes = in.ReadyAutoDeliverWarningMinutes
 	if e = u.repo.Update(ctx, s); e != nil {
 		return nil, e
 	}

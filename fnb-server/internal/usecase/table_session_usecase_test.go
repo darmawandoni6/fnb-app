@@ -42,6 +42,17 @@ func (m *mockTableSessionRepo) ListIdleOpen(ctx context.Context, q domain.IdleSe
 	return out, nil
 }
 
+func (m *mockTableSessionRepo) GetByID(ctx context.Context, id uuid.UUID) (*domain.TableSession, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, s := range m.sessions {
+		if s.ID == id {
+			return s, nil
+		}
+	}
+	return nil, nil
+}
+
 func (m *mockTableSessionRepo) GetOpenByTableID(ctx context.Context, tableID uuid.UUID) (*domain.TableSession, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -235,4 +246,44 @@ func TestTableSessionUsecase_Open_ConcurrentRace(t *testing.T) {
 			t.Errorf("token mismatch in race: %s vs %s", s.SessionToken, firstToken)
 		}
 	}
+}
+
+func TestTableSessionUsecase_CloseByTable_SetsClosedAndAudit(t *testing.T) {
+	table := &domain.Table{ID: uuid.New(), TableNumber: "B2", QRToken: "token-b2", IsActive: true}
+	tableRepo := &mockTableRepo{tables: map[string]*domain.Table{table.QRToken: table}}
+	sessionRepo := newMockTableSessionRepo()
+	audit := &recordingAuditRepo{}
+	u := NewTableSessionUsecase(sessionRepo, tableRepo, audit)
+
+	ctx := context.Background()
+	if _, err := u.Open(ctx, "token-b2"); err != nil {
+		t.Fatalf("open failed: %v", err)
+	}
+
+	actor := uuid.New()
+	role := domain.UserRoleCashier
+	closed, err := u.CloseByTable(ctx, table.ID, &actor, &role, nil)
+	if err != nil {
+		t.Fatalf("close failed: %v", err)
+	}
+	if closed.Status != domain.TableSessionStatusClosed {
+		t.Errorf("expected CLOSED, got %s", closed.Status)
+	}
+	if audit.entry == nil || audit.entry.Action != "session_closed" || audit.entry.ActorID == nil || *audit.entry.ActorID != actor {
+		t.Errorf("expected session_closed audit with actor, got %+v", audit.entry)
+	}
+
+	if _, err := u.CloseByTable(ctx, table.ID, &actor, &role, nil); err == nil {
+		t.Error("second close must return 404")
+	}
+}
+
+type recordingAuditRepo struct{ entry *domain.AuditLog }
+
+func (r *recordingAuditRepo) Create(_ context.Context, entry *domain.AuditLog) error {
+	r.entry = entry
+	return nil
+}
+func (r *recordingAuditRepo) List(context.Context, domain.AuditFilter, int) ([]domain.AuditLog, error) {
+	return nil, nil
 }

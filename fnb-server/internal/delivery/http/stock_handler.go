@@ -2,6 +2,7 @@ package http
 
 import (
 	"net/http"
+	"time"
 
 	"fnb-server/internal/delivery/http/dto"
 	"fnb-server/internal/domain"
@@ -71,6 +72,57 @@ func (h *StockHandler) Restock(c echo.Context) error {
 		return e
 	}
 	return Success(c, 200, map[string]interface{}{"ingredient_id": id, "qty": r.Qty})
+}
+func (h *StockHandler) Adjust(c echo.Context) error {
+	id, e := stockID(c, "ingredient")
+	if e != nil {
+		return e
+	}
+	var r dto.AdjustStockRequest
+	if e = c.Bind(&r); e != nil {
+		return e
+	}
+	delta, e := h.ingredients.Adjust(c.Request().Context(), id, *r.StockQty, r.Note)
+	if e != nil {
+		return e
+	}
+	return Success(c, 200, map[string]interface{}{"ingredient_id": id, "stock_qty": *r.StockQty, "delta": delta})
+}
+func (h *StockHandler) Movements(c echo.Context) error {
+	filter := domain.StockMovementFilter{}
+	if v := c.QueryParam("ingredient_id"); v != "" {
+		ingredientID, e := uuid.Parse(v)
+		if e != nil {
+			return domain.NewError(domain.CodeValidationError, "invalid ingredient_id", http.StatusBadRequest, e)
+		}
+		filter.IngredientID = &ingredientID
+	}
+	if v := c.QueryParam("type"); v != "" {
+		t := domain.StockMovementType(v)
+		if !t.Valid() {
+			return domain.NewError(domain.CodeValidationError, "invalid type", http.StatusBadRequest, nil)
+		}
+		filter.Type = &t
+	}
+	if d := c.QueryParam("from"); d != "" {
+		t, e := time.Parse("2006-01-02", d)
+		if e != nil {
+			return domain.NewError(domain.CodeValidationError, "invalid from date (expected YYYY-MM-DD)", http.StatusBadRequest, nil)
+		}
+		filter.From = &t
+	}
+	if d := c.QueryParam("to"); d != "" {
+		t, e := time.Parse("2006-01-02", d)
+		if e != nil {
+			return domain.NewError(domain.CodeValidationError, "invalid to date (expected YYYY-MM-DD)", http.StatusBadRequest, nil)
+		}
+		filter.To = &t
+	}
+	v, e := h.ingredients.Movements(c.Request().Context(), filter)
+	if e != nil {
+		return e
+	}
+	return Success(c, 200, v)
 }
 func (h *StockHandler) ListRecipes(c echo.Context) error {
 	v, e := h.recipes.List(c.Request().Context())

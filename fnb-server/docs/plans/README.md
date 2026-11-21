@@ -73,7 +73,7 @@ graph LR
 | 03 | `plan-03-public-session.md` | Table session open, `X-Session-Token`, public menu | DONE |
 | 04 | `plan-04-order-core.md` | Create order (QR + manual), totals, order number, item transitions, order-level cancel | DONE |
 | 05 | `plan-05-payment.md` | Cash confirmation, `payment_log`, Midtrans Snap and callback | DONE |
-| 06 | `plan-06-realtime.md` | WebSocket hub, topics, publish after commit | Pending |
+| 06 | `plan-06-realtime.md` | WebSocket hub, topics, publish after commit | DONE |
 | 07 | `plan-07-scheduler.md` | Auto-cancel, auto-deliver, auto-complete, session close | Pending |
 | 08 | `plan-08-admin.md` | Remaining CRUD aligned with PRD, session endpoints, audit log | Pending |
 | 09 | `plan-09-verification.md` | Tests, Bruno collection, doc sync, commit gate | Pending |

@@ -1,5 +1,13 @@
 # Plan 06 — Real-time WebSocket
 
+> **Status:** DONE (Completed on 2026-11-21)
+> - `usecase.Hub` publishes to `map[topic]map[Client]` under a mutex; sends use a buffered per-client channel and a slow client is dropped and closed.
+> - `WSHandler.Connect` serves `GET /ws` in both modes: `?session=<token>` for the QR menu, `Authorization: Bearer` for dashboard roles.
+> - Subscribe protocol `{"action":"subscribe","topic":"order:<id>"|"session:<token>"}` with authorize-at-subscribe: `order:` needs a JWT (KITCHEN also needs `LUNAS`), `session:` needs an open session or the connection's own token.
+> - Events `order.created`, `order.updated`, `item.updated` publish after commit through `domain.Publisher`; envelope `{"topic","event","data"}` with a compact `OrderEventData` payload.
+> - Ping every 30 s, pong deadline 60 s, read limit 4 KiB; `Hub.Close()` on signal shutdown.
+> - Unit tests passing: `ws_hub_test.go`, `ws_handler_test.go`. `go test -race` is unavailable locally (no C compiler).
+
 One hub, one connection per client, topics per order and per table session (PRD §11.4; `flow.md` real time and polling).
 
 Depends on: 04.

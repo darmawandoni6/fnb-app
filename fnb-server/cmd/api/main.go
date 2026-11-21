@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"fnb-server/internal/config"
 	"fnb-server/internal/database"
@@ -36,7 +38,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	e := newRouter(db, cfg, log)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	hub := newHub(ctx)
+	e := newRouter(db, cfg, hub, log)
 
 	if err := e.Start(":" + cfg.Port); err != nil {
 		log.Error("API server stopped", "error", err)

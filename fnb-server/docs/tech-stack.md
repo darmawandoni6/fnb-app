@@ -20,6 +20,7 @@ Backend serves `fnb-dashboard` and `fnb-qr-menu` through one Go API and one Post
 | Refresh tokens | `crypto/rand` + `crypto/sha256` | Cryptographically secure token generation; database stores only hashes |
 | QR generation | `github.com/skip2/go-qrcode` | Generate printable table QR codes when QR management is implemented |
 | Migrations | Versioned SQL + `psql` | Explicit schema changes, reviewable diffs, PostgreSQL enum support |
+| Real-time | `github.com/gorilla/websocket` | De-facto Go WebSocket implementation; Echo has no first-party WS. One in-process hub, no broker |
 | Testing | Go standard `testing` package | No test framework required for current scope |
 
 ## Runtime
@@ -27,7 +28,7 @@ Backend serves `fnb-dashboard` and `fnb-qr-menu` through one Go API and one Post
 - Local container runtime: Podman with `podman-compose`.
 - Database: PostgreSQL.
 - API communication: HTTP JSON.
-- MVP updates: client polling; no WebSocket, SSE, Redis, or message broker.
+- Updates: one WebSocket hub (`GET /ws`) for order and table-session topics; client polling every 3–5 s remains the fallback when the socket drops. No SSE, Redis, or message broker.
 - Money: integer rupiah (`bigint`), never floating point.
 
 ## Package Boundaries
@@ -68,13 +69,13 @@ Use database transactions for:
 Do not add these for MVP:
 
 - Redis
-- WebSocket or SSE
+- SSE
 - Payment gateway SDK
-
-Midtrans is reached with a hand-rolled `net/http` client (`internal/repository/midtrans_client.go`): Basic auth with the server key, 10 s timeout, one retry. Keep it that way; no SDK.
 - Dependency-injection framework
 - Swagger code generation
 - Zap or Zerolog
 - Multi-tenant database model
 
 Add them only when a measured requirement or product decision requires them.
+
+Midtrans is reached with a hand-rolled `net/http` client (`internal/repository/midtrans_client.go`): Basic auth with the server key, 10 s timeout, one retry. Keep it that way; no SDK.

@@ -1,0 +1,30 @@
+meta {
+  name: Subscribe
+  type: websocket
+  seq: 8
+}
+
+ws {
+  url: {{wsUrl}}/ws?session={{sessionToken}}
+  auth: none
+}
+
+body:json {
+  {
+    "action": "subscribe",
+    "topic": "session:{{sessionToken}}"
+  }
+}
+
+docs {
+  # Table session socket
+
+  Connect with the table session token, then subscribe to its topic.
+  `wsUrl` is `ws://localhost:8081` in the local environment.
+
+  Dashboard sockets connect to `{{wsUrl}}/ws` with `Authorization: Bearer {{accessToken}}`
+  and subscribe to `order:{{orderId}}`.
+
+  Events arrive as `{"topic","event","data"}`; a refused topic returns
+  `{"topic","event":"error","data":{"code":"FORBIDDEN"}}`.
+}

@@ -337,13 +337,22 @@ Topics:
 - `order:{id}` — dashboard subscribers.
 - `session:{session_token}` — customer subscribers.
 
+Subscribe after connecting, one topic per message:
+
+```json
+{ "action": "subscribe", "topic": "order:uuid" }
+{ "action": "unsubscribe", "topic": "order:uuid" }
+```
+
+Authorization at subscribe time: a `session:` topic requires an open table session — the connection's own `?session=` token, or an `OPEN` session when a dashboard client names one. An `order:` topic requires a valid JWT; `KITCHEN` additionally needs the order to be `LUNAS`. A refused subscribe gets `{"topic": "...", "event": "error", "data": {"code": "FORBIDDEN", "message": "topic not allowed"}}` and no subscription.
+
 Message:
 
 ```json
-{ "topic": "order:uuid", "event": "order.updated", "data": { "id": "uuid", "status": "DIPROSES" } }
+{ "topic": "order:uuid", "event": "order.updated", "data": { "id": "uuid", "order_number": "DI-20261121-001", "status": "DIPROSES", "payment_status": "LUNAS", "items": [{ "id": "uuid", "status": "COOKING" }] } }
 ```
 
-Events: `order.created`, `order.updated`, `item.updated`, `session.closed`. The server is the only publisher. If the socket drops, clients poll and resubscribe on reconnect (EC-19).
+Events: `order.created`, `order.updated`, `item.updated`, `session.closed`. The server is the only publisher. The server pings every 30 s; a client that does not read fast enough is disconnected rather than blocking the hub. If the socket drops, clients poll and resubscribe on reconnect (EC-19).
 
 ## Midtrans callback
 

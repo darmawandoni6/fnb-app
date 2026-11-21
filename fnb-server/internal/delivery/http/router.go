@@ -17,6 +17,7 @@ type Handlers struct {
 	Admin   *AdminHandler
 	Stock   *StockHandler
 	Users   *UsersSettingsHandler
+	WS      *WSHandler
 }
 
 func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, sessionUsecase *usecase.TableSessionUsecase, isDevelopment bool, log *slog.Logger) *echo.Echo {
@@ -72,6 +73,7 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	publicGroup := e.Group("/public")
 	publicGroup.POST("/tables/:qr_token/sessions", h.Public.OpenSession, qrRateLimit(20, 20))
 	publicGroup.POST("/payments/midtrans/callback", h.Payment.MidtransCallback)
+	e.GET("/ws", h.WS.Connect)
 
 	sessionGroup := e.Group("/public", SessionMiddleware(sessionUsecase))
 	sessionGroup.GET("/menu", h.Public.Menu, sessionRateLimit(60, 60))

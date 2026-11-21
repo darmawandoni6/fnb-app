@@ -6,6 +6,7 @@ require (
 	github.com/go-playground/validator/v10 v10.30.6
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.5.5
 	github.com/labstack/echo/v4 v4.16.3
 	golang.org/x/crypto v0.58.0

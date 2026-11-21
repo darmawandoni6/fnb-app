@@ -28,8 +28,8 @@ func newOrderTxRunner(db *gorm.DB) usecase.TxRunner {
 	}
 }
 
-func newPaymentHandler(db *gorm.DB, cfg *config.Config, log *slog.Logger) *httpDelivery.PaymentHandler {
+func newPaymentHandler(db *gorm.DB, cfg *config.Config, hub *usecase.Hub, log *slog.Logger) *httpDelivery.PaymentHandler {
 	orderRepo := repository.NewOrderRepository(db)
-	paymentUsecase := usecase.NewPaymentUsecase(orderRepo, newOrderTxRunner(db), cfg.MidtransServerKey, nil, log)
+	paymentUsecase := usecase.NewPaymentUsecase(orderRepo, newOrderTxRunner(db), cfg.MidtransServerKey, hub, log)
 	return httpDelivery.NewPaymentHandler(paymentUsecase)
 }

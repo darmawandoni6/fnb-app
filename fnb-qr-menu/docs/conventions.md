@@ -14,13 +14,16 @@ Place constants shared across features in `src/constants/`.
 export const ORDER_STATUS = {
   MENUNGGU: 'MENUNGGU',
   DIPROSES: 'DIPROSES',
-  SIAP: 'SIAP',
-  DIANTAR: 'DIANTAR',
   SELESAI: 'SELESAI',
   DIBATALKAN: 'DIBATALKAN',
 } as const
 
 export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS]
+
+export const PAYMENT_METHOD = {
+  CASH: 'CASH',
+  NON_CASH: 'NON_CASH',
+} as const
 
 export const POLL_INTERVAL_MS = 5_000
 export const SESSION_STORAGE_KEY = 'fnb-qr-menu:session'
@@ -39,6 +42,7 @@ export const MOCK_TABLE_TOKEN = {
 
 Rules:
 
+- Customer labels "siap" and "dalam pengantaran" are derived from item statuses in the UI; they are not stored status values.
 - Use one file per domain, for example `orderStatus.ts`, `cart.ts`, `storage.ts`.
 - Use `as const` for value maps.
 - Do not place magic strings or numbers in components.
@@ -58,7 +62,8 @@ Boolean names must use a prefix that describes the condition:
 ```ts
 const isOpen = menu.isOpen
 const hasOrder = session.orders.length > 0
-const canCancel = item.status === ITEM_STATUS.PENDING
+const canCancel =
+  order.status === ORDER_STATUS.MENUNGGU && order.payment_status === PAYMENT_STATUS.BELUM
 const isBrowseOnly = session.browseOnly
 ```
 
@@ -78,7 +83,7 @@ const cartLines = lines
 
 - React components: `PascalCase`, for example `MenuItemCard.tsx`.
 - Function components: `PascalCase`, for example `function MenuItemCard()`.
-- Custom hooks: `camelCase` with a `use` prefix, for example `useCustomerSession.ts`, `useTrackedOrder.ts`.
+- Custom hooks: `camelCase` with a `use` prefix, for example `useCustomerSession.ts`, `useOrderList.ts`.
 - Types and interfaces: `PascalCase`, for example `PublicMenu`, `Order`, `CustomerSession`, `CartLine`.
 - Props types: `[ComponentName]Props`, for example `MenuItemCardProps`.
 - Type guards: `is` prefix, for example `isApiError`.
@@ -111,13 +116,13 @@ type CartLine = { menuId: string; qty: number; note: string }
 
 type TrackedOrder = {
   id: string
-  trackingToken: string
   snapshot: OrderStatusResponse
 }
 
 type CustomerSession = {
   v: 1
   qr: string
+  sessionToken: string
   cart: CartLine[]
   orders: TrackedOrder[]
   browseOnly: boolean
@@ -160,32 +165,39 @@ Never put secrets in `VITE_*` variables; their values are included in the browse
 
 ## API Naming
 
-- API functions: verb + resource, for example `getPublicMenu`, `createPublicOrder`.
-- Mutation functions: `cancelOrderItem`.
-- Query option factories: `menuQuery`, `orderQuery`, following the iul `catalog/queries.ts` shape.
+- API functions: verb + resource, for example `openTableSession`, `getPublicMenu`, `createPublicOrder`.
+- Mutation functions: `cancelPublicOrder`.
+- Query option factories: `menuQuery`, `ordersQuery`, following the iul `catalog/queries.ts` shape.
 - Response DTOs: `Response` suffix when they differ from the domain type.
 - Request DTOs: `Request` suffix.
 - Error type: `ApiError`.
 
 ```ts
 export type CreatePublicOrderRequest = {
+  order_type: 'DINE_IN'
+  customer_name: string
+  customer_phone: string | null
+  payment_method: 'CASH' | 'NON_CASH'
   items: CreatePublicOrderItemRequest[]
 }
 
 export type CreatePublicOrderResponse = {
-  order_id: string
-  tracking_token: string
+  id: string
+  order_number: string
+  status: OrderStatus
+  payment_status: PaymentStatus
   subtotal_amount: number
+  service_amount: number
   tax_amount: number
   total_amount: number
-  status: OrderStatus
+  payment_url: string | null
 }
 
 export async function createPublicOrder(
-  qrToken: string,
+  sessionToken: string,
   request: CreatePublicOrderRequest,
 ): Promise<CreatePublicOrderResponse> {
-  // Send request through the API client.
+  // Send request through the API client with X-Session-Token.
 }
 ```
 
@@ -194,8 +206,8 @@ export async function createPublicOrder(
 Use constant maps instead of repeating string literals.
 
 ```ts
-if (item.status === ITEM_STATUS.PENDING) {
-  // Allow cancel action.
+if (canCancel) {
+  // Show the order-level cancel action.
 }
 ```
 

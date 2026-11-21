@@ -1,6 +1,6 @@
 # M1 API Draft
 
-This document is the source of truth before generating the Bruno request collection.
+This document is the source of truth before generating the Bruno request collection. Business rules live in `PRD.md`.
 
 Local base URL:
 
@@ -24,35 +24,57 @@ The access token uses this header:
 Authorization: Bearer <access_token>
 ```
 
-The refresh token uses an httpOnly cookie. The database stores only the token hash in `sessions`.
+The refresh token uses an httpOnly cookie. The database stores only the token hash in `sessions`. The login identity is `email`; there is no `username`.
 
 ## Public — customer
 
-No JWT required.
+No login. The customer is identified by a table session token.
 
 | Method | Path | Description |
 |---|---|---|
-| `GET` | `/public/tables/:qr_token/menu` | Available menus and categories |
-| `POST` | `/public/tables/:qr_token/orders` | Create a QR order and return a tracking token |
-| `GET` | `/public/orders/:tracking_token` | Order status and each item status |
-| `POST` | `/public/orders/:tracking_token/cancel` | Cancel the customer's `PENDING` item |
+| `POST` | `/public/tables/:qr_token/sessions` | Open a table session and return `session_token` |
+| `GET` | `/public/menu` | Cafe name, rates, `is_open`, categories and menus |
+| `POST` | `/public/orders` | Create an order in the session |
+| `GET` | `/public/orders` | Every order in the session |
+| `GET` | `/public/orders/:id` | One order with its items |
+| `POST` | `/public/orders/:id/cancel` | Cancel the whole order while `MENUNGGU` |
 
-The server reads prices from the database. The client must not determine prices, tax, totals, or stock.
+Every endpoint except `POST .../sessions` requires:
+
+```text
+X-Session-Token: <session_token>
+```
+
+A missing, unknown, or closed session token returns `401 UNAUTHORIZED`. The client never decides prices, service charge, tax, totals, or stock.
 
 Rate limits (per instance, in-memory):
 
 | Endpoint | Limit | Key |
 |---|---|---|
-| `POST /public/tables/:qr_token/orders` | 5/minute | `qr_token` |
-| `GET /public/orders/:tracking_token` | 30/minute | client IP |
-| `GET /public/tables/:qr_token/menu` | 60/minute | `qr_token` |
+| `POST /public/tables/:qr_token/sessions` | 20/minute | `qr_token` |
+| `GET /public/menu` | 60/minute | session token |
+| `POST /public/orders` | 5/minute | session token |
+| `GET /public/orders` | 30/minute | session token |
+
+### Open table session
+
+```json
+{
+  "session_token": "uuid",
+  "table_number": "A1",
+  "status": "OPEN"
+}
+```
+
+Idempotent while the session is open: scanning the same table QR again returns the same token (EC-14). An inactive table returns `404 NOT_FOUND`. A table with no open session creates one.
 
 ### Menu response
 
 ```json
 {
   "cafe_name": "Demo Cafe",
-  "tax_percent": 10,
+  "service_rate": 5,
+  "tax_rate": 10,
   "is_open": true,
   "categories": [
     {
@@ -64,83 +86,179 @@ Rate limits (per instance, in-memory):
 }
 ```
 
-Categories with no available menu are omitted. When `is_open` is `false`, the client disables ordering; `POST .../orders` returns `409 STORE_CLOSED`.
+Categories with no available menu are omitted. When `is_open` is `false`, the client disables ordering and `POST /public/orders` returns `409 STORE_CLOSED`.
 
-### Cancel item
-
-```json
-{
-  "item_id": "uuid"
-}
-```
-
-Only items with status `PENDING` can be cancelled. Cancelling while the order is `BELUM` keeps the order totals unchanged; cancelling while `LUNAS` records a refund and decreases the totals.
-
-### Create QR order
+### Create order
 
 ```json
 {
+  "order_type": "DINE_IN",
+  "customer_name": "Budi",
+  "customer_phone": null,
+  "payment_method": "CASH",
   "items": [
-    {
-      "menu_id": "uuid",
-      "qty": 2,
-      "note": "no sugar"
-    }
+    { "menu_id": "uuid", "qty": 2, "note": "no sugar" }
   ]
 }
 ```
 
-The response returns `tracking_token` once. QR Menu stores it in `localStorage`.
+- `customer_name` is required for every order; an empty value returns `400 VALIDATION_ERROR`.
+- `customer_phone` is optional.
+- `order_type` is `DINE_IN` for this endpoint; `table_id` and `table_session_id` come from the session.
+- `payment_method` is `CASH` or `NON_CASH`. For `NON_CASH` the response also carries `payment_url` and `snap_token`.
+- The server validates menu availability, recipes, and stock, then writes order, items, order number, snapshots, and `OUT` stock movements in one transaction.
+
+Response:
+
+```json
+{
+  "id": "uuid",
+  "order_number": "DI-001",
+  "status": "MENUNGGU",
+  "payment_status": "BELUM",
+  "subtotal_amount": 50000,
+  "service_amount": 2500,
+  "tax_amount": 5250,
+  "total_amount": 57750,
+  "payment_url": null,
+  "items": [{ "id": "uuid", "menu_id": "uuid", "status": "PENDING" }]
+}
+```
+
+### Order status
+
+```json
+{
+  "id": "uuid",
+  "order_number": "DI-001",
+  "status": "DIPROSES",
+  "payment_status": "LUNAS",
+  "order_type": "DINE_IN",
+  "customer_name": "Budi",
+  "subtotal_amount": 50000,
+  "service_amount": 2500,
+  "tax_amount": 5250,
+  "total_amount": 57750,
+  "created_at": "2026-11-20T10:00:00Z",
+  "items": [
+    { "id": "uuid", "menu_id": "uuid", "menu_name_snapshot": "Latte", "qty": 2, "price": 25000, "status": "COOKING", "note": null }
+  ]
+}
+```
+
+`GET /public/orders` returns only orders belonging to the caller's session, newest first.
+
+### Cancel order
+
+`POST /public/orders/:id/cancel` cancels the whole order.
+
+```json
+{ "reason": "changed my mind" }
+```
+
+Rules:
+
+- Allowed only while `status = MENUNGGU` and `payment_status = BELUM`. Otherwise `409 INVALID_TRANSITION`.
+- Every item moves to `CANCELLED`; stock for every item is restored; `RESTORE` movements are written.
+- No refund is created; no money has been collected.
+- Order becomes `DIBATALKAN` and `cancel_reason`/`canceled_at` are filled.
+- Cancellation is allowed while the store is closed.
 
 ## Internal — orders
 
 All endpoints below use JWT and role middleware.
 
-| Method | Path | Role | Keterangan |
+| Method | Path | Role | Description |
 |---|---|---|---|
-| `GET` | `/orders` | All roles | Filter by `status`, `table_id`, `date` |
+| `GET` | `/orders` | All roles | Filter by `status`, `table_id`, `order_type`, `date` |
 | `GET` | `/orders/:id` | All roles | Order and item details |
-| `POST` | `/orders/manual` | `CASHIER`, `OWNER` | Create a walk-in order |
-| `PATCH` | `/orders/:id/payment` | `CASHIER`, `OWNER` | Mark payment as `LUNAS` |
+| `POST` | `/orders/manual` | `CASHIER` | Create a take away order |
+| `PATCH` | `/orders/:id/payment` | `CASHIER`, `OWNER` | Confirm payment, idempotent |
+| `POST` | `/orders/:id/cancel` | `OWNER` | Cancel an unpaid order |
 
-The kitchen only sees `LUNAS` orders in the list. Reading an unpaid order by id returns `404 NOT_FOUND` to the kitchen. The kitchen board combines `MENUNGGU`, `DIPROSES`, and `DIANTAR` orders that still have active `PENDING` or `COOKING` items, because a paid order stays `MENUNGGU` until the first item becomes `COOKING`.
+`orders.status` is a stored aggregate recomputed on every item and payment change (PRD §5.3). There is no endpoint that sets it directly. `GET /orders` returns at most 200 rows, newest first; `date` is a UTC day (`YYYY-MM-DD`).
 
-There is no order status endpoint. `status` is derived from item statuses and payment according to PRD §5.1. `GET /orders` returns at most 200 rows, newest first; `date` is a UTC day (`YYYY-MM-DD`).
+The kitchen sees only `LUNAS` orders; reading an unpaid order by id returns `404 NOT_FOUND` to the kitchen.
 
 Create manual order:
 
 ```json
 {
+  "customer_name": "Budi",
+  "customer_phone": null,
+  "payment_method": "CASH",
   "items": [
     { "menu_id": "uuid", "qty": 1, "note": null }
   ]
 }
 ```
 
-Manual orders have `order_type = MANUAL`, `created_by` set from the JWT, and `table_id = NULL`. When `settings.is_open` is `false`, creation returns `409 STORE_CLOSED`, the same as QR orders.
+Manual orders have `order_type = TAKE_AWAY`, `created_by` from the JWT, and `table_id = NULL`. `customer_name` is required. When `settings.is_open` is `false`, creation returns `409 STORE_CLOSED`, the same as QR orders.
 
 Payment:
 
 ```json
-{ "payment_status": "LUNAS", "payment_method": "CASH", "amount_received": 50000, "change_amount": 17000 }
+{ "payment_method": "CASH", "amount_received": 100000, "change_amount": 42250 }
 ```
 
-`payment_method` is required and is `CASH` or `NON_CASH`. Only `BELUM → LUNAS` is allowed in M1; repeating it returns `409 INVALID_TRANSITION`. `amount_received` and `change_amount` are optional cash tendering fields, stored on the order when `payment_method` is `CASH` and returned as `null` otherwise, so a receipt can be reprinted with the same figures.
+- `payment_method` is required and is `CASH` or `NON_CASH`.
+- Only `BELUM → LUNAS` is a state change. Repeating the call returns `200` and the same order; no second `payment_log` is written (BR-11).
+- `amount_received` and `change_amount` are stored only for `CASH` and returned as `null` otherwise, so a receipt prints the same figures.
+- A manual `NON_CASH` confirmation has no `payment_ref`; reports treat it as manual until Midtrans is live.
+- The response returns the full order with its items so the dashboard reads the new `status` without a second call.
+
+Cancel order:
+
+```json
+{ "reason": "customer left" }
+```
+
+`OWNER` only. Same rules as the public cancel endpoint.
 
 ## Internal — kitchen items
 
 | Method | Path | Role | Body |
 |---|---|---|---|
-| `PATCH` | `/orders/:id/items/:item_id/status` | `KITCHEN`, `OWNER` for `COOKING`/`READY`; `CASHIER`, `OWNER` for `DELIVERED` | `{status: COOKING\|READY\|DELIVERED}` |
-| `POST` | `/orders/:id/items/:item_id/cancel` | `CASHIER`, `OWNER` | Batal if item `PENDING` |
+| `PATCH` | `/orders/:id/items/:item_id/status` | `KITCHEN`, `OWNER` for `COOKING`/`READY`; `KITCHEN`, `CASHIER`, `OWNER` for `DELIVERED`; `KITCHEN`, `CASHIER`, `OWNER` for `COMPLETED` | `{ "status": "COOKING" }` |
 
-Transitions are forward only: `PENDING → COOKING → READY → DELIVERED`. `COOKING` is rejected with `409 PAYMENT_REQUIRED` while the order is `BELUM`. `DELIVERED` moves the order to `DIANTAR`; the last active item plus `LUNAS` moves it to `SELESAI`.
+Transitions are forward only:
 
-The customer who owns the order, `CASHIER`, and `OWNER` may cancel `PENDING` items according to the PRD. After `COOKING`, items cannot be cancelled in M1. A staff cancellation on a `LUNAS` order writes a refund with `actor_id` set to the staff user and reason `staff cancelled item`; a `BELUM` cancellation writes no refund.
+```text
+PENDING → COOKING → READY → DELIVERED → COMPLETED
+```
 
-Item status and payment responses return the full order with its items, so the dashboard can read the new aggregate `status` without a second call.
+- `COOKING` is rejected with `409 PAYMENT_REQUIRED` while the order is `BELUM`.
+- `CASHIER` may only move items whose order is `TAKE_AWAY` to `DELIVERED` and `COMPLETED`.
+- `COMPLETED` is also reached automatically after `delivered_auto_complete_minutes`; a manual call earlier is an override (EC-13).
+- `READY → DELIVERED` is also reached automatically after `ready_auto_deliver_minutes`, after the warning window.
+- Two clients racing the same transition: the first write wins, the second is a no-op (EC-10).
 
-## Internal — menus and tables
+Item status and payment responses return the full order with its items.
+
+## Internal — tables and table sessions
+
+| Method | Path | Role | Description |
+|---|---|---|---|
+| `GET` | `/tables` | `OWNER` | List tables, sorted by `table_number` |
+| `POST` | `/tables` | `OWNER` | Create table and `qr_token` |
+| `PATCH` | `/tables/:id` | `OWNER` | Update table; `table_number` stays unique |
+| `DELETE` | `/tables/:id` | `OWNER` | Deactivate table |
+| `GET` | `/tables/:id/session` | `CASHIER`, `OWNER` | Read the open session of a table |
+| `POST` | `/tables/:id/session/close` | `CASHIER`, `OWNER` | Close the open session manually |
+
+Closing a session does not touch its orders; they keep `table_session_id`. A closed session cannot be reopened.
+
+Table QR content:
+
+```text
+<QR_MENU_BASE_URL>/?meja=<qr_token>
+```
+
+`QR_MENU_BASE_URL` is configured through the dashboard env `VITE_QR_MENU_URL`; the dashboard has no default and disables the "open QR Menu" action while it is empty.
+
+`qr_token` is generated by `POST /tables` and does not rotate in M1 — reprinting or re-rendering produces the same QR. Deactivating a table (`DELETE /tables/:id`) is the way to reject its QR scans without changing the token.
+
+## Internal — menus
 
 Role: `OWNER`.
 
@@ -154,22 +272,8 @@ Role: `OWNER`.
 | `POST` | `/menus` | Create menu; use multipart photo upload when needed |
 | `PATCH` | `/menus/:id` | Update menu |
 | `DELETE` | `/menus/:id` | Delete/deactivate menu |
-| `GET` | `/tables` | List tables, sorted by `table_number` |
-| `POST` | `/tables` | Create table and `qr_token` |
-| `PATCH` | `/tables/:id` | Update table; `table_number` stays unique |
-| `DELETE` | `/tables/:id` | Deactivate table |
 
 Exception: `PATCH /menus/:id` is also allowed for `CASHIER`, but only the `is_available` field. Sending `name`, `price`, `image_url`, or `category_id` as a cashier returns `403 FORBIDDEN`.
-
-Table QR content:
-
-```text
-<QR_MENU_BASE_URL>/?meja=<qr_token>
-```
-
-`QR_MENU_BASE_URL` is configured through the dashboard env `VITE_QR_MENU_URL`; the dashboard has no default and disables the "open QR Menu" action while it is empty. The QR Menu app (`fnb-qr-menu`) reads `meja` from the query string and resolves it with `GET /public/tables/:code`, which accepts either a `qr_token` or a `table_number`. The dashboard sends the token so the label keeps working if a number is ever reused.
-
-`qr_token` is generated by `POST /tables` and does not rotate in M1 — reprinting or re-rendering produces the same QR. Rotating a token would invalidate QR codes already attached to tables and requires a new endpoint plus reprinted labels, so it is out of scope. Deactivating a table (`DELETE /tables/:id`) is the way to reject its QR orders without changing the token.
 
 ## Internal — stock
 
@@ -178,7 +282,7 @@ Table QR content:
 | Method | Path | Description |
 |---|---|---|
 | `GET` | `/ingredients` | List ingredients with `stock_qty` and `min_stock` |
-| `POST` | `/ingredients` | Create ingredient (`name`, `unit`, `stock_qty`, `min_stock`); writes movement `ADJUSTMENT` when `stock_qty > 0` |
+| `POST` | `/ingredients` | Create ingredient; writes movement `ADJUSTMENT` when `stock_qty > 0` |
 | `PATCH` | `/ingredients/:id` | Update ingredient, including `min_stock` |
 | `POST` | `/ingredients/:id/restock` | Add stock and movement `IN` (body `{ qty, note? }`) |
 | `POST` | `/ingredients/:id/adjust` | Stock opname: body `{ stock_qty, note? }`, replaces stock, writes `ADJUSTMENT` with the signed delta |
@@ -188,36 +292,86 @@ Table QR content:
 | `DELETE` | `/recipe-items/:id` | Delete recipe item |
 | `GET` | `/stock-movements` | List stock movements; query `ingredient_id`, `type`, `from`, `to` (ISO date) |
 
-`stock_movements.qty` is signed per PRD §9: positive for incoming (`IN`, `RESTORE`) and negative for outgoing (`OUT`). `ADJUSTMENT` stores the signed delta between the counted stock and the previous stock, so it can be positive or negative and is never zero. `order_id`/`order_item_id` are filled for `OUT` and `RESTORE`.
+`stock_movements.qty` is signed: positive for `IN` and `RESTORE`, negative for `OUT`. `ADJUSTMENT` stores the signed delta and is never zero. `order_id`/`order_item_id` are filled for `OUT` and `RESTORE`.
 
-`POST /ingredients/:id/adjust` is an extension beyond PRD Phase 2 (opname). The flow is documented in `docs/flow.md` under "Stock Opname".
+`POST`, `PATCH`, and `DELETE` on `/recipe-items` are rejected with `STORE_CLOSED` while `settings.is_open` is true (BR-23). Reading recipes stays allowed. Restock, opname, and ingredient CRUD are not gated by `is_open`.
 
-`POST`, `PATCH`, and `DELETE` on `/recipe-items` are rejected with `STORE_CLOSED` while `settings.is_open` is true (PRD §8: recipes are finalized before the store opens). Reading recipes stays allowed. Restock, opname, and ingredient CRUD are not gated by `is_open`.
+## Internal — users, settings, audit
 
-## Internal — users and settings
+| Method | Path | Role | Description |
+|---|---|---|---|
+| `GET` | `/users` | `OWNER` | List users |
+| `POST` | `/users` | `OWNER` | Create `CASHIER` or `KITCHEN` user |
+| `PATCH` | `/users/:id` | `OWNER` | Update or activate/deactivate user |
+| `GET` | `/settings` | `OWNER` | Read every outlet setting |
+| `PATCH` | `/settings` | `OWNER` | Update outlet settings |
+| `GET` | `/audit-log` | `OWNER` | Read the audit trail; query `entity`, `entity_id`, `actor_id`, `from`, `to` |
 
-Role: `OWNER`.
+Settings fields:
 
-| Method | Path | Description |
-|---|---|---|
-| `GET` | `/users` | List users |
-| `POST` | `/users` | Create `CASHIER` or `KITCHEN` user |
-| `PATCH` | `/users/:id` | Update or activate/deactivate user |
-| `GET` | `/settings` | Get `cafe_name` and `tax_percent` |
-| `PATCH` | `/settings` | Update settings |
+```json
+{
+  "cafe_name": "Demo Cafe",
+  "service_rate": 5,
+  "tax_rate": 10,
+  "is_open": true,
+  "cash_timeout_minutes": 15,
+  "delivered_auto_complete_minutes": 5,
+  "ready_auto_deliver_minutes": 10,
+  "ready_auto_deliver_warning_minutes": 2
+}
+```
 
-## Error codes
+Every rate and timer is configurable. Changing a rate affects only new orders (BR-12).
 
-| Code | HTTP | Kapan |
+## WebSocket
+
+```text
+GET /ws                          Authorization: Bearer <access_token>
+GET /ws?session=<session_token>  QR Menu table session
+```
+
+Topics:
+
+- `order:{id}` — dashboard subscribers.
+- `session:{session_token}` — customer subscribers.
+
+Message:
+
+```json
+{ "topic": "order:uuid", "event": "order.updated", "data": { "id": "uuid", "status": "DIPROSES" } }
+```
+
+Events: `order.created`, `order.updated`, `item.updated`, `session.closed`. The server is the only publisher. If the socket drops, clients poll and resubscribe on reconnect (EC-19).
+
+## Midtrans callback
+
+```text
+POST /public/payments/midtrans/callback
+```
+
+Verifies `signature_key`, then is idempotent on `gateway_ref` and `order_id`:
+
+| Midtrans status | Effect |
+|---|---|
+| `settlement` | `payment_status` `LUNAS`, `paid_at`, `payment_ref`, `payment_log` `SETTLED`, order `DIPROSES` |
+| `expire`, `deny`, `cancel` | Order `DIBATALKAN`, every item `CANCELLED`, stock restored |
+| anything else | `200`, no state change |
+
+A repeated callback with the same `gateway_ref` returns `200` and writes nothing.
+
+## Error Codes
+
+| Code | HTTP | When |
 |---|---:|---|
-| `VALIDATION_ERROR` | 400 | Invalid input |
+| `VALIDATION_ERROR` | 400 | Invalid input or missing required field |
 | `UNAUTHORIZED` | 401 | Missing or invalid token |
 | `FORBIDDEN` | 403 | Role is not authorized |
 | `NOT_FOUND` | 404 | Resource not found |
 | `STOCK_NOT_ENOUGH` | 409 | Insufficient stock |
 | `STORE_CLOSED` | 409 | Store is closed for new orders |
-| `INVALID_TRANSITION` | 409 | Status violates PRD matrix |
-| `PAYMENT_REQUIRED` | 409 | Kitchen/order requires payment |
+| `INVALID_TRANSITION` | 409 | Transition violates the state machine |
+| `PAYMENT_REQUIRED` | 409 | Cooking requested before payment |
 | `INTERNAL_ERROR` | 500 | Unexpected failure |
 
 ## Bruno collection
@@ -231,6 +385,7 @@ bruno/
 ├── auth/
 ├── public/
 ├── orders/
+├── tables/
 ├── menus/
 ├── stock/
 └── users/

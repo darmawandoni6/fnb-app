@@ -159,7 +159,7 @@ VITE_USE_MOCKS=true
 
 Verify: `git status --short` shows no `.env`.
 
-### Step 10 — Create constants
+### Step 10 — Create constants `[REWORK]`
 
 Files: `src/constants/`
 
@@ -167,6 +167,7 @@ Files: `src/constants/`
 orderStatus.ts     ORDER_STATUS map + OrderStatus type
 itemStatus.ts      ITEM_STATUS map + ItemStatus type
 paymentStatus.ts   PAYMENT_STATUS map + PaymentStatus type
+paymentMethod.ts   PAYMENT_METHOD map (CASH, NON_CASH) + PaymentMethod type
 cart.ts            MAX_QTY 50, NOTE_MAX 120
 storage.ts         SESSION_STORAGE_KEY, SESSION_VERSION
 queryKeys.ts       query key factories
@@ -179,52 +180,60 @@ All maps use `as const`. Names follow `docs/conventions.md`.
 
 Verify: `npm run build` passes; no magic string remains in a component later.
 
-### Step 11 — Create types and lib helpers
+### Step 11 — Create types and lib helpers `[REWORK]`
 
 Files: `src/types/`, `src/lib/`
 
 - `src/types/api.ts` — success and error envelope types, `ApiError` shape.
 - `src/types/menu.ts` — `PublicMenu`, `MenuCategory`, `MenuItem`.
-- `src/types/order.ts` — `PublicOrder`, `PublicOrderItem`, `OrderStatusResponse`, `CreatePublicOrderRequest`.
+- `src/types/order.ts` — `OpenSessionResponse`, `PublicOrder`, `PublicOrderItem`, `OrderStatusResponse`, `PublicOrderList`, `CreatePublicOrderRequest`, `CancelPublicOrderRequest`.
 - `src/lib/apiError.ts` — `isApiError` type guard.
 - `src/lib/formatRupiah.ts` — `Intl.NumberFormat('id-ID')`.
 - `src/lib/useNow.ts` — ticking clock hook for relative time.
 - `src/lib/mode.ts` — `export const useMocks = import.meta.env.VITE_USE_MOCKS === 'true'`.
 
-Types mirror `../docs/api.md` and `fnb-server/internal/delivery/http/dto/public.go`, including `order_id`, `tracking_token`, totals, `status`, `payment_status`, and `items[{id, menu_name, qty, price, status, note}]`.
+Types mirror `../docs/api.md`: `session_token` from the session open; `cafe_name`, `service_rate`, `tax_rate`, `is_open` from the menu; the order payload carries `order_type`, `customer_name`, `customer_phone`, `payment_method`, `items[{menu_id, qty, note}]`; the order response carries `id`, `order_number`, `status`, `payment_status`, `subtotal_amount`, `service_amount`, `tax_amount`, `total_amount`, `payment_url`, `items[{id, menu_id, menu_name_snapshot, qty, price, status, note}]`. There is no `tracking_token` anywhere.
 
 Verify: `npm run build` passes.
 
-### Step 12 — Create the mock/HTTP switch
+### Step 12 — Create the mock/HTTP switch `[REWORK]`
 
-Files: `src/api/index.ts`, `src/api/publicMenu.ts`, `src/api/publicOrders.ts`
+Files: `src/api/index.ts`, `src/api/session.ts`, `src/api/publicMenu.ts`, `src/api/publicOrders.ts`
 
 ```ts
 import * as mockMenu from '@/mocks/handlers/publicMenu'
 import * as mockOrders from '@/mocks/handlers/publicOrders'
+import * as mockSession from '@/mocks/handlers/session'
 
 import { useMocks } from '@/lib/mode'
 
 import * as httpMenu from './publicMenu'
 import * as httpOrders from './publicOrders'
+import * as httpSession from './session'
 
+export const openTableSession = useMocks
+  ? mockSession.openTableSession
+  : httpSession.openTableSession
 export const getPublicMenu = useMocks ? mockMenu.getPublicMenu : httpMenu.getPublicMenu
 export const createPublicOrder = useMocks
   ? mockOrders.createPublicOrder
   : httpOrders.createPublicOrder
-export const getPublicOrder = useMocks ? mockOrders.getPublicOrder : httpOrders.getPublicOrder
-export const cancelOrderItem = useMocks ? mockOrders.cancelOrderItem : httpOrders.cancelOrderItem
+export const getPublicOrders = useMocks ? mockOrders.getPublicOrders : httpOrders.getPublicOrders
+export const cancelPublicOrder = useMocks
+  ? mockOrders.cancelPublicOrder
+  : httpOrders.cancelPublicOrder
 ```
 
-Phase 1 fills the mock modules; Phase 3 fills the HTTP modules. Until then both sides export typed stubs that throw `NOT_IMPLEMENTED`.
+Phase 1 fills the mock modules; Phase 3 fills the HTTP modules. Until then both sides export typed stubs that throw `NOT_IMPLEMENTED`. The old `getPublicOrder` / `cancelOrderItem` exports are removed with the rework.
 
 Verify: importing from `@/api` typechecks with no mock or HTTP detail leaking into a component.
 
-### Step 13 — Create the session store skeleton
+### Step 13 — Create the session store skeleton `[REWORK]`
 
 Files: `src/features/session/store.ts`
 
-- `CustomerSession` with `v: 1`, `qr`, `cart`, `orders`, `browseOnly`, `invalidTable`, `updatedAt`.
+- `CustomerSession` with `v: 1`, `qr`, `sessionToken`, `cart`, `orders`, `browseOnly`, `invalidTable`, `updatedAt`.
+- `TrackedOrder` is `{ id, snapshot }`; there is no `trackingToken`.
 - `read`, `write`, `subscribe` with a `storage` listener.
 - `useCustomerSession()` returning `[session, update]` via `useSyncExternalStore`.
 - Storage failures fall back to memory; corrupt or unknown versions start empty.
@@ -251,6 +260,6 @@ Verify: a throwaway component can add a cart line and survives a reload.
 - Do not commit `.env`, `node_modules/`, or any token.
 - `VITE_USE_MOCKS=true` must fail a production build; the guard lands with `src/api/index.ts`.
 - QR Menu has no `VITE_QR_MENU_URL`; it is the target of the QR link, not the producer.
-- The API returns no `table_number`, no opening hours, and no order timeline.
-- The status rate limit is 30/minute per IP; polling only the open card keeps the app at 12/minute.
+- The session open returns `table_number`; the menu response has no opening hours and no order timeline.
+- Rate limits are keyed by session token: `POST /public/orders` 5/minute, `GET /public/orders` 30/minute. One list poll every 5 seconds is 12/minute.
 - The client must never compute subtotal, tax, or total.

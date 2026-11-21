@@ -1,13 +1,13 @@
-# Phase 2.5 — Cart and Order Submit
+# Phase 2.5 — Cart, Checkout Form, Order Submit
 
 Granular plan for Phase 2.5 of `../implementation-plan.md`.
 
-Goal: a working cart page that lists lines with unit prices, submits the order through `@/api`, and stores the resulting order in the session. No aggregate totals.
+Goal: a working cart page that lists lines with unit prices, collects the required customer name plus payment method, submits the order through `@/api`, and stores the resulting order in the session. No client-side aggregate totals.
 
 ## Prerequisites
 
 - Phase 2 complete: cart helpers, session store, menu query, cart bar.
-- Docs read: `docs/tech-stack.md` (Cart Rules), `../docs/api.md` (Create QR order, Error codes).
+- Docs read: `docs/tech-stack.md` (Cart Rules), `../docs/api.md` (Create order, Open table session, Error codes).
 
 ## Steps
 
@@ -38,7 +38,7 @@ Verify: an empty cart shows the empty state, not a broken list.
 Files: `src/features/checkout/pages/CartPage.tsx`
 
 - Footer text: "N item · total dihitung kasir".
-- No subtotal, tax, or total anywhere on the page.
+- No subtotal, service, tax, or total anywhere on the page.
 - Submit button disabled when the cart is empty or ordering is blocked.
 
 `api.md` forbids the client from determining prices, tax, or totals. This step is the enforcement point.
@@ -55,24 +55,46 @@ Files: `src/features/checkout/pages/CartPage.tsx`, `src/features/browse/cart.ts`
 
 Verify: remove a menu from the mock response, reload, and confirm the cart empties with the message.
 
-### Step 5 — Implement the submit mutation
+### Step 5 — Build the checkout form `[REWORK]`
+
+Files: `src/features/checkout/components/CheckoutForm.tsx`, `src/schemas/checkout.ts`
+
+- `customer_name`: required, trimmed, non-empty; React Hook Form + Zod (already installed).
+- `customer_phone`: optional; empty string maps to `null` in the payload.
+- `payment_method`: radio group `CASH` / `NON_CASH`, default `CASH`; helper text for `NON_CASH` says payment continues in Snap.
+- Inline errors from the Zod schema; no client-side totals anywhere in the form.
+
+Verify: submitting with an empty name shows an inline error and never calls the API.
+
+### Step 6 — Implement the submit mutation `[REWORK]`
 
 Files: `src/features/checkout/hooks.ts`
 
 ```ts
 export const useSendOrder = () =>
   useMutation({
-    mutationFn: (input: CreatePublicOrderRequest) => createPublicOrder(session.qr, input),
+    mutationFn: (input: CreatePublicOrderRequest) => createPublicOrder(session.sessionToken, input),
   })
 ```
 
-- Payload is `items: [{ menu_id, qty, note }]` with hidden lines removed.
+- Payload is `{ order_type: 'DINE_IN', customer_name, customer_phone, payment_method, items: [{ menu_id, qty, note }] }` with hidden lines removed.
 - Empty payload after filtering → do not call the API.
-- On success: prepend `{ id: order_id, trackingToken: tracking_token, snapshot: response }` to `session.orders`, clear `cart`, then navigate to `/status`.
+- On success: prepend `{ id: response.id, snapshot: response }` to `session.orders`, clear `cart`, then handle the payment branch (Step 7).
+- `401 UNAUTHORIZED` → re-open the session from `session.qr` once and retry the submit; `404` → `/tidak-valid`.
 
 Verify: submitting adds one card and empties the cart.
 
-### Step 6 — Handle `STORE_CLOSED`
+### Step 7 — Branch on the payment method `[REWORK]`
+
+Files: `src/features/checkout/pages/CartPage.tsx`
+
+- `CASH`: navigate to `/status`; the order stays `MENUNGGU` until the cashier confirms.
+- `NON_CASH`: the response carries `payment_url`; navigate to it (`window.location.assign`) after the order is stored in the session, so `/status` still shows the order on return.
+- Store the order before navigating in both branches.
+
+Verify: `CASH` lands on `/status`; `NON_CASH` opens the Snap URL and the order card is still there on return.
+
+### Step 8 — Handle `STORE_CLOSED`
 
 Files: `src/features/checkout/pages/CartPage.tsx`
 
@@ -82,23 +104,24 @@ Files: `src/features/checkout/pages/CartPage.tsx`
 
 Verify: `demo-tutup` on submit toasts and lands on `/tutup`.
 
-### Step 7 — Handle `STOCK_NOT_ENOUGH` and `VALIDATION_ERROR`
+### Step 9 — Handle `STOCK_NOT_ENOUGH`, `VALIDATION_ERROR`, and `429`
 
 Files: `src/features/checkout/pages/CartPage.tsx`
 
 - `STOCK_NOT_ENOUGH`: toast the message, refetch the menu, keep the cart.
 - `VALIDATION_ERROR`: toast the message and keep the cart; the client does not re-implement server validation.
+- `429` (submit is limited to 5/minute per session): back off, one toast maximum, no immediate retry loop.
 - Any other code: generic error toast with a retry action.
 
 Verify: `demo-habis` toasts and refetches without clearing the cart.
 
-### Step 8 — Add the submission pending state
+### Step 10 — Add the submission pending state
 
 Files: `src/features/checkout/pages/CartPage.tsx`
 
 - Disable submit and the steppers while the mutation is pending.
 - Show a spinner in the button.
-- Prevent double submit.
+- Prevent double submit — a second POST would hit the 5/minute limit.
 
 Verify: double-clicking submit creates exactly one order.
 
@@ -108,9 +131,12 @@ Verify: double-clicking submit creates exactly one order.
 - [x] Stepper clamps at 50 and removing the last unit removes the line after confirmation.
 - [x] Note edits persist to the session.
 - [x] Hidden lines are excluded from the payload; an all-hidden cart cannot submit.
-- [x] Submit prepends an order card and clears the cart.
+- [ ] Checkout form requires `customer_name`, accepts an optional phone, and offers `CASH` / `NON_CASH`.
+- [x] Submit stores the order card and clears the cart.
+- [ ] `NON_CASH` navigates to the returned `payment_url` with the order already stored.
 - [x] `STORE_CLOSED` toasts and routes to `/tutup`.
 - [x] `STOCK_NOT_ENOUGH` toasts and refetches.
+- [ ] `429` backs off with a single toast.
 - [x] Pending state blocks double submit.
 - [x] `npm run lint && npm run format:check && npm run build` pass.
 
@@ -118,10 +144,12 @@ Verify: double-clicking submit creates exactly one order.
 
 - [x] An order can be created end-to-end on mock data and appears as a stored session order.
 - [x] No client-side money aggregate exists anywhere in the cart flow.
+- [ ] `CASH` and `NON_CASH` both complete from the cart on mock data.
 - [x] Phase 2.6 can render the stored order on `/status`.
 
 ## Gotchas
 
-- `tax_percent` from the menu response must not be used to display a tax preview.
+- `service_rate` and `tax_rate` from the menu response must not be used to display a tax preview.
 - Do not clear the cart before the submit response arrives.
 - Do not drop a cart line from the session just because its menu is hidden.
+- Do not navigate to `payment_url` before the order is written to `session.orders`.

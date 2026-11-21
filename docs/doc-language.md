@@ -10,8 +10,9 @@ Language standard for all `.md` documentation files in the `fnb-app` monorepo (`
 2. New documents must be written in English from the start.
 3. Existing documents that still contain Indonesian should be translated when the document is touched (edited or reviewed), rather than through a forced mass migration.
 4. Domain words and terms from the PRD must retain their original values because they are backend literal values, not translations:
-   - Order statuses: `MENUNGGU`, `DIPROSES`, `SIAP`, `DIANTAR`, `SELESAI`, `DIBATALKAN`.
-   - Item statuses: `PENDING`, `COOKING`, `READY`, `DELIVERED`, `CANCELLED`.
+   - Order statuses: `MENUNGGU`, `DIPROSES`, `SELESAI`, `DIBATALKAN`.
+   - Item statuses: `PENDING`, `COOKING`, `READY`, `DELIVERED`, `COMPLETED`, `CANCELLED`.
+   - Order types: `DINE_IN`, `TAKE_AWAY`.
    - Payment values: `BELUM`, `LUNAS`, `CASH`, `NON_CASH`.
    - Roles: `OWNER`, `CASHIER`, `KITCHEN`.
 5. File names, API field names (`snake_case`), code identifiers, paths, and commands remain unchanged.

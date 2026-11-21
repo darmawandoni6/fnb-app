@@ -49,63 +49,71 @@ Files: `src/components/AppShell.tsx`
 
 Verify: header stays put while content scrolls on a 375px viewport.
 
-### Step 4 — Complete the session store
+### Step 4 — Complete the session store `[REWORK]`
 
 Files: `src/features/session/store.ts`, `src/constants/storage.ts`
 
 - `SESSION_STORAGE_KEY` `fnb-qr-menu:session`, version `v: 1`.
+- `CustomerSession` gains `sessionToken`; `TrackedOrder` is `{ id, snapshot }` with no `trackingToken`.
 - `read`, `write`, `subscribe` with a `storage` listener and a module-level cache keyed on the raw string.
 - `useCustomerSession()` → `[session, update]` via `useSyncExternalStore`.
 - Storage failures fall back to memory; corrupt JSON or an unknown `v` starts empty.
-- `orders` is `{ id, trackingToken, snapshot }[]`, no cap, no clear action.
+- `orders` is `{ id, snapshot }[]`, no cap, no clear action.
 
 Verify: two tabs stay in sync through the `storage` event.
 
-### Step 5 — Implement session reset semantics
+### Step 5 — Implement session reset semantics `[REWORK]`
 
 Files: `src/features/session/store.ts`
 
-- A different `qr` than the stored one clears `cart` and `orders`.
+- A different `qr` than the stored one clears `cart`, `orders`, and `sessionToken`.
 - The reset raises a one-shot "new table session" notice for the next screen to consume, mirroring iul's `setFlash`/`takeFlash`.
 
-Verify: writing a new `qr` empties cart and orders and leaves `browseOnly` at its default.
+Verify: writing a new `qr` empties cart, orders, and the token and leaves `browseOnly` at its default.
 
-### Step 6 — Implement `useUrlTable`
+### Step 6 — Implement `useTableSession` `[REWORK]`
 
-Files: `src/features/browse/useUrlTable.ts`, `src/constants/storage.ts`
+Files: `src/features/browse/useTableSession.ts`, `src/constants/storage.ts`
 
 - Read `?meja` with `useSearchParams`.
-- Non-empty and different from the session → write it to the session.
-- Empty and the session already has a `qr` → keep the session.
-- Empty and no session → leave `qr` empty so the home screen can redirect to `/tidak-valid`.
+- Non-empty and different from the session → call `openTableSession(qr)`; on success write `qr` and `sessionToken`.
+- Empty and the session already has a `qr` plus `sessionToken` → keep the session.
+- Empty and either is missing → call `openTableSession(session.qr)` when `qr` exists, else leave both empty so the home screen redirects to `/tidak-valid`.
+- `404 NOT_FOUND` from the open → leave the session empty; the home screen redirects to `/tidak-valid`.
 - Strip `meja` from the URL after applying it, so a reload keeps the session.
 
-Verify: visiting `/?meja=demo-meja` leaves the URL at `/` and sets `session.qr`.
+Verify: visiting `/?meja=demo-meja` leaves the URL at `/` and sets `session.qr` and `session.sessionToken`.
 
-### Step 7 — Create the catalog query layer
+### Step 7 — Create the catalog query layer `[REWORK]`
 
 Files: `src/features/catalog/queries.ts`, `src/features/catalog/api.ts`, `src/features/catalog/hooks.ts`
 
 ```ts
-export const catalogKeys = { menu: (qr: string) => ['public-menu', qr] as const }
+export const catalogKeys = {
+  menu: (sessionToken: string) => ['public-menu', sessionToken] as const,
+}
 
-export const menuQuery = (qr: string) =>
-  queryOptions({ queryKey: catalogKeys.menu(qr), queryFn: () => getPublicMenu(qr) })
+export const menuQuery = (sessionToken: string) =>
+  queryOptions({
+    queryKey: catalogKeys.menu(sessionToken),
+    queryFn: () => getPublicMenu(sessionToken),
+  })
 
-export const usePublicMenu = (qr: string) => useQuery(menuQuery(qr))
+export const usePublicMenu = (sessionToken: string) => useQuery(menuQuery(sessionToken))
 ```
 
-Import `getPublicMenu` from `@/api`, never from a concrete module.
+Import `getPublicMenu` from `@/api`, never from a concrete module. The query is disabled while `sessionToken` is empty.
 
-Verify: the query runs once per `qr` and caches across navigation.
+Verify: the query runs once per session and caches across navigation.
 
-### Step 8 — Create the menu home page
+### Step 8 — Create the menu home page `[REWORK]`
 
 Files: `src/features/browse/pages/MenuHomePage.tsx`
 
-- Apply `useUrlTable()` first.
-- Redirect to `/tidak-valid` when `qr` is empty.
-- Read the menu; on `404 NOT_FOUND` redirect to `/tidak-valid`.
+- Apply `useTableSession()` first; it resolves `?meja`, opens the session, and strips the param.
+- Redirect to `/tidak-valid` when `qr` is empty after the session attempt (covers `404` from the open).
+- Read the menu with `session.sessionToken`; on `404 NOT_FOUND` redirect to `/tidak-valid`.
+- On `401 UNAUTHORIZED` re-open the session from `session.qr` once, store the new token, and refetch; if the re-open returns `404`, redirect to `/tidak-valid`.
 - When `is_open` is `false` and `browseOnly` is false, redirect to `/tutup`.
 - Render categories, search, and the grid.
 
@@ -205,13 +213,13 @@ Files: `src/features/browse/components/CartBar.tsx` (link only), `src/features/c
 
 Verify: navigation works both ways without losing the cart.
 
-### Step 18 — Guard the empty-table edge cases
+### Step 18 — Guard the empty-table edge cases `[REWORK]`
 
-Files: `src/features/browse/pages/MenuHomePage.tsx`, `src/features/browse/useUrlTable.ts`
+Files: `src/features/browse/pages/MenuHomePage.tsx`, `src/features/browse/useTableSession.ts`
 
 - `/` with no `meja` and no session `qr` → `/tidak-valid`.
-- `/` with `meja` that resolves to 404 → `/tidak-valid`.
-- A stale `qr` in the session still attempts the query and redirects on 404.
+- `/` with `meja` that resolves to `404` on the session open → `/tidak-valid`.
+- A stored `sessionToken` that returns `401` → re-open once from `session.qr`, then `/tidak-valid` if that also fails.
 
 Verify: clearing `localStorage` and opening `/` lands on `/tidak-valid`.
 
@@ -220,7 +228,7 @@ Verify: clearing `localStorage` and opening `/` lands on `/tidak-valid`.
 - [x] Routes all resolve; `*` redirects to `/`.
 - [x] `?meja` applies to the session then disappears from the URL.
 - [x] Two tabs share the session through the `storage` event.
-- [x] A new `qr` clears cart and orders.
+- [x] A new `qr` clears cart, orders, and the session token.
 - [x] Category tabs and search filter the grid.
 - [x] Quick add merges into one line with clamped qty.
 - [x] Menu detail add and `?edit` save both work, including the merge case.
@@ -235,6 +243,6 @@ Verify: clearing `localStorage` and opening `/` lands on `/tidak-valid`.
 
 ## Gotchas
 
-- Do not store the table token in a second place; `session.qr` is the only copy.
+- Do not store `qr` or `sessionToken` in a second place; the session store is the only copy.
 - Do not add a money total to the cart bar.
 - Keep `browseState` selection in memory only; it must not go into `localStorage`.

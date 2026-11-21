@@ -2,12 +2,12 @@
 
 Granular plan for Phase 4 of `../implementation-plan.md`.
 
-Goal: satisfy PRD §12 with unit tests on the non-trivial logic, finish formatting and accessibility polish, and record the QR Menu adaptations in the root docs.
+Goal: satisfy PRD §15 with unit tests on the non-trivial logic, finish formatting and accessibility polish, and record the QR Menu adaptations in the root docs.
 
 ## Prerequisites
 
 - Phase 3 complete: the app runs against `fnb-server`.
-- Docs read: `../docs/PRD.md` §12, `docs/conventions.md` (Test Files).
+- Docs read: `../docs/PRD.md` §15, `docs/conventions.md` (Test Files).
 
 ## Steps
 
@@ -41,7 +41,7 @@ Cases:
 
 Verify: `npm test` passes with every case named after behaviour.
 
-### Step 3 — Test the session store
+### Step 3 — Test the session store `[REWORK]`
 
 Files: `src/features/session/store.test.ts`
 
@@ -49,20 +49,21 @@ Cases:
 
 - A corrupt stored value yields an empty session, not a throw.
 - An unknown `v` yields an empty session.
-- A different `qr` clears `cart` and `orders`.
+- A different `qr` clears `cart`, `orders`, and `sessionToken`.
 - Storage failure falls back to memory and the session still updates.
 - `orders` append preserves order and snapshot.
 
 Verify: `npm test` passes with the storage stub replacing `localStorage`.
 
-### Step 4 — Test the polling predicate
+### Step 4 — Test the polling predicate `[REWORK]`
 
 Files: `src/features/orders/status.test.ts`
 
 Cases:
 
 - `isFinished` is true for `SELESAI` and `DIBATALKAN`.
-- `isFinished` is false for `MENUNGGU`, `DIPROSES`, `SIAP`, `DIANTAR`.
+- `isFinished` is false for `MENUNGGU` and `DIPROSES`.
+- The list poll stops only when every stored order is finished.
 - The backoff helper skips exactly one interval after a `429`.
 
 Verify: `npm test` passes.
@@ -105,9 +106,9 @@ Files: `../docs/api.md`, `../docs/flow.md`
 
 Add short notes, marked as pending until the frontend behavior ships:
 
-- The customer app identifies the table by `qr_token` only; `table_number` is not returned.
+- The customer app identifies the table by `qr_token` only on entry; the session open returns `table_number`, which the menu response does not repeat.
 - The customer app has a closed state (`/tutup`) and a browse-only mode.
-- The customer app keeps a local order history; the API has no order list endpoint.
+- The customer app polls the session's order list (`GET /public/orders`) as the real-time fallback; WebSocket (`session:{token}`) is deferred and polling ships first.
 
 Do not change any contract, endpoint, or status value.
 
@@ -126,7 +127,7 @@ Verify: `../docs/api.md` and `../docs/flow.md` still describe the server accurat
 
 ## Exit Criteria
 
-- [ ] PRD §12 coverage: cart rules, session store, status aggregation predicate.
+- [ ] PRD §15 coverage: cart rules, session store, status aggregation predicate.
 - [ ] Verification order passes in full.
 - [ ] Documentation and code agree.
 

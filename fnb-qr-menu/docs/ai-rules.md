@@ -31,8 +31,8 @@ These rules apply when AI creates or changes code in `fnb-qr-menu`. Sources of t
 - Do not place backend business rules in components.
 - Safely display error messages from backend responses.
 - Branch on the error `code`, not by matching the `message` text.
-- Never send prices, totals, or stock from the client; send `menu_id`, `qty`, and `note` only.
-- Do not log the tracking token or full API responses.
+- Never send prices, service, tax, totals, or stock from the client; send `order_type`, `customer_name`, `customer_phone`, `payment_method`, and `items: [{ menu_id, qty, note }]`.
+- Do not log the session token or full API responses.
 - `VITE_API_URL` is the source for the API base URL.
 - The list of public endpoints is fixed by `docs/tech-stack.md`; do not invent endpoints that `fnb-server` does not expose.
 - `src/api/index.ts` is the only place that chooses between mock and HTTP. Never branch on `VITE_USE_MOCKS` elsewhere.
@@ -59,9 +59,9 @@ These rules apply when AI creates or changes code in `fnb-qr-menu`. Sources of t
 ## Customer Session Rules
 
 - Customer state lives in one versioned `localStorage` record read through `useSyncExternalStore`.
-- Store only `qr`, `cart`, `orders`, `browseOnly`, `invalidTable`, `updatedAt`, and `v`.
-- Never store credentials, refresh tokens, or table secrets beyond `qr`.
-- A different `qr` resets the cart and orders.
+- Store only `qr`, `sessionToken`, `cart`, `orders`, `browseOnly`, `invalidTable`, `updatedAt`, and `v`.
+- Never store credentials or refresh tokens; `qr` and `sessionToken` are table-scoped capability tokens.
+- A different `qr` resets the cart, orders, and `sessionToken`.
 - Corrupt or unknown versions start from an empty session instead of throwing.
 - Storage failures fall back to memory; the app must keep working in private mode.
 - `orders` has no size cap and no clear action; do not add pruning or a reset button unless requested.
@@ -70,21 +70,21 @@ These rules apply when AI creates or changes code in `fnb-qr-menu`. Sources of t
 
 - Merge lines by `menuId|note.trim().toLowerCase()`.
 - Keep `MAX_QTY` 50 and `NOTE_MAX` 120 in `src/constants/cart.ts`; do not inline the numbers.
-- Never compute subtotal, tax, or total. `api.md` forbids the client from determining prices, tax, and totals; the cart shows unit prices only.
+- Never compute subtotal, service, tax, or total. `api.md` forbids the client from determining prices, tax, and totals; the cart shows unit prices only.
 - Lines whose menu is missing from the menu response are hidden and dropped from the submit payload.
 - Do not enable submission while the cart is empty, fully hidden, or `is_open` is `false`.
 
 ## Order and Status Rules
 
 - Order status is the backend aggregate; do not calculate a different status in the UI.
-- The status stepper is derived from the aggregate `status` value only; there is no timeline in the API.
+- The status stepper is derived from item statuses (the aggregate has no `SIAP` / `DIANTAR`); there is no timeline in the API.
 - `/status` lists one card per order, newest first, with exactly one card open.
-- Only the open card polls; collapsed cards render from `snapshot` and never request.
-- The client may cancel only `PENDING` items, through `POST /public/orders/:tracking_token/cancel`.
-- A `LUNAS` order keeps the cancel action but adds a refund warning to the confirmation.
+- One `GET /public/orders` poll every 5 seconds refreshes every stored card; collapsed cards render their snapshot between polls.
+- The client may cancel a whole order only while it is `MENUNGGU` with `payment_status` `BELUM`, through `POST /public/orders/:id/cancel` with `{ reason }`.
+- A `LUNAS` or `DIPROSES` order shows no cancel action; there is no refund warning in v1.
 - `CANCELLED` items stay visible, crossed out.
-- Stop polling when the order is `SELESAI`, `DIBATALKAN`, or the screen unmounts.
-- An unknown tracking token shows the invalid-order state, not an empty page.
+- Stop polling when every stored order is `SELESAI`, `DIBATALKAN`, or the screen unmounts.
+- An entry missing from the list response keeps its snapshot instead of disappearing.
 - `unbounded` order history is a deliberate choice; do not add limits without confirmation.
 
 ## Money and Data Rules

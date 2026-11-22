@@ -8,7 +8,7 @@ Cross-page mock behaviour that must match `../../docs/api.md` and PRD before API
 
 ## Status
 
-OPEN — 0 of 2 tasks complete.
+DONE — all tasks complete.
 
 ## Files
 
@@ -18,12 +18,12 @@ OPEN — 0 of 2 tasks complete.
 
 ## Tasks
 
-- [ ] Change `order_number` to `DI-YYYYMMDD-SSS` / `TA-YYYYMMDD-SSS` (`../../docs/api.md`, last line).
+- [x] Change `order_number` to `DI-YYYYMMDD-SSS` / `TA-YYYYMMDD-SSS` (`../../docs/api.md`, last line).
   - `nextOrderNumber` prefixes with the type plus the local business day, then the zero-padded daily sequence.
   - Fixtures in `src/mocks/data/orders.ts` follow the same shape.
   - Assertion at `src/mocks/selfcheck.ts:71` changes from the `TA-` prefix check to the full date pattern.
   - The printed receipt and the board read `order_number` unchanged; only the value shape moves.
-- [ ] Add self check coverage for table session authorisation.
+- [x] Add self check coverage for table session authorisation.
   - `closeTableSession` succeeds for `CASHIER` and for `OWNER`.
   - `closeTableSession` returns `FORBIDDEN` for `KITCHEN`.
   - A second close returns `NOT_FOUND`.

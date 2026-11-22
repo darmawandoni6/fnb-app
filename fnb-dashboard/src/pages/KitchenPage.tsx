@@ -5,6 +5,8 @@ import { ITEM_STATUS, type ItemStatus, PAYMENT_STATUS, TERMINAL_ITEM_STATUS } fr
 import type { Order, OrderItem } from '@/types'
 import { toast } from 'sonner'
 
+import { formatTime } from '@/lib/format'
+
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -116,30 +118,69 @@ function BoardGrid({
     )
   }
 
+  // PRD §7.3: group per table for dine-in and per order_number for take away,
+  // keeping the status columns inside each group.
+  const groups = new Map<string, BoardItem[]>()
+  items.forEach((entry) => {
+    const key = entry.order.table_id ? `table-${entry.order.table_id}` : `order-${entry.order.id}`
+    groups.set(key, [...(groups.get(key) ?? []), entry])
+  })
+  const waitingSince = (group: BoardItem[]) =>
+    Math.min(...group.map(({ order }) => new Date(order.created_at).getTime()))
+  const sortedGroups = [...groups.entries()].sort(
+    ([, left], [, right]) => waitingSince(left) - waitingSince(right),
+  )
+
   return (
-    <div
-      className={
-        columns.length === 2 ? 'grid grid-cols-1 gap-4 lg:grid-cols-2' : 'grid grid-cols-1 gap-4'
-      }
-    >
-      {columns.map((status) => (
-        <div key={status} className="flex min-w-0 flex-col gap-3">
-          <h2 className="text-sm font-semibold">{COLUMN_TITLE[status]}</h2>
-          {items
-            .filter(({ item }) => item.status === status)
-            .map(({ order, item }) => (
-              <KitchenItemCard
-                key={item.id}
-                orderId={order.id}
-                orderNumber={orderNumbers.get(order.id) ?? order.id}
-                item={item}
-                tableNumber={order.table_number}
-                warningAt={warningAt}
-                onAdvance={onAdvance}
-              />
-            ))}
-        </div>
-      ))}
+    <div className="flex flex-col gap-6">
+      {sortedGroups.map(([key, groupItems]) => {
+        const { order } = groupItems[0]!
+        const label =
+          order.order_number ||
+          orderNumbers.get(order.id) ||
+          (order.table_number ? `Meja ${order.table_number}` : order.id)
+        return (
+          <section key={key} className="flex flex-col gap-3">
+            <div className="flex items-center gap-2">
+              <Badge variant={order.table_number ? 'secondary' : 'outline'}>
+                {order.table_number ? `Meja ${order.table_number}` : 'Take Away'}
+              </Badge>
+              <h2 className="text-sm font-semibold">{label}</h2>
+              <span className="text-muted-foreground text-xs">
+                {groupItems.length} item · masuk {formatTime(order.created_at)}
+              </span>
+            </div>
+            <div
+              className={
+                columns.length === 2
+                  ? 'grid grid-cols-1 gap-4 lg:grid-cols-2'
+                  : 'grid grid-cols-1 gap-4'
+              }
+            >
+              {columns.map((status) => (
+                <div key={status} className="flex min-w-0 flex-col gap-3">
+                  <h3 className="text-muted-foreground text-xs font-semibold">
+                    {COLUMN_TITLE[status]}
+                  </h3>
+                  {groupItems
+                    .filter(({ item }) => item.status === status)
+                    .map(({ item }) => (
+                      <KitchenItemCard
+                        key={item.id}
+                        orderId={order.id}
+                        orderNumber={label}
+                        item={item}
+                        tableNumber={order.table_number}
+                        warningAt={warningAt}
+                        onAdvance={onAdvance}
+                      />
+                    ))}
+                </div>
+              ))}
+            </div>
+          </section>
+        )
+      })}
     </div>
   )
 }

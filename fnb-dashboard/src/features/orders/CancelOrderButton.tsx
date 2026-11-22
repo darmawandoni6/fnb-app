@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
-import { ORDER_STATUS, PAYMENT_STATUS } from '@/constants'
+import { ORDER_STATUS, PAYMENT_STATUS, USER_ROLE } from '@/constants'
 import type { Order } from '@/types'
 import { toast } from 'sonner'
 
 import { ROUTES } from '@/constants/routes'
+
+import { useAuth } from '@/auth/context'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { Button } from '@/components/ui/button'
@@ -16,6 +18,7 @@ import { Button } from '@/components/ui/button'
 export function CancelOrderButton({ order }: { order: Order }) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   const cancel = useMutation({
     mutationFn: () => api.cancelOrder(order.id, 'Dibatalkan oleh owner'),
@@ -31,7 +34,9 @@ export function CancelOrderButton({ order }: { order: Order }) {
   })
 
   const canCancel =
-    order.status === ORDER_STATUS.MENUNGGU && order.payment_status === PAYMENT_STATUS.BELUM
+    user?.role === USER_ROLE.OWNER &&
+    order.status === ORDER_STATUS.MENUNGGU &&
+    order.payment_status === PAYMENT_STATUS.BELUM
   if (!canCancel) return null
 
   return (

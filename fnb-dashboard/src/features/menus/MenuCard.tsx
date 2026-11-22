@@ -22,10 +22,12 @@ import { RecipeDialog } from './RecipeDialog'
 export function MenuCard({
   menu,
   categoryId,
+  canEdit,
   onChanged,
 }: {
   menu: Menu
   categoryId: string
+  canEdit: boolean
   onChanged: () => void
 }) {
   const [editOpen, setEditOpen] = useState(false)
@@ -80,19 +82,21 @@ export function MenuCard({
             {menu.is_available ? 'Tersedia' : 'Habis'}
           </Label>
         </div>
-        <div className="flex items-center gap-1">
-          <RecipeDialog menu={menu} />
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="text-muted-foreground hover:text-foreground h-7 gap-1 px-2 text-xs"
-            onClick={() => setEditOpen(true)}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            Edit
-          </Button>
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-1">
+            <RecipeDialog menu={menu} />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground hover:text-foreground h-7 gap-1 px-2 text-xs"
+              onClick={() => setEditOpen(true)}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </Button>
+          </div>
+        )}
       </CardFooter>
 
       <MenuFormDialog

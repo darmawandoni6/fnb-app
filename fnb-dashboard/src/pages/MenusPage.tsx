@@ -1,6 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
+import { USER_ROLE } from '@/constants'
+
+import { useAuth } from '@/auth/context'
 
 import { Skeleton } from '@/components/ui/skeleton'
 import { CategoryFormDialog } from '@/features/menus/CategoryFormDialog'
@@ -8,6 +11,9 @@ import { CategorySection } from '@/features/menus/CategorySection'
 
 export function MenusPage() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
+  // `../../docs/api.md`: CASHIER may only toggle `is_available`; every other field is OWNER-only.
+  const canEdit = user?.role === USER_ROLE.OWNER
   const { data: categories, isLoading } = useQuery({
     queryKey: ['menu-categories'],
     queryFn: api.getMenuCategories,
@@ -23,7 +29,7 @@ export function MenusPage() {
             Kelola kategori dan menu katalog. Tandai habis untuk menyembunyikan menu dari POS.
           </p>
         </div>
-        <CategoryFormDialog onSaved={invalidate} />
+        {canEdit && <CategoryFormDialog onSaved={invalidate} />}
       </div>
 
       {isLoading ? (
@@ -39,7 +45,12 @@ export function MenusPage() {
       ) : (
         <div className="flex flex-col gap-6">
           {(categories ?? []).map((category) => (
-            <CategorySection key={category.id} category={category} onChanged={invalidate} />
+            <CategorySection
+              key={category.id}
+              category={category}
+              canEdit={canEdit}
+              onChanged={invalidate}
+            />
           ))}
         </div>
       )}

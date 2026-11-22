@@ -8,7 +8,7 @@ Granular plan for executing section 2.11 from `../implementation-plan.md`.
 
 ## Status
 
-OPEN — 1 of 2 tasks remaining.
+DONE — all tasks complete.
 
 ## Files
 
@@ -19,7 +19,7 @@ OPEN — 1 of 2 tasks remaining.
 ## Tasks
 
 - [x] All eight fields editable: `cafe_name`, `service_rate`, `tax_rate`, `is_open`, `cash_timeout_minutes`, `delivered_auto_complete_minutes`, `ready_auto_deliver_minutes`, `ready_auto_deliver_warning_minutes`.
-- [ ] `ready_auto_deliver_warning_minutes` must be lower than `ready_auto_deliver_minutes`; otherwise `400 VALIDATION_ERROR` (`../../docs/api.md`, Internal — users, settings).
+- [x] `ready_auto_deliver_warning_minutes` must be lower than `ready_auto_deliver_minutes`; otherwise `400 VALIDATION_ERROR` (`../../docs/api.md`, Internal — users, settings).
   - Enforce across the pair in `updateSettings`, reading the stored value for whichever field the body omits, so a partial patch cannot produce an invalid pair.
   - Mirror the rule in `settingsSchema` with a `refine` across both fields; the current check only rejects values below 1.
   - Timers stay integers of at least 1 minute.

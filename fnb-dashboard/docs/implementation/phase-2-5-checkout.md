@@ -8,7 +8,7 @@ Granular plan for executing section 2.5 from `../implementation-plan.md`.
 
 ## Status
 
-OPEN — 1 of 5 tasks remaining.
+DONE — all tasks complete.
 
 ## Files
 
@@ -24,7 +24,7 @@ OPEN — 1 of 5 tasks remaining.
 - [x] Printable receipt at 58/80 mm through `window.print()`, showing `order_number`, service amount, tax amount, and the persisted `amount_received` / `change_amount`.
 - [x] Leaving with an unpaid order asks for confirmation; the order board routes payment actions here.
 - [x] Order-level cancel from this page is visible to `OWNER` only.
-- [ ] Cash countdown on the unpaid order, reusing `CashCountdown` from `phase-2-2-orders-board.md` instead of recomputing the deadline.
+- [x] Cash countdown on the unpaid order, reusing `CashCountdown` from `phase-2-2-orders-board.md` instead of recomputing the deadline.
 
 ## Verification
 

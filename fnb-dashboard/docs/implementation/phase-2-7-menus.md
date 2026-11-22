@@ -8,7 +8,7 @@ Granular plan for executing section 2.7 from `../implementation-plan.md`.
 
 ## Status
 
-OPEN — 3 of 6 tasks remaining.
+DONE — all tasks complete.
 
 ## Files
 
@@ -28,9 +28,9 @@ OPEN — 3 of 6 tasks remaining.
 - [x] Category CRUD; deleting a category with menus returns `INVALID_TRANSITION`.
 - [x] Menu CRUD with name, price, category, availability, and optional image.
 - [x] Recipe editing through `RecipeDialog`, rejected with `STORE_CLOSED` while `settings.is_open` is true (BR-23); reading recipes stays allowed.
-- [ ] Open `/menus` to `CASHIER` in `App.tsx` (add `USER_ROLE.CASHIER` to the route guard) and add the sidebar entry for the cashier.
-- [ ] Cashier view: catalog read-only except an availability switch per menu, calling `updateMenu(id, { is_available })`.
-- [ ] Hide `MenuFormDialog`, `CategoryFormDialog`, `DeleteCategoryButton`, and `RecipeDialog` from `CASHIER`; the mock already answers `FORBIDDEN` for other fields, so the UI must not offer them.
+- [x] Open `/menus` to `CASHIER` in `App.tsx` (add `USER_ROLE.CASHIER` to the route guard) and add the sidebar entry for the cashier.
+- [x] Cashier view: catalog read-only except an availability switch per menu, calling `updateMenu(id, { is_available })`.
+- [x] Hide `MenuFormDialog`, `CategoryFormDialog`, `DeleteCategoryButton`, and `RecipeDialog` from `CASHIER`; the mock already answers `FORBIDDEN` for other fields, so the UI must not offer them.
 
 ## Verification
 

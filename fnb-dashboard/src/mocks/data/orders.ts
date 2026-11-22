@@ -76,32 +76,80 @@ const order = (
 }
 
 export const orders: Order[] = [
-  order('order-1', 'DI-001', ORDER_TYPE.DINE_IN, PAYMENT_STATUS.BELUM, ORDER_STATUS.MENUNGGU, [
-    item('item-1', 'menu-1', 'Kopi Susu', ITEM_STATUS.PENDING),
-    item('item-2', 'menu-2', 'Americano', ITEM_STATUS.PENDING),
-  ]),
-  order('order-2', 'TA-001', ORDER_TYPE.TAKE_AWAY, PAYMENT_STATUS.LUNAS, ORDER_STATUS.DIPROSES, [
-    item('item-3', 'menu-1', 'Kopi Susu', ITEM_STATUS.PENDING),
-    item('item-4', 'menu-2', 'Americano', ITEM_STATUS.COOKING),
-  ]),
-  order('order-3', 'DI-002', ORDER_TYPE.DINE_IN, PAYMENT_STATUS.LUNAS, ORDER_STATUS.DIPROSES, [
-    item('item-5', 'menu-1', 'Kopi Susu', ITEM_STATUS.COOKING),
-    item('item-6', 'menu-2', 'Americano', ITEM_STATUS.READY),
-  ]),
-  order('order-4', 'DI-003', ORDER_TYPE.DINE_IN, PAYMENT_STATUS.LUNAS, ORDER_STATUS.DIPROSES, [
-    item('item-7', 'menu-1', 'Kopi Susu', ITEM_STATUS.READY),
-  ]),
-  order('order-5', 'TA-002', ORDER_TYPE.TAKE_AWAY, PAYMENT_STATUS.LUNAS, ORDER_STATUS.DIPROSES, [
-    item('item-8', 'menu-1', 'Kopi Susu', ITEM_STATUS.DELIVERED),
-    item('item-9', 'menu-2', 'Americano', ITEM_STATUS.READY),
-  ]),
-  order('order-6', 'TA-003', ORDER_TYPE.TAKE_AWAY, PAYMENT_STATUS.LUNAS, ORDER_STATUS.SELESAI, [
-    item('item-10', 'menu-1', 'Kopi Susu', ITEM_STATUS.COMPLETED),
-  ]),
-  order('order-7', 'DI-004', ORDER_TYPE.DINE_IN, PAYMENT_STATUS.BELUM, ORDER_STATUS.DIBATALKAN, [
-    item('item-11', 'menu-1', 'Kopi Susu', ITEM_STATUS.CANCELLED),
-  ]),
-  order('order-8', 'TA-004', ORDER_TYPE.TAKE_AWAY, PAYMENT_STATUS.BELUM, ORDER_STATUS.MENUNGGU, [
-    item('item-12', 'menu-1', 'Kopi Susu', ITEM_STATUS.PENDING),
-  ]),
+  order(
+    'order-1',
+    'DI-20260101-001',
+    ORDER_TYPE.DINE_IN,
+    PAYMENT_STATUS.BELUM,
+    ORDER_STATUS.MENUNGGU,
+    [
+      item('item-1', 'menu-1', 'Kopi Susu', ITEM_STATUS.PENDING),
+      item('item-2', 'menu-2', 'Americano', ITEM_STATUS.PENDING),
+    ],
+  ),
+  order(
+    'order-2',
+    'TA-20260101-001',
+    ORDER_TYPE.TAKE_AWAY,
+    PAYMENT_STATUS.LUNAS,
+    ORDER_STATUS.DIPROSES,
+    [
+      item('item-3', 'menu-1', 'Kopi Susu', ITEM_STATUS.PENDING),
+      item('item-4', 'menu-2', 'Americano', ITEM_STATUS.COOKING),
+    ],
+  ),
+  order(
+    'order-3',
+    'DI-20260101-002',
+    ORDER_TYPE.DINE_IN,
+    PAYMENT_STATUS.LUNAS,
+    ORDER_STATUS.DIPROSES,
+    [
+      item('item-5', 'menu-1', 'Kopi Susu', ITEM_STATUS.COOKING),
+      item('item-6', 'menu-2', 'Americano', ITEM_STATUS.READY),
+    ],
+  ),
+  order(
+    'order-4',
+    'DI-20260101-003',
+    ORDER_TYPE.DINE_IN,
+    PAYMENT_STATUS.LUNAS,
+    ORDER_STATUS.DIPROSES,
+    [item('item-7', 'menu-1', 'Kopi Susu', ITEM_STATUS.READY)],
+  ),
+  order(
+    'order-5',
+    'TA-20260101-002',
+    ORDER_TYPE.TAKE_AWAY,
+    PAYMENT_STATUS.LUNAS,
+    ORDER_STATUS.DIPROSES,
+    [
+      item('item-8', 'menu-1', 'Kopi Susu', ITEM_STATUS.DELIVERED),
+      item('item-9', 'menu-2', 'Americano', ITEM_STATUS.READY),
+    ],
+  ),
+  order(
+    'order-6',
+    'TA-20260101-003',
+    ORDER_TYPE.TAKE_AWAY,
+    PAYMENT_STATUS.LUNAS,
+    ORDER_STATUS.SELESAI,
+    [item('item-10', 'menu-1', 'Kopi Susu', ITEM_STATUS.COMPLETED)],
+  ),
+  order(
+    'order-7',
+    'DI-20260101-004',
+    ORDER_TYPE.DINE_IN,
+    PAYMENT_STATUS.BELUM,
+    ORDER_STATUS.DIBATALKAN,
+    [item('item-11', 'menu-1', 'Kopi Susu', ITEM_STATUS.CANCELLED)],
+  ),
+  order(
+    'order-8',
+    'TA-20260101-004',
+    ORDER_TYPE.TAKE_AWAY,
+    PAYMENT_STATUS.BELUM,
+    ORDER_STATUS.MENUNGGU,
+    [item('item-12', 'menu-1', 'Kopi Susu', ITEM_STATUS.PENDING)],
+  ),
 ]

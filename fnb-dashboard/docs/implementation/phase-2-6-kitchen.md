@@ -8,7 +8,7 @@ Granular plan for executing section 2.6 from `../implementation-plan.md`.
 
 ## Status
 
-OPEN — 1 of 4 tasks remaining.
+DONE — all tasks complete.
 
 ## Files
 
@@ -21,7 +21,7 @@ OPEN — 1 of 4 tasks remaining.
 - [x] Fetch `GET /orders` and keep `LUNAS` orders only; terminal items are filtered out of the board.
 - [x] Actions `PENDING → COOKING`, `COOKING → READY`, `READY → DELIVERED`, and the `DELIVERED → COMPLETED` override.
 - [x] Auto-deliver warning derived from `ready_auto_deliver_minutes` and `ready_auto_deliver_warning_minutes` in settings.
-- [ ] Group items per table for dine-in and per `order_number` for take away, keeping the status columns inside each group (PRD §7.3).
+- [x] Group items per table for dine-in and per `order_number` for take away, keeping the status columns inside each group (PRD §7.3).
   - Sort groups so the longest-waiting item appears first; keep a group visible while any of its items is non-terminal.
   - Show the table badge for dine-in and the order number for take away on every item card.
 

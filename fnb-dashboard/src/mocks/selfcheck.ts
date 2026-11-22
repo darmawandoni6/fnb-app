@@ -61,14 +61,14 @@ export const runMockSelfCheck = async () => {
   db.currentUserId = 'user-1'
   await api.updateMenu('menu-3', { is_available: true })
 
-  // Order creation: CASHIER only, TAKE_AWAY only, TA-### number, OUT movement, service + tax snapshots.
+  // Order creation: CASHIER only, TAKE_AWAY only, DI/TA-YYYYMMDD-SSS number, OUT movement, snapshots.
   db.currentUserId = 'user-2'
   const created = await api.createManualOrder({
     items: [{ menu_id: 'menu-1', qty: 1, note: null }],
     customer_name: 'Budi',
   })
   assert(created.order_type === ORDER_TYPE.TAKE_AWAY, 'manual order is TAKE_AWAY')
-  assert(created.order_number.startsWith('TA-'), 'take away number uses TA- prefix')
+  assert(/^TA-\d{8}-\d{3,}$/.test(created.order_number), 'take away number is TA-YYYYMMDD-SSS')
   assert(created.table_id === null, 'manual order has no table')
   assert(
     created.service_amount === Math.round((created.subtotal_amount * 5) / 100),
@@ -219,7 +219,7 @@ export const runMockSelfCheck = async () => {
   // Status derivation matrix (PRD §5.3).
   const orderWith = (statuses: ItemStatus[], payment: PaymentStatus): Order => ({
     id: 'check',
-    order_number: 'TA-999',
+    order_number: 'TA-20260101-999',
     order_type: ORDER_TYPE.TAKE_AWAY,
     table_id: null,
     table_number: null,
@@ -357,12 +357,18 @@ export const runMockSelfCheck = async () => {
   assert(afterDelete?.is_active === false, 'deleteTable deactivates the table')
   assert(afterDelete?.qr_token === tableA.qr_token, 'deactivate keeps the qr_token')
 
-  // Table session: read then close (PRD §4.6).
+  // Table session: read then close (PRD §4.6). KITCHEN may not close, CASHIER and OWNER may.
   const session = await api.getTableSession('table-1')
   assert(session.status === 'OPEN', 'table-1 has an open session')
-  const closedSession = await api.closeTableSession('table-1')
-  assert(closedSession.status === 'CLOSED', 'closeTableSession closes the session')
-  assert(closedSession.ended_at !== null, 'closed session records ended_at')
+  db.currentUserId = 'user-3'
+  await throwsCode(() => api.closeTableSession('table-1'), 'FORBIDDEN')
+  await throwsCode(() => api.getTableSession('table-1'), 'FORBIDDEN')
+  db.currentUserId = 'user-2'
+  const closedByCashier = await api.closeTableSession('table-1')
+  assert(closedByCashier.status === 'CLOSED', 'cashier closes the session')
+  assert(closedByCashier.closed_by === 'user-2', 'closed_by records the cashier')
+  await throwsCode(() => api.closeTableSession('table-1'), 'NOT_FOUND')
+  db.currentUserId = 'user-1'
   await throwsCode(() => api.getTableSession('table-1'), 'NOT_FOUND')
 
   // Audit log: OWNER only.
@@ -377,6 +383,21 @@ export const runMockSelfCheck = async () => {
   assert(updatedSettings.service_rate === 7, 'updateSettings stores service_rate')
   assert(updatedSettings.tax_rate === 11, 'updateSettings stores tax_rate')
   await throwsCode(() => api.updateSettings({ cash_timeout_minutes: 0 }), 'VALIDATION_ERROR')
+  await throwsCode(
+    () => api.updateSettings({ ready_auto_deliver_warning_minutes: 10 }),
+    'VALIDATION_ERROR',
+  )
+  await throwsCode(
+    () => api.updateSettings({ ready_auto_deliver_warning_minutes: 12 }),
+    'VALIDATION_ERROR',
+  )
+  const patchedTimers = await api.updateSettings({ ready_auto_deliver_minutes: 3 })
+  assert(
+    patchedTimers.ready_auto_deliver_minutes === 3,
+    'auto-deliver updates when the stored warning stays lower',
+  )
+  await throwsCode(() => api.updateSettings({ ready_auto_deliver_minutes: 1 }), 'VALIDATION_ERROR')
+  await api.updateSettings({ ready_auto_deliver_minutes: 10 })
   db.currentUserId = 'user-2'
   await throwsCode(() => api.updateSettings({ tax_rate: 5 }), 'FORBIDDEN')
   db.currentUserId = 'user-1'

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
-import { ITEM_STATUS, ORDER_TYPE, PAYMENT_STATUS } from '@/constants'
+import { ITEM_STATUS, ORDER_STATUS, ORDER_TYPE, PAYMENT_STATUS } from '@/constants'
 import type { Order, OrderItem } from '@/types'
 import { toast } from 'sonner'
 
@@ -13,6 +13,7 @@ import { formatRupiah, formatTime } from '@/lib/format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { CashCountdown } from '@/features/orders/CashCountdown'
 
 const onError = (error: unknown) =>
   toast.error((error as { message?: string }).message ?? 'Terjadi kesalahan')
@@ -20,10 +21,12 @@ const onError = (error: unknown) =>
 export function OrderCard({
   order,
   showCashierActions,
+  timeoutMinutes,
   onClick,
 }: {
   order: Order
   showCashierActions: boolean
+  timeoutMinutes: number
   onClick?: () => void
 }) {
   const navigate = useNavigate()
@@ -56,7 +59,18 @@ export function OrderCard({
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-2 text-sm">
-        <div className="text-muted-foreground">{formatTime(order.created_at)}</div>
+        <div className="flex items-center gap-2">
+          <span className="text-muted-foreground">{formatTime(order.created_at)}</span>
+          {order.payment_status === PAYMENT_STATUS.BELUM &&
+            order.status === ORDER_STATUS.MENUNGGU &&
+            timeoutMinutes > 0 && (
+              <CashCountdown
+                createdAt={order.created_at}
+                timeoutMinutes={timeoutMinutes}
+                onExpire={invalidate}
+              />
+            )}
+        </div>
         <ul className="flex flex-col gap-1">
           {order.items.map((item) => (
             <li key={item.id} className="flex items-center justify-between gap-2">

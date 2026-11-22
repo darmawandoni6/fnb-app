@@ -35,6 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PaymentReceiptDialog } from '@/features/manual-order/PaymentReceiptDialog'
 import { CancelOrderButton } from '@/features/orders/CancelOrderButton'
+import { CashCountdown } from '@/features/orders/CashCountdown'
 
 export function OrderPaymentPage() {
   const { id } = useParams<{ id: string }>()
@@ -48,11 +49,17 @@ export function OrderPaymentPage() {
   const [completedOrder, setCompletedOrder] = useState<Order | null>(null)
   const [backConfirmOpen, setBackConfirmOpen] = useState(false)
 
-  const { data: order, isLoading } = useQuery<Order>({
+  const {
+    data: order,
+    isLoading,
+    refetch,
+  } = useQuery<Order>({
     queryKey: ['orders', id],
     queryFn: () => api.getOrder(id!),
     enabled: !!id,
   })
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: api.getSettings })
+  const timeoutMinutes = settings?.cash_timeout_minutes ?? 0
 
   const totalAmount = order?.total_amount ?? 0
   const cashReceived = Number(cashReceivedInput.replace(/\D/g, '')) || 0
@@ -174,11 +181,18 @@ export function OrderPaymentPage() {
         <div className="space-y-4 lg:col-span-7 xl:col-span-8">
           <Card>
             <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
                 <CardTitle className="text-base font-bold">Ringkasan Pesanan</CardTitle>
                 <Badge variant="outline" className="font-mono text-xs">
                   {order.order_number}
                 </Badge>
+                {!isAlreadyPaid && timeoutMinutes > 0 && (
+                  <CashCountdown
+                    createdAt={order.created_at}
+                    timeoutMinutes={timeoutMinutes}
+                    onExpire={refetch}
+                  />
+                )}
               </div>
               <CardDescription className="text-xs">
                 {order.created_at.slice(0, 10)} · {formatTime(order.created_at)}

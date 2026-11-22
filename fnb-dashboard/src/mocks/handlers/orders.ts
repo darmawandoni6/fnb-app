@@ -10,6 +10,8 @@ import {
 import { db } from '@/mocks/db'
 import type { Order } from '@/types'
 
+import { businessDay, formatOrderNumber, orderNumberSequence } from '@/lib/orderNumber'
+
 import { deriveOrderStatus } from './deriveStatus'
 import { audit, currentUser, delay, fail, findOrThrow, isStaff, requireRole } from './shared'
 
@@ -37,19 +39,16 @@ const findMenu = (id: string) => {
   return menu ?? fail(API_ERROR_CODE.VALIDATION_ERROR, 'Menu is unavailable')
 }
 
-/** PRD §7.5 / BR-15: TA-### for take away, DI-### for dine-in, reset daily per type. */
+/** `../docs/api.md`: `DI-YYYYMMDD-SSS` / `TA-YYYYMMDD-SSS`, daily sequence per order type. */
 const nextOrderNumber = (orderType: OrderType): string => {
-  const prefix = orderType === 'TAKE_AWAY' ? 'TA-' : 'DI-'
-  const today = new Date().toISOString().slice(0, 10)
+  const day = businessDay()
   const highest = db.orders
-    .filter(
-      (order) =>
-        order.order_type === orderType &&
-        order.order_number.startsWith(prefix) &&
-        order.created_at.slice(0, 10) === today,
+    .filter((order) => order.order_type === orderType)
+    .reduce(
+      (max, order) => Math.max(max, orderNumberSequence(order.order_number, orderType, day)),
+      0,
     )
-    .reduce((max, order) => Math.max(max, Number(order.order_number.slice(3)) || 0), 0)
-  return `${prefix}${String(highest + 1).padStart(3, '0')}`
+  return formatOrderNumber(orderType, day, highest + 1)
 }
 
 export const getOrders = async (filters?: OrderFilters): Promise<Order[]> => {
@@ -96,6 +95,7 @@ export const createManualOrder = async (body: CreateManualOrderInput): Promise<O
     return { input, menu, recipes }
   })
   const orderId = `order-${Date.now()}`
+  const createdAt = new Date().toISOString()
   const items = resolved.map(({ input, menu }, index) => ({
     id: `item-${Date.now()}-${index}`,
     menu_id: menu.id,
@@ -158,7 +158,7 @@ export const createManualOrder = async (body: CreateManualOrderInput): Promise<O
     tax_rate_snapshot: tax_rate,
     tax_amount,
     total_amount: subtotal + service_amount + tax_amount,
-    created_at: new Date().toISOString(),
+    created_at: createdAt,
     items,
   }
   db.orders.unshift(order)

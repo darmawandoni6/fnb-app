@@ -9,9 +9,11 @@ import { MenuFormDialog } from './MenuFormDialog'
 
 export function CategorySection({
   category,
+  canEdit,
   onChanged,
 }: {
   category: Category
+  canEdit: boolean
   onChanged: () => void
 }) {
   return (
@@ -23,17 +25,25 @@ export function CategorySection({
             {category.menus.length} menu
           </Badge>
         </div>
-        <div className="flex items-center gap-1">
-          <CategoryFormDialog editing={category} onSaved={onChanged} />
-          <DeleteCategoryButton category={category} onDeleted={onChanged} />
-        </div>
+        {canEdit && (
+          <div className="flex items-center gap-1">
+            <CategoryFormDialog editing={category} onSaved={onChanged} />
+            <DeleteCategoryButton category={category} onDeleted={onChanged} />
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
         {category.menus.map((menu) => (
-          <MenuCard key={menu.id} menu={menu} categoryId={category.id} onChanged={onChanged} />
+          <MenuCard
+            key={menu.id}
+            menu={menu}
+            categoryId={category.id}
+            canEdit={canEdit}
+            onChanged={onChanged}
+          />
         ))}
-        <MenuFormDialog categoryId={category.id} onSaved={onChanged} />
+        {canEdit && <MenuFormDialog categoryId={category.id} onSaved={onChanged} />}
       </div>
     </section>
   )

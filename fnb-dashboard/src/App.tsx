@@ -67,7 +67,7 @@ const router = createBrowserRouter([
           },
           {
             path: ROUTES.MENUS,
-            element: <RoleGuard roles={owner} />,
+            element: <RoleGuard roles={staff} />,
             children: [{ index: true, element: <MenusPage /> }],
           },
           {

@@ -2,6 +2,9 @@ import { useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
 
+import { useQuery } from '@tanstack/react-query'
+
+import { api } from '@/api'
 import type { Order } from '@/types'
 
 import { ORDER_STATUS, type OrderStatus } from '@/constants/orderStatus'
@@ -33,6 +36,7 @@ export function OrdersPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const { data: orders, isPending } = useOrders()
+  const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: api.getSettings })
   const stats = useOrderStats()
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
@@ -96,6 +100,7 @@ export function OrdersPage() {
                     key={order.id}
                     order={order}
                     showCashierActions={canAct}
+                    timeoutMinutes={settings?.cash_timeout_minutes ?? 0}
                     onClick={() => setSelectedOrder(order)}
                   />
                 ))}

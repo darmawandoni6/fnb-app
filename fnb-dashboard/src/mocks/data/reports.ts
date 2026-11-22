@@ -1,6 +1,8 @@
 import { ITEM_STATUS, ORDER_STATUS, ORDER_TYPE, PAYMENT_METHOD, PAYMENT_STATUS } from '@/constants'
 import type { Order, OrderItem } from '@/types'
 
+import { formatOrderNumber } from '@/lib/orderNumber'
+
 import { menus } from './menus'
 
 // Deterministic LCG pseudo-random generator
@@ -62,11 +64,14 @@ export const generateHistoricalOrders = (): Order[] => {
       const serviceAmount = Math.round((subtotal * serviceRate) / 100)
       const taxAmount = Math.round(((subtotal + serviceAmount) * taxRate) / 100)
       const totalAmount = subtotal + serviceAmount + taxAmount
-      const prefix = isDineIn ? 'DI' : 'TA'
 
       generated.push({
         id: orderId,
-        order_number: `${prefix}-${String(dayOffset * 20 + orderIndex + 1).padStart(3, '0')}`,
+        order_number: formatOrderNumber(
+          isDineIn ? ORDER_TYPE.DINE_IN : ORDER_TYPE.TAKE_AWAY,
+          orderTime.toISOString(),
+          orderIndex + 1,
+        ),
         order_type: isDineIn ? ORDER_TYPE.DINE_IN : ORDER_TYPE.TAKE_AWAY,
         table_id: isDineIn ? `table-${tableNum}` : null,
         table_number: tableNum,

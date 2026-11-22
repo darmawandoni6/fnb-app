@@ -8,12 +8,13 @@ Granular plan for executing section 2.3 from `../implementation-plan.md`.
 
 ## Status
 
-OPEN — 2 of 4 tasks remaining.
+DONE — all tasks complete.
 
 ## Files
 
 - `src/features/orders/OrderDetailDialog.tsx`
 - `src/features/orders/CancelOrderButton.tsx`
+- `src/features/orders/CloseTableSessionButton.tsx`
 - `src/features/manual-order/PaymentReceiptDialog.tsx`
 
 ## Tasks
@@ -21,12 +22,12 @@ OPEN — 2 of 4 tasks remaining.
 - [x] Show order header, item table, and totals; readable by `OWNER` and `CASHIER`.
 - [x] Receipt reprint for paid orders through `PaymentReceiptDialog`.
 - [x] Order-level cancel rendered for `OWNER` only, calling `POST /orders/:id/cancel`; hidden unless the order is `MENUNGGU` and `BELUM`.
-- [ ] Close table session action for `CASHIER` and `OWNER` (PRD §9).
+- [x] Close table session action for `CASHIER` and `OWNER` (PRD §9).
   - Read the open session with `getTableSession(order.table_id)`; close it with `closeTableSession(order.table_id)`.
   - Only for `DINE_IN` orders that still have `table_id`; take away orders have none.
   - Hide the action when the read returns `NOT_FOUND` (no open session); do not pre-empt the error with local state.
   - Invalidate `['orders']` and `['tables']` after a successful close.
-- [ ] `/tables` stays `OWNER`-only; the cashier reaches this action only through the order detail.
+- [x] `/tables` stays `OWNER`-only; the cashier reaches this action only through the order detail.
 
 ## Verification
 

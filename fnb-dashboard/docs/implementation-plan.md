@@ -16,12 +16,12 @@ This document is the index. Every phase and every page has its own file in `docs
 
 ## Phase Map
 
-| Phase | Name              | Goal                                              | State                    |
-| ----- | ----------------- | ------------------------------------------------- | ------------------------ |
-| 1     | Setup             | Scaffold, tooling, constants, types, mock harness | Done                     |
-| 2     | Slicing with mock | Every page works against `src/mocks/`             | Mostly done; 7 gaps open |
-| 3     | API integration   | Swap mock for the live `fnb-server`               | Not started              |
-| 4     | Verification      | Per-page manual verification and docs sync        | Not started              |
+| Phase | Name              | Goal                                              | State       |
+| ----- | ----------------- | ------------------------------------------------- | ----------- |
+| 1     | Setup             | Scaffold, tooling, constants, types, mock harness | Done        |
+| 2     | Slicing with mock | Every page works against `src/mocks/`             | Done        |
+| 3     | API integration   | Swap mock for the live `fnb-server`               | Not started |
+| 4     | Verification      | Per-page manual verification and docs sync        | Not started |
 
 Work is organized per feature or per page so each page can be sliced, integrated, and verified independently.
 
@@ -31,32 +31,24 @@ Work is organized per feature or per page so each page can be sliced, integrated
 
 ## Phase 2 — Slicing with Mock
 
-| Page                     | File                                                                            | State                       |
-| ------------------------ | ------------------------------------------------------------------------------- | --------------------------- |
-| 2.1 Auth                 | [phase-2-1-auth.md](implementation/phase-2-1-auth.md)                           | Done                        |
-| 2.2 Orders board         | [phase-2-2-orders-board.md](implementation/phase-2-2-orders-board.md)           | Open — cash countdown       |
-| 2.3 Order detail dialog  | [phase-2-3-order-detail.md](implementation/phase-2-3-order-detail.md)           | Open — session close        |
-| 2.4 Take away POS        | [phase-2-4-pos.md](implementation/phase-2-4-pos.md)                             | Done                        |
-| 2.5 Checkout and payment | [phase-2-5-checkout.md](implementation/phase-2-5-checkout.md)                   | Open — countdown reuse      |
-| 2.6 Kitchen board        | [phase-2-6-kitchen.md](implementation/phase-2-6-kitchen.md)                     | Open — grouping             |
-| 2.7 Menus and recipes    | [phase-2-7-menus.md](implementation/phase-2-7-menus.md)                         | Open — cashier availability |
-| 2.8 Tables and QR        | [phase-2-8-tables.md](implementation/phase-2-8-tables.md)                       | Done                        |
-| 2.9 Stock                | [phase-2-9-stock.md](implementation/phase-2-9-stock.md)                         | Done                        |
-| 2.10 Users               | [phase-2-10-users.md](implementation/phase-2-10-users.md)                       | Done                        |
-| 2.11 Settings            | [phase-2-11-settings.md](implementation/phase-2-11-settings.md)                 | Open — warning validation   |
-| 2.12 Reports             | [phase-2-12-reports.md](implementation/phase-2-12-reports.md)                   | Done, frozen on mocks       |
-| 2.13 Audit log           | [phase-2-13-audit-log.md](implementation/phase-2-13-audit-log.md)               | Done                        |
-| 2.14 Mock conformance    | [phase-2-14-mock-conformance.md](implementation/phase-2-14-mock-conformance.md) | Open — order number         |
+| Page                     | File                                                                            | State                 |
+| ------------------------ | ------------------------------------------------------------------------------- | --------------------- |
+| 2.1 Auth                 | [phase-2-1-auth.md](implementation/phase-2-1-auth.md)                           | Done                  |
+| 2.2 Orders board         | [phase-2-2-orders-board.md](implementation/phase-2-2-orders-board.md)           | Done                  |
+| 2.3 Order detail dialog  | [phase-2-3-order-detail.md](implementation/phase-2-3-order-detail.md)           | Done                  |
+| 2.4 Take away POS        | [phase-2-4-pos.md](implementation/phase-2-4-pos.md)                             | Done                  |
+| 2.5 Checkout and payment | [phase-2-5-checkout.md](implementation/phase-2-5-checkout.md)                   | Done                  |
+| 2.6 Kitchen board        | [phase-2-6-kitchen.md](implementation/phase-2-6-kitchen.md)                     | Done                  |
+| 2.7 Menus and recipes    | [phase-2-7-menus.md](implementation/phase-2-7-menus.md)                         | Done                  |
+| 2.8 Tables and QR        | [phase-2-8-tables.md](implementation/phase-2-8-tables.md)                       | Done                  |
+| 2.9 Stock                | [phase-2-9-stock.md](implementation/phase-2-9-stock.md)                         | Done                  |
+| 2.10 Users               | [phase-2-10-users.md](implementation/phase-2-10-users.md)                       | Done                  |
+| 2.11 Settings            | [phase-2-11-settings.md](implementation/phase-2-11-settings.md)                 | Done                  |
+| 2.12 Reports             | [phase-2-12-reports.md](implementation/phase-2-12-reports.md)                   | Done, frozen on mocks |
+| 2.13 Audit log           | [phase-2-13-audit-log.md](implementation/phase-2-13-audit-log.md)               | Done                  |
+| 2.14 Mock conformance    | [phase-2-14-mock-conformance.md](implementation/phase-2-14-mock-conformance.md) | Done                  |
 
-Open work, in dependency order:
-
-1. `2.14` order number format — touches the mock generator, fixtures, and self check.
-2. `2.2` cash countdown — the shared `CashCountdown` component is a prerequisite for `2.5`.
-3. `2.5` countdown reuse.
-4. `2.3` table session close in the order detail.
-5. `2.7` cashier menu availability.
-6. `2.11` settings warning validation.
-7. `2.6` kitchen grouping.
+Phase 2 is complete on the mock layer. The integration work that used to be listed here is now the first task of Phase 3.
 
 ## Phase 3 — API Integration
 

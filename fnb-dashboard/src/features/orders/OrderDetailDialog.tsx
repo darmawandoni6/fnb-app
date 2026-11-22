@@ -25,6 +25,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { PaymentReceiptDialog } from '@/features/manual-order/PaymentReceiptDialog'
+import { CancelOrderButton } from '@/features/orders/CancelOrderButton'
+import { CloseTableSessionButton } from '@/features/orders/CloseTableSessionButton'
 
 export function OrderDetailDialog({
   order,
@@ -107,6 +109,8 @@ export function OrderDetailDialog({
               Cetak Struk
             </Button>
           )}
+          <CloseTableSessionButton order={order} />
+          <CancelOrderButton order={order} />
         </DialogContent>
       </Dialog>
 

@@ -22,6 +22,15 @@ const requireMinutes = (value: number, label: string) => {
 export const updateSettings = async (body: Partial<Settings>): Promise<Settings> => {
   await delay()
   requireRole(USER_ROLE.OWNER)
+  // `../docs/api.md`: validate the timer pair as a whole, so a partial patch cannot break it.
+  const nextDeliver = body.ready_auto_deliver_minutes ?? db.settings.ready_auto_deliver_minutes
+  const nextWarning =
+    body.ready_auto_deliver_warning_minutes ?? db.settings.ready_auto_deliver_warning_minutes
+  if (body.ready_auto_deliver_minutes !== undefined) requireMinutes(nextDeliver, 'Auto-deliver')
+  if (body.ready_auto_deliver_warning_minutes !== undefined)
+    requireMinutes(nextWarning, 'Peringatan auto-deliver')
+  if (nextWarning >= nextDeliver)
+    fail(API_ERROR_CODE.VALIDATION_ERROR, 'Peringatan auto-deliver harus lebih kecil')
   if (body.cafe_name !== undefined) {
     if (!body.cafe_name.trim()) fail(API_ERROR_CODE.VALIDATION_ERROR, 'Nama kafe wajib diisi')
     db.settings.cafe_name = body.cafe_name
@@ -43,14 +52,10 @@ export const updateSettings = async (body: Partial<Settings>): Promise<Settings>
     requireMinutes(body.delivered_auto_complete_minutes, 'Auto-complete')
     db.settings.delivered_auto_complete_minutes = body.delivered_auto_complete_minutes
   }
-  if (body.ready_auto_deliver_minutes !== undefined) {
-    requireMinutes(body.ready_auto_deliver_minutes, 'Auto-deliver')
-    db.settings.ready_auto_deliver_minutes = body.ready_auto_deliver_minutes
-  }
-  if (body.ready_auto_deliver_warning_minutes !== undefined) {
-    requireMinutes(body.ready_auto_deliver_warning_minutes, 'Peringatan auto-deliver')
-    db.settings.ready_auto_deliver_warning_minutes = body.ready_auto_deliver_warning_minutes
-  }
+  if (body.ready_auto_deliver_minutes !== undefined)
+    db.settings.ready_auto_deliver_minutes = nextDeliver
+  if (body.ready_auto_deliver_warning_minutes !== undefined)
+    db.settings.ready_auto_deliver_warning_minutes = nextWarning
   if (body.is_open !== undefined) {
     db.settings.is_open = body.is_open
     audit({

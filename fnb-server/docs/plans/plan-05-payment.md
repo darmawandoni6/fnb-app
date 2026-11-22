@@ -27,7 +27,7 @@ Plus: Snap transaction creation when a `NON_CASH` order is created (inside plan 
 Out:
 
 - Refund (PRD §1.4).
-- Reports.
+- Reports — delivered separately in `plan-10-reports.md`.
 - Receipt printing (dashboard-side, reads the order response from plan 04).
 
 ## 2. Decisions

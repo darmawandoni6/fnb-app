@@ -353,6 +353,45 @@ Audit log response:
 
 Entries are written by usecases only. `from`/`to` are ISO dates; `to` covers the whole day.
 
+## Internal — reports
+
+`OWNER` only. `from`/`to` are UTC days (`YYYY-MM-DD`), inclusive. Both are required; `from > to` or a span over 366 days returns `400 VALIDATION_ERROR`.
+
+| Method | Path | Params | Description |
+|---|---|---|---|
+| `GET` | `/reports/summary` | `from`, `to` | KPI summary, daily trend, top menus, category share in one response |
+| `GET` | `/reports/transactions` | `from`, `to`, `order_type`, `payment_method` | Transaction history, `created_at DESC`, at most 200 rows |
+
+Aggregates count only `payment_status = LUNAS` orders with `status <> DIBATALKAN`. Money is integer rupiah. `average_order_value` is rounded. `percentage` is the category's share of item revenue, rounded.
+
+```json
+{
+  "success": true,
+  "data": {
+    "summary": {
+      "total_revenue": 1250000,
+      "total_orders": 42,
+      "average_order_value": 29762,
+      "cash_revenue": 800000,
+      "non_cash_revenue": 450000,
+      "dine_in_orders_count": 30,
+      "take_away_orders_count": 12,
+      "total_items_sold": 96
+    },
+    "trends": [ { "date": "2026-11-20", "revenue": 300000, "order_count": 11 } ],
+    "top_menus": [ { "menu_id": "uuid", "menu_name": "Nasi Goreng", "category_name": "Makanan", "qty_sold": 18, "total_revenue": 540000 } ],
+    "categories": [ { "category_id": "uuid", "category_name": "Makanan", "total_revenue": 900000, "total_items_sold": 55, "percentage": 72 } ]
+  }
+}
+```
+
+- `trends` covers every day in the range, zero-filled where no paid order exists.
+- `top_menus` is capped at 10, sorted by `qty_sold` descending. `category_name` is the menu's current category; a deleted menu falls back to `"Other"`.
+- `categories` lists every category, including zero-revenue ones.
+- `summary` is one call so the dashboard issues a single request for all four aggregate queries.
+
+`GET /reports/transactions` returns the same order objects as `GET /orders` (see above). Unlike the aggregates it does not filter by payment status, so unpaid and canceled orders are visible. `order_type` and `payment_method` filters are optional.
+
 ## WebSocket
 
 ```text
@@ -431,6 +470,7 @@ api-collection/
 ├── tables/       # tables and table sessions
 ├── stock/        # ingredients, restock, adjust, movements, recipes
 ├── users/        # users and settings
+├── reports/      # sales summary and transaction history
 └── audit/        # audit log
 ```
 

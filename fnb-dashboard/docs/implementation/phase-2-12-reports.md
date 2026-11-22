@@ -4,11 +4,11 @@ Granular plan for executing section 2.12 from `../implementation-plan.md`.
 
 ## Scope
 
-`/reports` for `OWNER`: KPI cards, sales trend, menu performance, and transaction history with CSV export. Runs on mocks because `../../docs/api.md` defines no `/reports/*` contract. PRD §17 places reports in phase 2; the dashboard slice is complete and frozen.
+`/reports` for `OWNER`: KPI cards, sales trend, menu performance, and transaction history with CSV export. Contract lands in `../../docs/api.md` § Internal — reports; swap tracked in `phase-3-api.md` 3.11. PRD §17 places reports in phase 2; the dashboard slice is complete.
 
 ## Status
 
-DONE (frozen) — no work until the API contract exists.
+DONE — API contract in `../../docs/api.md`; swap tracked in `phase-3-api.md` 3.11.
 
 ## Files
 
@@ -33,7 +33,7 @@ DONE (frozen) — no work until the API contract exists.
 
 ## Tasks — deferred
 
-- [ ] API integration. Blocked: `../../docs/api.md` has no `/reports/*` endpoints.
+- [ ] API integration. Tracked in `phase-3-api.md` 3.11 once `../../docs/api.md` § Internal — reports is live.
 
 ## Verification
 

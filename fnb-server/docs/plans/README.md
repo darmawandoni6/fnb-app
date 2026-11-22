@@ -73,6 +73,7 @@ graph LR
 | 07 | `plan-07-scheduler.md` | Auto-cancel, auto-deliver, auto-complete, session close | DONE |
 | 08 | `plan-08-admin.md` | Remaining CRUD aligned with PRD, session endpoints, audit log | DONE |
 | 09 | `plan-09-verification.md` | Tests, Bruno collection, doc sync, commit gate | DONE |
+| 10 | `plan-10-reports.md` | `GET /reports/summary` and `/reports/transactions`, `OWNER` only, aggregates over paid orders | OPEN |
 
 Each milestone ends in a state where `go test ./... && go build ./...` passes and the API matches `../../../docs/api.md` for the endpoints it owns.
 

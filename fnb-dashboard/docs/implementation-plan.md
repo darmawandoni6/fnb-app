@@ -8,7 +8,7 @@ Plan for the internal dashboard `fnb-dashboard`, based on `../docs/PRD.md`, `../
 
 Decided exception: `order_number` follows `api.md` (`DI-YYYYMMDD-SSS` / `TA-YYYYMMDD-SSS`, zero-padded daily sequence per `order_type`). PRD §7.5 (`TA-001` / `DI-001`) is superseded and needs a correction in the PRD itself.
 
-Reports are complete on the mock layer. `api.md` has no `/reports/*` contract, so Reports stays on mocks and is excluded from API integration until the contract exists.
+Reports are complete on the mock layer. `api.md` now defines `/reports/*` (phase 3.11), so Reports joins the API integration.
 
 Unit, component, and E2E testing are excluded.
 
@@ -44,7 +44,7 @@ Work is organized per feature or per page so each page can be sliced, integrated
 | 2.9 Stock                | [phase-2-9-stock.md](implementation/phase-2-9-stock.md)                         | Done                  |
 | 2.10 Users               | [phase-2-10-users.md](implementation/phase-2-10-users.md)                       | Done                  |
 | 2.11 Settings            | [phase-2-11-settings.md](implementation/phase-2-11-settings.md)                 | Done                  |
-| 2.12 Reports             | [phase-2-12-reports.md](implementation/phase-2-12-reports.md)                   | Done, frozen on mocks |
+| 2.12 Reports             | [phase-2-12-reports.md](implementation/phase-2-12-reports.md)                   | Done                  |
 | 2.13 Audit log           | [phase-2-13-audit-log.md](implementation/phase-2-13-audit-log.md)               | Done                  |
 | 2.14 Mock conformance    | [phase-2-14-mock-conformance.md](implementation/phase-2-14-mock-conformance.md) | Done                  |
 
@@ -61,5 +61,4 @@ Phase 2 is complete on the mock layer. The integration work that used to be list
 ## Excluded
 
 - Unit, component, and E2E testing; Redux or Zustand; Storybook; Playwright before the MVP flow is stable.
-- Reports API integration until `api.md` defines `/reports/*`.
 - Refund, item-level cancellation, multi-outlet, manager role, notifications, and Midtrans UI inside the dashboard (customer payment stays in the QR Menu).

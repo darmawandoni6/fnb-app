@@ -37,7 +37,7 @@ VITE_RUN_MOCK_SELFCHECK=true npm run dev
 - [ ] Stock — restock `IN`, opname `ADJUSTMENT`, order `OUT`, cancel `RESTORE`; `CASHIER` read-only.
 - [ ] Users — `OWNER` only; create `CASHIER` / `KITCHEN`; deactivated user cannot log in.
 - [ ] Settings — eight fields; rates affect new orders only; warning must be lower than auto-deliver.
-- [ ] Reports — four presets; three tabs; CSV export; `OWNER` only.
+- [ ] Reports — four presets; three tabs; CSV export; `OWNER` only; `/reports/summary` and `/reports/transactions` match the mock figures.
 - [ ] Audit log — append-only; `OWNER` only; `FORBIDDEN` for other roles.
 
 ## 4.2 Contract conformance

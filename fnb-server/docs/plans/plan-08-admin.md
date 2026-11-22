@@ -30,7 +30,7 @@ In:
 
 Out:
 
-- Reports (phase 2).
+- Reports — delivered separately in `plan-10-reports.md`.
 - Recipe editing while the store is open is a gate, not a new flow.
 - Anything already matching `api.md` is verified, not rewritten.
 

@@ -680,7 +680,8 @@ PATCH /orders/:id/items/:item_id/status        move an item along the matrix (ro
 GET   /tables/:id/session                      read the open session of a table (`CASHIER`, `OWNER`)
 POST  /tables/:id/session/close                close a table session manually (`CASHIER`, `OWNER`)
 GET   /audit-log                               read the audit trail (`OWNER`)
-GET   /reports/*                               phase 2
+GET   /reports/summary                         KPI summary, daily trend, top menus, category share (`OWNER`)
+GET   /reports/transactions                    transaction history, filter order_type/payment_method (`OWNER`)
 ```
 
 `PATCH /orders/:id/payment` accepts a cash or manual non-cash confirmation:
@@ -833,7 +834,7 @@ Non-trivial changes must add or update the relevant tests.
 
 ### Phase 2
 
-- Reports: sales summary, daily and weekly charts, transaction history, CSV export.
+- Reports: sales summary, daily and weekly charts, transaction history, CSV export. Contract: `api.md` § Internal — reports.
 - WhatsApp and push notification to the customer (`customer_phone`).
 - Digital receipt.
 - Separate manager role.

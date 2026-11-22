@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
+import { subscribeOrder, unsubscribeOrder } from '@/api'
 import { PAYMENT_STATUS } from '@/constants'
 import type { Order } from '@/types'
 import { Printer } from 'lucide-react'
@@ -36,6 +37,12 @@ export function OrderDetailDialog({
   onClose: () => void
 }) {
   const [receiptOpen, setReceiptOpen] = useState(false)
+
+  useEffect(() => {
+    if (!order) return
+    subscribeOrder(order.id)
+    return () => unsubscribeOrder(order.id)
+  }, [order])
 
   if (!order) return null
 

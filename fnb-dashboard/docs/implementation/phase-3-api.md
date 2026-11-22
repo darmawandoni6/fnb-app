@@ -8,7 +8,7 @@ Swap `src/mocks/` for the live `fnb-server` at `http://localhost:8081` one resou
 
 ## Status
 
-OPEN — 12 of 15 tasks complete.
+OPEN — 13 of 15 tasks complete.
 
 ## Rule
 
@@ -30,7 +30,7 @@ Tasks are grouped per resource, not per page, because one `api` function is shar
 - [x] 3.7 Menus and recipes — `GET|POST|PATCH|DELETE /menu-categories`, `/menus`, `/recipe-items`. Files: `src/pages/MenusPage.tsx`, `src/features/menus/*`.
 - [x] 3.8 Stock — `GET|POST|PATCH /ingredients`, `POST /ingredients/:id/restock`, `POST /ingredients/:id/adjust`, `GET /stock-movements`. Files: `src/pages/StockPage.tsx`, `src/features/stock/*`.
 - [x] 3.9 Users and audit log — `GET|POST|PATCH /users`, `GET /audit-log`. Files: `src/pages/UsersPage.tsx`, `src/pages/AuditLogPage.tsx`.
-- [ ] 3.10 WebSocket — `src/api/ws.ts`, `GET /ws` with the bearer token, subscribe `order:{id}`, handle `order.created`, `order.updated`, `item.updated`, `session.closed`. Invalidate affected queries; keep 3–5 s polling while the socket is down; reconnect and resubscribe; close on unmount and logout. PRD §11.4, EC-19. Not mocked.
+- [x] 3.10 WebSocket — `src/api/ws.ts`, `GET /ws` with the bearer token, subscribe `order:{id}`, handle `order.created`, `order.updated`, `item.updated`, `session.closed`. Invalidate affected queries; keep 3–5 s polling while the socket is down; reconnect and resubscribe; close on unmount and logout. PRD §11.4, EC-19. Not mocked.
 - [ ] 3.11 Reports — deferred, keeps `src/mocks/handlers/reports.ts` until `../../docs/api.md` defines `/reports/*`.
 - [ ] 3.12 Flag flip — `VITE_USE_MOCKS=false` in the integration environment; confirm no page still resolves a mock resource through the 3.0 merge.
 

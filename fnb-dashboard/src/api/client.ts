@@ -6,7 +6,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios'
 
-import { getAccessToken, setAccessToken } from '@/auth/token'
+import { emitUnauthorized, getAccessToken, setAccessToken } from '@/auth/token'
 
 export const API_BASE_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8081'
 
@@ -72,6 +72,7 @@ http.interceptors.response.use(
       return await http(config)
     } catch {
       setAccessToken(null)
+      emitUnauthorized()
       window.dispatchEvent(new Event('auth:unauthorized'))
       return Promise.reject(toApiError(error))
     }

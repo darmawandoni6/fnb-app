@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
+
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { api } from '@/api'
+import { api, subscribeOrder, unsubscribeOrder } from '@/api'
 import { ITEM_STATUS, type ItemStatus, PAYMENT_STATUS, TERMINAL_ITEM_STATUS } from '@/constants'
 import type { Order, OrderItem } from '@/types'
 import { toast } from 'sonner'
@@ -35,6 +37,13 @@ export function KitchenPage() {
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: api.getSettings })
   const queryClient = useQueryClient()
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['orders'] })
+
+  // Subscribe to paid order updates via WebSocket
+  useEffect(() => {
+    const paidOrders = (orders ?? []).filter((o) => o.payment_status === PAYMENT_STATUS.LUNAS)
+    paidOrders.forEach((o) => subscribeOrder(o.id))
+    return () => paidOrders.forEach((o) => unsubscribeOrder(o.id))
+  }, [orders])
 
   // PRD §5.3: kitchen only reads paid orders that still have active items.
   const boardItems: BoardItem[] = (orders ?? [])

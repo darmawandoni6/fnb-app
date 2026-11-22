@@ -1,10 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { api } from '@/api'
+import { api, subscribeOrder, unsubscribeOrder } from '@/api'
 import { ITEM_STATUS, PAYMENT_METHOD, PAYMENT_STATUS, type PaymentMethod } from '@/constants'
 import type { Order } from '@/types'
 import { ArrowLeft, Banknote, CheckCircle2, CreditCard, Printer, UserCheck } from 'lucide-react'
@@ -58,6 +58,12 @@ export function OrderPaymentPage() {
     queryFn: () => api.getOrder(id!),
     enabled: !!id,
   })
+
+  useEffect(() => {
+    if (!id) return
+    subscribeOrder(id)
+    return () => unsubscribeOrder(id)
+  }, [id])
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: api.getSettings })
   const timeoutMinutes = settings?.cash_timeout_minutes ?? 0
 

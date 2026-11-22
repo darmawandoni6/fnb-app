@@ -1,11 +1,11 @@
 import { type ReactNode, createContext, useContext, useEffect, useState } from 'react'
 
-import { api } from '@/api'
+import { api, initWS } from '@/api'
 import type { User } from '@/types'
 
-import { getAccessToken, setAccessToken } from '@/auth/token'
+import { emitUnauthorized, getAccessToken, setAccessToken } from '@/auth/token'
 
-export { getAccessToken, setAccessToken }
+export { getAccessToken, setAccessToken, emitUnauthorized as onUnauthorized }
 
 type AuthContextValue = {
   user: User | null
@@ -28,6 +28,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccessToken(result.access_token)
         setUser(result.user)
         setIsLoading(false)
+        initWS()
       },
       () => {
         if (!active) return
@@ -55,12 +56,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const result = await api.login(email, password)
     setAccessToken(result.access_token)
     setUser(result.user)
+    initWS()
   }
 
   const logout = async () => {
     await api.logout().catch(() => undefined)
     setAccessToken(null)
     setUser(null)
+    emitUnauthorized()
   }
 
   return (

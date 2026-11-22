@@ -1,6 +1,6 @@
 import { Navigate, RouterProvider, createBrowserRouter } from 'react-router-dom'
 
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 
 import { AuditLogPage } from '@/pages/AuditLogPage'
 import { DashboardLayout } from '@/pages/DashboardLayout'
@@ -19,6 +19,7 @@ import { Toaster } from 'sonner'
 
 import { USER_ROLE } from '@/constants/roles'
 import { ROUTES } from '@/constants/routes'
+import { queryClient } from '@/lib/queryClient'
 
 import { useAuth } from '@/auth/context'
 import { AuthProvider } from '@/auth/context'
@@ -105,8 +106,6 @@ const router = createBrowserRouter([
     ],
   },
 ])
-
-const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 4_000, retry: 1 } } })
 
 export default function App() {
   return (

@@ -1,6 +1,12 @@
 # Plan 10 — Reports
 
-> **Status:** OPEN
+> **Status:** DONE (Completed on 2026-11-22)
+> - `GET /reports/summary` returns `summary`, `trends`, `top_menus`, `categories` from four concurrent queries (`errgroup`); `GET /reports/transactions` reuses `OrderRepository.List` with the new `PaymentMethod`/`From`/`To` filters.
+> - Trends zero-fill missing days in SQL with `generate_series`; aggregates scope `payment_status = 'LUNAS' AND status <> 'DIBATALKAN'`.
+> - `from`/`to` required, `from <= to`, span ≤ 366 days → `400 VALIDATION_ERROR`; `CASHIER`/`KITCHEN` → `403`.
+> - Tests passing: summary envelope, range validation (missing, inverted, too long, bad format), role guard, transaction filters, invalid filter value.
+> - Bruno: `api-collection/reports/` (`01-summary`, `02-transactions`).
+> - Dashboard: `src/api/http/reports.ts`; the four aggregate hooks share one `['reports', 'summary', filter]` query via `select`. Verified live against the seeded database.
 
 Read-only analytics for `OWNER`. The contract is frozen in `../../../docs/api.md` § Internal — reports.
 

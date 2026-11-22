@@ -8,12 +8,15 @@ import (
 )
 
 type OrderFilter struct {
-	Status    *OrderStatus
-	TableID   *uuid.UUID
-	SessionID *uuid.UUID
-	OrderType *OrderType
-	Date      *time.Time
-	PaidOnly  bool
+	Status        *OrderStatus
+	TableID       *uuid.UUID
+	SessionID     *uuid.UUID
+	OrderType     *OrderType
+	PaymentMethod *PaymentMethod
+	Date          *time.Time
+	From          *time.Time
+	To            *time.Time
+	PaidOnly      bool
 }
 
 type OrderQueryRepository interface {

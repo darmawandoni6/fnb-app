@@ -32,6 +32,7 @@ func newHandlers(db *gorm.DB, cfg *config.Config, hub *usecase.Hub, log *slog.Lo
 		Users:   newUsersSettingsHandler(db),
 		WS:      newWSHandler(db, hub, authUsecase, sessionUsecase),
 		Audit:   httpDelivery.NewAuditHandler(usecase.NewAuditUsecase(repository.NewAuditRepository(db))),
+		Report:  newReportHandler(db),
 	}
 	return handlers, authUsecase, sessionUsecase
 }
@@ -92,4 +93,9 @@ func newOrderHandler(db *gorm.DB, cfg *config.Config, hub *usecase.Hub, log *slo
 	settingRepo := repository.NewSettingRepository(db)
 	orderUsecase := usecase.NewOrderUsecase(orderRepo, menuRepo, settingRepo, newOrderTxRunner(db), hub, newSnapGateway(cfg), log, cfg.Location())
 	return httpDelivery.NewOrderHandler(orderUsecase)
+}
+
+func newReportHandler(db *gorm.DB) *httpDelivery.ReportHandler {
+	reports := usecase.NewReportUsecase(repository.NewReportRepository(db), repository.NewOrderRepository(db))
+	return httpDelivery.NewReportHandler(reports)
 }

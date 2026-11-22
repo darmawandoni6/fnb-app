@@ -10,6 +10,8 @@ import type {
   TransactionHistoryParams,
 } from '@/types'
 
+import type { ReportsSummary } from '@/api/http/reports'
+
 import { delay, requireRole } from './shared'
 
 const filterOrdersByDate = (from: string, to: string): Order[] => {
@@ -174,6 +176,16 @@ export const getCategorySales = async (filter: ReportFilter): Promise<CategorySa
     total_items_sold: data.itemsSold,
     percentage: grandRevenue > 0 ? Math.round((data.revenue / grandRevenue) * 100) : 0,
   }))
+}
+
+export const getReportsSummary = async (filter: ReportFilter): Promise<ReportsSummary> => {
+  const [summary, trends, top_menus, categories] = await Promise.all([
+    getSalesReportSummary(filter),
+    getSalesTrends(filter),
+    getTopSellingMenus(filter),
+    getCategorySales(filter),
+  ])
+  return { summary, trends, top_menus, categories }
 }
 
 export const getTransactionHistory = async (params: TransactionHistoryParams): Promise<Order[]> => {

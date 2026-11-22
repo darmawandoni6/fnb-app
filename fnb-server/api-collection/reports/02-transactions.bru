@@ -1,0 +1,26 @@
+meta {
+  name: Transaction history
+  type: http
+  seq: 2
+}
+get {
+  url: {{baseUrl}}/reports/transactions
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+params:query {
+  from: 2026-11-01
+  to: 2026-11-21
+  order_type: ALL
+  payment_method: ALL
+}
+tests {
+  test("lists transactions", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data).to.be.an("array");
+  });
+}

@@ -1,0 +1,27 @@
+meta {
+  name: Sales summary
+  type: http
+  seq: 1
+}
+get {
+  url: {{baseUrl}}/reports/summary
+  body: none
+  auth: bearer
+}
+auth:bearer {
+  token: {{accessToken}}
+}
+params:query {
+  from: 2026-11-01
+  to: 2026-11-21
+}
+tests {
+  test("returns the four aggregates", function() {
+    expect(res.status).to.equal(200);
+    expect(res.body.success).to.equal(true);
+    expect(res.body.data).to.have.property("summary");
+    expect(res.body.data).to.have.property("trends");
+    expect(res.body.data).to.have.property("top_menus");
+    expect(res.body.data).to.have.property("categories");
+  });
+}

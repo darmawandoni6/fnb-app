@@ -1,17 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { api } from '@/api'
-import type {
-  CategorySalesShare,
-  DailySalesTrend,
-  Order,
-  ReportDatePreset,
-  ReportFilter,
-  SalesReportSummary,
-  TopSellingMenuItem,
-  TransactionHistoryParams,
-} from '@/types'
+import type { Order, ReportDatePreset, ReportFilter, TransactionHistoryParams } from '@/types'
 
+import type { ReportsSummary } from '@/api/http/reports'
 import { todayUTC } from '@/lib/format'
 
 export const getDatesForPreset = (
@@ -44,30 +36,32 @@ export const getDatesForPreset = (
 }
 
 export function useSalesReportSummary(filter: ReportFilter) {
-  return useQuery<SalesReportSummary>({
-    queryKey: ['reports', 'summary', filter],
-    queryFn: () => api.getSalesReportSummary(filter),
-  })
+  return useReportsSummary(filter, (data) => data.summary)
 }
 
 export function useSalesTrends(filter: ReportFilter) {
-  return useQuery<DailySalesTrend[]>({
-    queryKey: ['reports', 'trends', filter],
-    queryFn: () => api.getSalesTrends(filter),
-  })
+  return useReportsSummary(filter, (data) => data.trends)
 }
 
 export function useTopSellingMenus(filter: ReportFilter, limit = 10) {
-  return useQuery<TopSellingMenuItem[]>({
-    queryKey: ['reports', 'top-menus', filter, limit],
-    queryFn: () => api.getTopSellingMenus(filter, limit),
-  })
+  // `limit` stays for the caller signature; the server caps top menus at 10.
+  void limit
+  return useReportsSummary(filter, (data) => data.top_menus)
 }
 
 export function useCategorySales(filter: ReportFilter) {
-  return useQuery<CategorySalesShare[]>({
-    queryKey: ['reports', 'categories', filter],
-    queryFn: () => api.getCategorySales(filter),
+  return useReportsSummary(filter, (data) => data.categories)
+}
+
+/**
+ * The four aggregate tabs read one endpoint, so one cached query serves all of
+ * them. `select` keeps each hook's return type unchanged.
+ */
+function useReportsSummary<T>(filter: ReportFilter, select: (data: ReportsSummary) => T) {
+  return useQuery<ReportsSummary, Error, T>({
+    queryKey: ['reports', 'summary', filter],
+    queryFn: () => api.getReportsSummary(filter),
+    select,
   })
 }
 

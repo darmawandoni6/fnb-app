@@ -19,6 +19,7 @@ type Handlers struct {
 	Users   *UsersSettingsHandler
 	WS      *WSHandler
 	Audit   *AuditHandler
+	Report  *ReportHandler
 }
 
 func NewRouter(h Handlers, authUsecase *usecase.AuthUsecase, sessionUsecase *usecase.TableSessionUsecase, isDevelopment bool, log *slog.Logger) *echo.Echo {
@@ -73,6 +74,10 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	admin.GET("/audit-log", h.Audit.List)
 	admin.GET("/settings", h.Users.GetSettings)
 	admin.PATCH("/settings", h.Users.UpdateSettings)
+
+	reports := e.Group("/reports", JWTMiddleware(authUsecase), RequireRoles(domain.UserRoleOwner))
+	reports.GET("/summary", h.Report.Summary)
+	reports.GET("/transactions", h.Report.Transactions)
 
 	authGroup := e.Group("/auth")
 	authGroup.POST("/login", h.Auth.Login)

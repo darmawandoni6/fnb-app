@@ -196,6 +196,15 @@ func (r *OrderRepository) List(ctx context.Context, filter domain.OrderFilter) (
 	if filter.OrderType != nil {
 		query = query.Where("order_type = ?", *filter.OrderType)
 	}
+	if filter.PaymentMethod != nil {
+		query = query.Where("payment_method = ?", *filter.PaymentMethod)
+	}
+	if filter.From != nil {
+		query = query.Where("created_at >= ?", *filter.From)
+	}
+	if filter.To != nil {
+		query = query.Where("created_at < ?", *filter.To)
+	}
 	if filter.Date != nil {
 		start := filter.Date.UTC().Truncate(24 * time.Hour)
 		end := start.Add(24 * time.Hour)

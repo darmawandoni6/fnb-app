@@ -52,7 +52,7 @@ Phase 2 is complete on the mock layer. The integration work that used to be list
 
 ## Phase 3 — API Integration
 
-- [phase-3-api.md](implementation/phase-3-api.md) — 11 tasks, resource by resource, WebSocket last.
+- [phase-3-api.md](implementation/phase-3-api.md) — 15 tasks, resource by resource, settings before orders, WebSocket last.
 
 ## Phase 4 — Verification
 

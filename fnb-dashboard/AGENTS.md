@@ -41,12 +41,14 @@ Verification order before commit: `npm run lint && npm run format:check && npm r
 
 - Backend API at `http://localhost:8081` (see `../fnb-server/AGENTS.md` for how to run it). Start the server before manual testing.
 - `VITE_API_URL` in `.env` / `.env.example`; only `VITE_*` vars reach the client bundle. Never put secrets in `VITE_*`.
+- Leave `VITE_API_URL` empty in development. `fnb-server` has no CORS middleware and the refresh cookie is scoped to `Path=/auth`, so `vite.config.ts` proxies the API prefixes with their paths unchanged. A hard navigation to `/orders`, `/menus`, `/tables`, or `/settings` still serves `index.html`.
+- `VITE_USE_MOCKS=true` keeps the whole app on `src/mocks/`; `false` uses `src/api/http/` for the resources already integrated and mocks for the rest.
 - Ports 8080/5432 may be occupied by other local projects; the API uses 8081.
 
 ## Architecture
 
 - SPA for three roles in one build: `OWNER`, `CASHIER`, `KITCHEN`. Role guards live in `src/auth/`; UI hiding is never a substitute for server authorization.
-- Dependency direction: `components/features → api → server`. No direct `fetch`/axios outside `src/api/`.
+- Dependency direction: `components/features → api → server`. No direct `fetch`/axios outside `src/api/`. `src/api/client.ts` owns the only axios instance and unwraps the envelope; `src/api/http/` holds one module per integrated resource; `src/api/index.ts` merges them over the mock module.
 - Status order (`MENUNGGU → DIPROSES → SELESAI`, plus `DIBATALKAN`) and item status (`PENDING → COOKING → READY → DELIVERED → COMPLETED`, plus `CANCELLED`) transitions are computed by the backend. The client reads aggregates and sends transitions; it never recalculates status or money (integer rupiah only).
 - Polling: TanStack Query `refetchInterval` 3–5 s per PRD as the WebSocket fallback; the kitchen board fetches `GET /orders` and filters paid orders client-side. Stop polling on unmount (Query does this automatically).
 - Auth: access token in memory only; refresh via httpOnly cookie (`POST /auth/refresh` on load and on 401, retry once). Never store tokens in `localStorage`.

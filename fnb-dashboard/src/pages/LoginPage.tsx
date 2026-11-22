@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 
 import { ROUTES } from '@/constants/routes'
+import { useMocks } from '@/lib/mode'
 
 import { useAuth } from '@/auth/context'
 
@@ -25,6 +26,7 @@ const demoAccounts = [
 export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const showDemoAccounts = useMocks
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
@@ -74,26 +76,28 @@ export function LoginPage() {
               {submitting ? 'Memproses…' : 'Masuk'}
             </Button>
           </form>
-          <div className="flex flex-col gap-2">
-            <p className="text-muted-foreground text-sm">
-              Mode mock — pilih role demo (password: demo)
-            </p>
-            {demoAccounts.map((account) => (
-              <Button
-                key={account.email}
-                type="button"
-                variant="outline"
-                disabled={submitting}
-                onClick={() => {
-                  form.setValue('email', account.email)
-                  form.setValue('password', 'demo')
-                  void signIn(account.email, 'demo')
-                }}
-              >
-                {account.label}
-              </Button>
-            ))}
-          </div>
+          {showDemoAccounts && (
+            <div className="flex flex-col gap-2">
+              <p className="text-muted-foreground text-sm">
+                Mode mock — pilih role demo (password: demo)
+              </p>
+              {demoAccounts.map((account) => (
+                <Button
+                  key={account.email}
+                  type="button"
+                  variant="outline"
+                  disabled={submitting}
+                  onClick={() => {
+                    form.setValue('email', account.email)
+                    form.setValue('password', 'demo')
+                    void signIn(account.email, 'demo')
+                  }}
+                >
+                  {account.label}
+                </Button>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

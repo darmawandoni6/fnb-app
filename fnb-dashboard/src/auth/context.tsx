@@ -3,12 +3,9 @@ import { type ReactNode, createContext, useContext, useEffect, useState } from '
 import { api } from '@/api'
 import type { User } from '@/types'
 
-let accessToken: string | null = null
+import { getAccessToken, setAccessToken } from '@/auth/token'
 
-export const getAccessToken = () => accessToken
-export const setAccessToken = (token: string | null) => {
-  accessToken = token
-}
+export { getAccessToken, setAccessToken }
 
 type AuthContextValue = {
   user: User | null
@@ -42,6 +39,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => {
       active = false
     }
+  }, [])
+
+  // The HTTP client refreshes once on 401, then gives up and fires this event.
+  useEffect(() => {
+    const onUnauthorized = () => {
+      setAccessToken(null)
+      setUser(null)
+    }
+    window.addEventListener('auth:unauthorized', onUnauthorized)
+    return () => window.removeEventListener('auth:unauthorized', onUnauthorized)
   }, [])
 
   const login = async (email: string, password: string) => {

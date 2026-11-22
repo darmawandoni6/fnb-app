@@ -53,7 +53,8 @@ VITE_RUN_MOCK_SELFCHECK=true npm run dev
 
 ## 4.3 Live API verification
 
-- [ ] Backend on `:8081`; `VITE_USE_MOCKS=false`.
+- [ ] Backend on `:8081`; `VITE_USE_MOCKS=false` and `VITE_API_URL` empty so the Vite proxy carries `/auth`, `/orders`, `/settings`, and the rest.
+- [ ] `fnb-server` has no CORS middleware. Development works through the proxy; a deployed dashboard needs the same origin or CORS on the server.
 - [ ] Login works; the refresh cookie keeps the session after reload; logout clears it.
 - [ ] Cashier creates a take away order and confirms cash.
 - [ ] Kitchen processes only `LUNAS` orders through `PENDING → COOKING → READY → DELIVERED`, then overrides `COMPLETED`.
@@ -68,4 +69,5 @@ VITE_RUN_MOCK_SELFCHECK=true npm run dev
 - [ ] `docs/tech-stack.md` — auth file names (`auth/context.tsx`, `auth/guards.tsx`), WebSocket transport, Reports status.
 - [ ] `docs/dashboard-structure.md` — polling plus WebSocket; cashier `READY → DELIVERED → COMPLETED` limited to `TAKE_AWAY`.
 - [ ] `../../docs/PRD.md` §7.5 — order number wording matches `../../docs/api.md`.
+- [ ] `fnb-server` — decide on `GET /auth/me` or a CORS policy. Refresh returns only `access_token`, so the dashboard caches the profile in `localStorage`; clearing it logs the user out despite a valid cookie.
 - [ ] `docs/implementation/*` — completed tasks stay marked, open tasks removed once done.

@@ -6,17 +6,18 @@ Goal: a working Vite + React + TypeScript shell with tooling, shared constants a
 
 ## Status
 
-DONE — all tasks complete.
+DONE — all tasks complete. Verified against the code, not just claimed:
+`src/constants/` holds 10 modules, `src/types/` 10 modules, `src/mocks/` 8 fixture modules and 12 handler modules, `src/api/index.ts` re-exports the mock module, and the self check is wired in `src/main.tsx` behind `VITE_RUN_MOCK_SELFCHECK=true`.
 
 ## Tasks
 
 ### Scaffold and tooling
 
-- [x] Scaffold Vite + React + TypeScript into `fnb-dashboard/` (scaffolded in a temp dir, then copied).
-- [x] Enable `strict: true` TypeScript, Vite 8, TypeScript 7.
+- [x] Scaffold Vite + React + TypeScript into `fnb-dashboard/` (scaffolded in a temp dir, then copied). Vite 8, TypeScript 7, React 19.
+- [x] Strict type checking. TypeScript 7 enables it by default; no explicit `strict` key needed. Verified with probes: assigning `null` to `string` gives `TS2322`, and an untyped parameter gives `TS7006`.
 - [x] Tailwind CSS v4 through `@tailwindcss/vite`.
 - [x] shadcn/ui source-owned components in `src/components/ui/`.
-- [x] Alias `@/*` in `tsconfig.json` (`paths`) and `vite.config.ts` (`resolve.alias`); no `baseUrl` (TypeScript 7 dropped it).
+- [x] Alias `@/*` in `tsconfig.app.json` (`paths`) and `vite.config.ts` (`resolve.alias`); the root `tsconfig.json` only holds project references. No `baseUrl` (TypeScript 7 dropped it).
 - [x] Prettier with `@trivago/prettier-plugin-sort-imports` first and `prettier-plugin-tailwindcss` last.
 - [x] Lint with `oxlint src`.
 - [x] Scripts `dev`, `build`, `lint`, `format`, `format:check`, `preview`.
@@ -28,7 +29,7 @@ DONE — all tasks complete.
 
 ### Constants
 
-- [x] `src/constants/`: `roles.ts`, `orderStatus.ts`, `itemStatus.ts`, `paymentStatus.ts`, `orderType.ts`, `paymentMethod.ts`, `stockMovementType.ts`, `routes.ts`, `errors.ts`, `index.ts`.
+- [x] `src/constants/`: `roles.ts`, `orderStatus.ts`, `itemStatus.ts`, `paymentStatus.ts`, `orderType.ts`, `paymentMethod.ts`, `stockMovementType.ts`, `routes.ts`, `errors.ts`, `index.ts` — ten modules.
 - [x] All values use `as const` maps; no TypeScript `enum`.
 - [x] `TERMINAL_ITEM_STATUS` covers `COMPLETED` and `CANCELLED` only.
 

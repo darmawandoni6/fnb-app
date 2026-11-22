@@ -14,6 +14,7 @@ These rules apply when AI creates or changes code in `fnb-dashboard`.
 - Do not change an API contract without updating the related documentation and types.
 - Do not remove user changes without confirmation.
 - Comments explain a non-obvious "why" only. Do not narrate what the code already says or restate PRD/spec text in code; that belongs in `docs/`.
+- Do not proactively add comments. If a comment is not requested, do not write it. Remove comments that merely restate the code or document the API contract — that belongs in `docs/api.md` and `docs/implementation/`.
 
 ## TypeScript Rules
 

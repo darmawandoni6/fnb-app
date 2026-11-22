@@ -270,7 +270,8 @@ Table QR content:
 
 ## Internal — menus
 
-Role: `OWNER`.
+Role: `OWNER`. `GET /menu-categories` and `GET /menus` are also open to `CASHIER` because the
+POS builds take away orders from the same catalog.
 
 | Method | Path | Description |
 |---|---|---|

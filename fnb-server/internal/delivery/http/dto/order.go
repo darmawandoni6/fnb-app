@@ -21,32 +21,35 @@ type OrderItemResponse struct {
 }
 
 type OrderResponse struct {
-	ID             string              `json:"id"`
-	OrderNumber    string              `json:"order_number"`
-	OrderType      string              `json:"order_type"`
-	TableID        *string             `json:"table_id,omitempty"`
-	TableNumber    *string             `json:"table_number,omitempty"`
-	CreatedBy      *string             `json:"created_by,omitempty"`
-	CustomerName   string              `json:"customer_name"`
-	CustomerPhone  *string             `json:"customer_phone,omitempty"`
-	Status         string              `json:"status"`
-	PaymentStatus  string              `json:"payment_status"`
-	PaymentMethod  *string             `json:"payment_method,omitempty"`
-	PaymentRef     *string             `json:"payment_ref,omitempty"`
-	PaidAt         *string             `json:"paid_at,omitempty"`
-	AmountReceived *int64              `json:"amount_received,omitempty"`
-	ChangeAmount   *int64              `json:"change_amount,omitempty"`
-	PaymentURL     *string             `json:"payment_url,omitempty"`
-	SnapToken      *string             `json:"snap_token,omitempty"`
-	SubtotalAmount int64               `json:"subtotal_amount"`
-	ServiceAmount  int64               `json:"service_amount"`
-	TaxAmount      int64               `json:"tax_amount"`
-	TotalAmount    int64               `json:"total_amount"`
-	CancelReason   *string             `json:"cancel_reason,omitempty"`
-	CanceledAt     *string             `json:"canceled_at,omitempty"`
-	CreatedAt      string              `json:"created_at"`
-	UpdatedAt      string              `json:"updated_at"`
-	Items          []OrderItemResponse `json:"items"`
+	ID             string  `json:"id"`
+	OrderNumber    string  `json:"order_number"`
+	OrderType      string  `json:"order_type"`
+	TableID        *string `json:"table_id,omitempty"`
+	TableNumber    *string `json:"table_number,omitempty"`
+	CreatedBy      *string `json:"created_by,omitempty"`
+	CustomerName   string  `json:"customer_name"`
+	CustomerPhone  *string `json:"customer_phone,omitempty"`
+	Status         string  `json:"status"`
+	PaymentStatus  string  `json:"payment_status"`
+	PaymentMethod  *string `json:"payment_method,omitempty"`
+	PaymentRef     *string `json:"payment_ref,omitempty"`
+	PaidAt         *string `json:"paid_at,omitempty"`
+	AmountReceived *int64  `json:"amount_received,omitempty"`
+	ChangeAmount   *int64  `json:"change_amount,omitempty"`
+	PaymentURL     *string `json:"payment_url,omitempty"`
+	SnapToken      *string `json:"snap_token,omitempty"`
+	SubtotalAmount int64   `json:"subtotal_amount"`
+	ServiceAmount  int64   `json:"service_amount"`
+	TaxAmount      int64   `json:"tax_amount"`
+	TotalAmount    int64   `json:"total_amount"`
+	// PRD §6: the dashboard prints the rate that was snapshotted into the order.
+	ServiceRateSnapshot float64             `json:"service_rate_snapshot"`
+	TaxRateSnapshot     float64             `json:"tax_rate_snapshot"`
+	CancelReason        *string             `json:"cancel_reason,omitempty"`
+	CanceledAt          *string             `json:"canceled_at,omitempty"`
+	CreatedAt           string              `json:"created_at"`
+	UpdatedAt           string              `json:"updated_at"`
+	Items               []OrderItemResponse `json:"items"`
 }
 
 type CreateOrderItemRequest struct {
@@ -171,11 +174,15 @@ func OrderResponseFrom(o *domain.Order) OrderResponse {
 		ServiceAmount:  o.ServiceAmount,
 		TaxAmount:      o.TaxAmount,
 		TotalAmount:    o.TotalAmount,
-		CancelReason:   cancelReason,
-		CanceledAt:     canceledAt,
-		CreatedAt:      o.CreatedAt.UTC().Format(time.RFC3339),
-		UpdatedAt:      o.UpdatedAt.UTC().Format(time.RFC3339),
-		Items:          items,
+
+		ServiceRateSnapshot: o.ServiceRateSnapshot,
+		TaxRateSnapshot:     o.TaxRateSnapshot,
+
+		CancelReason: cancelReason,
+		CanceledAt:   canceledAt,
+		CreatedAt:    o.CreatedAt.UTC().Format(time.RFC3339),
+		UpdatedAt:    o.UpdatedAt.UTC().Format(time.RFC3339),
+		Items:        items,
 	}
 }
 

@@ -38,11 +38,9 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	e.Static("/static", uploadDir)
 
 	admin := e.Group("", JWTMiddleware(authUsecase), RequireRoles(domain.UserRoleOwner))
-	admin.GET("/menu-categories", h.Admin.Categories)
 	admin.POST("/menu-categories", h.Admin.CreateCategory)
 	admin.PATCH("/menu-categories/:id", h.Admin.UpdateCategory)
 	admin.DELETE("/menu-categories/:id", h.Admin.DeleteCategory)
-	admin.GET("/menus", h.Admin.Menus)
 	admin.POST("/menus", h.Admin.CreateMenu)
 	admin.DELETE("/menus/:id", h.Admin.DeleteMenu)
 	admin.GET("/tables", h.Admin.Tables)
@@ -51,6 +49,9 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	admin.DELETE("/tables/:id", h.Admin.DeleteTable)
 
 	sessions := e.Group("", JWTMiddleware(authUsecase), RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
+	// The POS catalog: the cashier reads menus to build a take away order.
+	sessions.GET("/menu-categories", h.Admin.Categories)
+	sessions.GET("/menus", h.Admin.Menus)
 	sessions.PATCH("/menus/:id", h.Admin.UpdateMenu)
 	sessions.GET("/tables/:id/session", h.Admin.GetSession)
 	sessions.POST("/tables/:id/session/close", h.Admin.CloseSession)

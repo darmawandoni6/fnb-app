@@ -17,7 +17,7 @@ The checklist gates every commit.
 
 ## Status
 
-Phases 0–3 and 5 are shipped against the current `../docs/api.md` contract: table session token, order-level cancel, checkout form, list polling, menu polling, the `session:{token}` WebSocket, order discovery, and the HTTP layer behind `@/api`. `VITE_USE_MOCKS=false` in local `.env`; the mock layer stays in the repo and `.env.example` keeps mocks on. Phase 4 tracks the remaining manual device and keyboard passes.
+Phases 0–3 and 5 are shipped against the current `../docs/api.md` contract: table session token, order-level cancel, checkout form, list polling, menu polling, the `session:{token}` WebSocket, order discovery, and the HTTP layer behind `@/api`. The status card also shows a "Tunjukkan QR" dialog encoding `${VITE_DASHBOARD_URL}/orders?q=<order_number>`, so a cashier scan opens the dashboard board already filtered. `VITE_USE_MOCKS=false` in local `.env`; the mock layer stays in the repo and `.env.example` keeps mocks on. Phase 4 tracks the remaining manual device and keyboard passes.
 
 ## Plan conventions
 

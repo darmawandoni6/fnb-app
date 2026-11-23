@@ -21,7 +21,7 @@ Folder and runtime structure for the public `fnb-qr-menu` application. Based on 
 | `/`             | `?meja=<qr_token>` | Menu home: open session, cafe name, search, categories, quick add |
 | `/menu/:menuId` | `?edit=<lineKey>`  | Menu detail: qty, note, add or save the cart line                 |
 | `/keranjang`    | —                  | Cart lines, qty, notes, checkout form, submit                     |
-| `/status`       | —                  | Order status and item statuses, list polling                      |
+| `/status`       | —                  | Order status, item statuses, list polling, "Tunjukkan QR"         |
 | `/tidak-valid`  | —                  | Table QR is missing, unknown, or inactive                         |
 | `/tutup`        | —                  | Store is closed (`is_open = false`)                               |
 | `*`             | —                  | Not found; redirect to `/`                                        |
@@ -61,7 +61,8 @@ fnb-qr-menu/
 │   │   ├── phase-2-8-realtime-sync.md
 │   │   ├── phase-3-api.md
 │   │   ├── phase-4-verification.md
-│   │   └── phase-5-menu-polling.md
+│   │   ├── phase-5-menu-polling.md
+│   │   └── phase-6-order-qr.md
 │   ├── qr-menu-structure.md
 │   └── tech-stack.md
 ├── public/
@@ -116,6 +117,7 @@ fnb-qr-menu/
 │   │   │   ├── status.ts
 │   │   │   ├── pages/StatusPage.tsx
 │   │   │   ├── components/OrderCard.tsx
+│   │   │   ├── components/OrderQrDialog.tsx
 │   │   │   ├── components/StatusStepper.tsx
 │   │   │   └── components/OrderItemRow.tsx
 │   │   └── session/
@@ -124,6 +126,7 @@ fnb-qr-menu/
 │   │   ├── apiError.ts
 │   │   ├── formatRupiah.ts
 │   │   ├── mode.ts
+│   │   ├── orderQr.ts
 │   │   └── useNow.ts
 │   ├── mocks/
 │   │   ├── data/

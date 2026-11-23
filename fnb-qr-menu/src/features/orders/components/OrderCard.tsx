@@ -6,6 +6,7 @@ import { ORDER_STATUS, ORDER_STATUS_LABEL } from '@/constants/orderStatus'
 import type { OrderStatus } from '@/constants/orderStatus'
 import { PAYMENT_STATUS, PAYMENT_STATUS_LABEL } from '@/constants/paymentStatus'
 import { formatRupiah } from '@/lib/formatRupiah'
+import { hasDashboardUrl } from '@/lib/orderQr'
 import { cn } from '@/lib/utils'
 
 import {
@@ -27,6 +28,7 @@ import type { TrackedOrder } from '@/features/session/store'
 
 import { useCancelOrder } from '../status'
 import { OrderItemRow } from './OrderItemRow'
+import { OrderQrDialog } from './OrderQrDialog'
 import { StatusStepper } from './StatusStepper'
 
 const ORDER_STATUS_CLASS: Record<OrderStatus, string> = {
@@ -147,6 +149,8 @@ export function OrderCard({ order, open, onToggle }: OrderCardProps) {
             Menunggu konfirmasi pembayaran. Tunjukkan pesanan ke kasir.
           </p>
         )}
+
+        {hasDashboardUrl && <OrderQrDialog orderNumber={data.orderNumber} />}
 
         {canCancel && (
           <Button

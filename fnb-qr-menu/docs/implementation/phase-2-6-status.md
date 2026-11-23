@@ -35,6 +35,7 @@ DONE — status screen shipped.
 - [x] Cancel success replaces the stored snapshot and invalidates the list.
 - [x] `INVALID_TRANSITION` toasts and refreshes; `401` re-opens once and retries.
 - [x] "Tambah pesanan" clears the cart and returns to `/` without resetting `qr`, `sessionToken`, or `orders`.
+- [x] Card shows "Tunjukkan QR": `OrderQrDialog` encodes `${VITE_DASHBOARD_URL}/orders?q=<order_number>` so the cashier scan opens the board already filtered to that order. Hidden when the variable is empty.
 - [x] Header back link to `/`.
 
 ## Verification
@@ -43,6 +44,7 @@ DONE — status screen shipped.
 - Stepper matches each fixture; mixed item statuses show the furthest active step.
 - Cancel flips the card to `DIBATALKAN` with crossed items; a `LUNAS` order has no cancel button.
 - `429` backs off and keeps the last snapshots.
+- Scanned order QR opens the dashboard board with `?q=<order_number>` and only that order visible.
 - `npm run lint && npm run format:check && npm run build` pass.
 
 ## Notes
@@ -51,3 +53,4 @@ DONE — status screen shipped.
 - No timeline or timestamps in the stepper; the API returns none.
 - No refund warning; v1 cancels unpaid orders only.
 - Payment URL link removed in phase 2.8.
+- The order QR carries a dashboard URL, not an API lookup; `api.md` has no order-by-QR endpoint and the cashier reads the order from the board.

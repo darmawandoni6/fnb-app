@@ -35,6 +35,7 @@ Plan for the public customer SPA `fnb-qr-menu`, based on:
 | 3     | API integration   | Swap the mock for the live `fnb-server`                           | Planned |
 | 4     | Verification      | Tests, accessibility, docs sync, final gates                      | Partial |
 | 5     | Menu polling      | Closed-store notice without a checkout attempt                    | Done    |
+| 6     | Order QR          | Status card "Tunjukkan QR" deep link to the dashboard board       | Done    |
 
 Work is organized per screen or feature so each slice can be built, integrated, and verified independently. Phase 2.8 ran before phase 3; phase 5 was executed ahead of phase 3 and needs no rework. Phase 4 keeps the two manual device passes open.
 
@@ -70,6 +71,10 @@ Work is organized per screen or feature so each slice can be built, integrated, 
 ## Phase 5 — Menu Polling
 
 - [phase-5-menu-polling.md](implementation/phase-5-menu-polling.md) — menu query polls every 15 seconds and stops when `is_open` is `false`. Done.
+
+## Phase 6 — Order QR
+
+- [phase-6-order-qr.md](implementation/phase-6-order-qr.md) — "Tunjukkan QR" on the status card encodes `${VITE_DASHBOARD_URL}/orders?q=<order_number>`. Done.
 
 ## Excluded
 

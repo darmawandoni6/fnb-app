@@ -36,6 +36,7 @@ Single Page Application only. No SSR, no `@tanstack/react-router`, no `@tanstack
 - Realtime: TanStack Query polls the order list every 5 seconds; phase 2.8 adds the `session:{token}` WebSocket as an accelerator, and polling stays the fallback (PRD v1, EC-19).
 - Polling runs while the tab is active; default TanStack behavior pauses when the tab is hidden.
 - Mobile-first layout: the menu is designed for phones, not desktop dashboards.
+- `VITE_DASHBOARD_URL` is the dashboard origin. The order status screen encodes `${VITE_DASHBOARD_URL}/orders?q=<order_number>` in the "Tunjukkan QR" dialog so a cashier scan opens the board already filtered; when the var is empty the button is hidden.
 - Money is integer rupiah; QR Menu never computes prices, tax, or totals — the server does, and the cart shows unit prices only.
 - Order status is read from the API aggregate; the client never recalculates it.
 

@@ -152,6 +152,7 @@ Vite only exposes variables with the `VITE_` prefix.
 ```ts
 const apiUrl = import.meta.env.VITE_API_URL
 const useMocks = import.meta.env.VITE_USE_MOCKS === 'true'
+const dashboardUrl = import.meta.env.VITE_DASHBOARD_URL
 ```
 
 `.env.example`:
@@ -159,6 +160,7 @@ const useMocks = import.meta.env.VITE_USE_MOCKS === 'true'
 ```env
 VITE_API_URL=http://localhost:8081
 VITE_USE_MOCKS=true
+VITE_DASHBOARD_URL=http://localhost:5173
 ```
 
 Never put secrets in `VITE_*` variables; their values are included in the browser bundle.

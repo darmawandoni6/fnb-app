@@ -64,9 +64,12 @@ api/ → features/* → components/ui
 ## Polling Rules
 
 - Order boards use TanStack Query with `refetchInterval: 5_000`.
+- A manual refresh button invalidates the whole `['orders']` prefix, so the board and the stat cards share one refetch.
+- Today's board relies on the server default: `GET /orders` without `date` returns the current outlet day. The dashboard never computes the day itself.
 - Kitchen board queries filtered order statuses such as `?status=DIPROSES`.
 - Cashier board queries its required active order statuses.
 - Mutations invalidate affected order queries so updates appear immediately.
+- The settings query polls so the store-closed banner and the POS guard react without a reload.
 - No background polling outside authenticated routes.
 
 ## Error Handling

@@ -142,7 +142,8 @@ The iul reference targets a different backend. These mappings are deliberate; th
 - Polling stops when every stored order is `SELESAI` or `DIBATALKAN`, or the component unmounts.
 - Polling respects the 30/minute orders limit per session: one 5-second poll is 12/minute.
 - Mutations (cancel) update the stored snapshot and the list query so changes appear immediately.
-- No background polling outside `/status`.
+- The menu query (`GET /public/menu`) polls every 15 seconds and stops once `is_open` is `false`, so a store closed mid-browse lands on `/tutup` without waiting for a checkout attempt.
+- No background polling on other paths.
 - A `429` skips the next interval instead of retrying immediately.
 
 ## Error Handling

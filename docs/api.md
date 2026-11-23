@@ -186,7 +186,9 @@ All endpoints below use JWT and role middleware.
 | `PATCH` | `/orders/:id/payment` | `CASHIER`, `OWNER` | Confirm payment, idempotent |
 | `POST` | `/orders/:id/cancel` | `CASHIER`, `OWNER` | Cancel an unpaid order, `reason` required |
 
-`orders.status` is a stored aggregate recomputed on every item and payment change (PRD §5.3). There is no endpoint that sets it directly. `GET /orders` returns at most 200 rows, newest first; `date` is a UTC day (`YYYY-MM-DD`).
+`orders.status` is a stored aggregate recomputed on every item and payment change (PRD §5.3). There is no endpoint that sets it directly. `GET /orders` returns at most 200 rows, newest first.
+
+When `date` is omitted, `GET /orders` returns orders created on the current outlet day (`OUTLET_TIMEZONE`), so a dashboard board never shows a stale previous-day backlog by default. Passing `date=YYYY-MM-DD` selects that outlet day explicitly; `date` is interpreted in the outlet timezone on both ends.
 
 The kitchen sees only `LUNAS` orders; reading an unpaid order by id returns `404 NOT_FOUND` to the kitchen.
 
@@ -325,7 +327,8 @@ A count equal to the current stock returns `400 VALIDATION_ERROR`. `GET /stock-m
 | `POST` | `/users` | `OWNER` | Create `CASHIER` or `KITCHEN` user |
 | `PATCH` | `/users/:id` | `OWNER` | Update or activate/deactivate user |
 | `GET` | `/settings` | `OWNER` | Read every outlet setting |
-| `PATCH` | `/settings` | `OWNER` | Update outlet settings |
+| `PATCH` | `/settings` | `OWNER` | Update outlet settings; `is_open: false` is rejected |
+| `POST` | `/settings/close` | `OWNER` | Close the store; cancels today's unpaid orders |
 | `GET` | `/audit-log` | `OWNER` | Read the audit trail; query `entity`, `entity_id`, `actor_id`, `from`, `to` |
 
 Settings fields:
@@ -344,6 +347,22 @@ Settings fields:
 ```
 
 Every rate and timer is configurable. Changing a rate affects only new orders (BR-12). Timers must be at least 1 minute, and `ready_auto_deliver_warning_minutes` must be less than `ready_auto_deliver_minutes` (`400 VALIDATION_ERROR` otherwise).
+
+`PATCH /settings` never opens or closes the store on its own terms: `is_open: false` in the body returns `409 INVALID_TRANSITION` pointing at the close endpoint, while `is_open: true` opens the store immediately (BR-26).
+
+Close the store:
+
+```text
+POST /settings/close
+```
+
+No request body. The operation runs in one transaction:
+
+- If any order created on the current outlet day (`OUTLET_TIMEZONE`) is still `DIPROSES`, the call returns `409 INVALID_TRANSITION` and nothing changes. The message reports how many orders block the close.
+- Otherwise every unpaid `MENUNGGU` order of that day is cancelled: `status = DIBATALKAN`, `cancel_reason` set to the system close reason, every item `CANCELLED`, stock restored, `RESTORE` movements written, `audit_log` appended.
+- `settings.is_open` becomes `false`, then the response returns the updated settings object.
+
+Orders created on earlier days never block a close and are never cancelled by it. Repeating the call while the store is already closed returns `200` with the same settings and cancels nothing.
 
 Audit log response:
 

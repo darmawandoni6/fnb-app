@@ -19,6 +19,8 @@ The checklist gates every commit.
 
 Phases 0–2.6 are shipped against the current `../docs/api.md` contract (table session token, order-level cancel, checkout form, list polling); the `[REWORK]` steps in phases 0–2.6 are applied. Next step: `docs/implementation/phase-3.md` (HTTP client behind `@/api`). Vitest runs with `npm test`.
 
+Phase 5 (`docs/implementation/phase-5.md`) adds menu polling so a store closed mid-browse reaches `/tutup` without a checkout attempt.
+
 ## Plan conventions
 
 - Phase 2 steps are tagged `[MOCK]` (buildable against `src/mocks/`) or untagged (UI-only).

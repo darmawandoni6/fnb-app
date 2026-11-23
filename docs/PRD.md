@@ -334,6 +334,7 @@ total_amount   = subtotal + service_amount + tax_amount
 - Create take away orders from the dashboard (BR-24).
 - Cancel an order only while it is `MENUNGGU` and unpaid; the cancel reason is required.
 - Configure outlet settings: `service_rate`, `tax_rate`, `cash_timeout_minutes`, `ready_auto_deliver_minutes`, `ready_auto_deliver_warning_minutes`, `delivered_auto_complete_minutes`, `is_open`.
+- Close the store: only when no order created today is still `DIPROSES`. Unpaid `MENUNGGU` orders for today are cancelled automatically in the same transaction.
 - Manage users and roles (`OWNER`, `CASHIER`, `KITCHEN`), activate or deactivate users.
 - Read the audit log.
 - Confirm cash as a backup for the cashier.
@@ -354,6 +355,7 @@ total_amount   = subtotal + service_amount + tax_amount
 - Auto-complete items at `DELIVERED` for `delivered_auto_complete_minutes`.
 - Recompute the order status whenever an item or the payment changes.
 - Reject new orders with `409 STORE_CLOSED` while `settings.is_open` is false; existing orders stay readable and processable.
+- Cancel every unpaid `MENUNGGU` order of the current outlet day (`status = DIBATALKAN`, items `CANCELLED`, stock restored, `RESTORE` movements, `audit_log`) when the store is closed.
 
 ### 7.6 Non-Functional
 
@@ -393,6 +395,8 @@ total_amount   = subtotal + service_amount + tax_amount
 - BR-22: `customer_name` is required on every order; `customer_phone` is optional.
 - BR-23: Recipes can be edited only while `settings.is_open` is false; store closure only blocks new orders.
 - BR-24: The owner may create take away orders from the dashboard; the owner cannot create a dine-in order.
+- BR-25: The store can be closed only while no order created on the current outlet day is `DIPROSES`. Unpaid `MENUNGGU` orders of that day are cancelled automatically as part of the close operation.
+- BR-26: `PATCH /settings` rejects `is_open: false`; closing must go through the dedicated close operation so the active-order check always runs. Opening the store stays a plain settings update.
 
 ## 9. Access Matrix
 

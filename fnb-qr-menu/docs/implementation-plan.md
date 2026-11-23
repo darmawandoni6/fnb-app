@@ -26,6 +26,7 @@ This file is the index. Each phase has its own file in `docs/implementation/` wi
 | `implementation/phase-2.6.md` | Status, closed, invalid                | `[MOCK]`     | phase 2.5                           | 13    |
 | `implementation/phase-3.md`   | API integration                        | `[TODO-API]` | phase 2.6 + `fnb-server` on `:8081` | 10    |
 | `implementation/phase-4.md`   | Tests, polish, docs sync               | —            | phase 3                             | 8     |
+| `implementation/phase-5.md`   | Menu polling for the closed notice     | —            | phase 4                             | 3     |
 
 Run the phases in order. A phase is done only when its `Exit Criteria` pass.
 

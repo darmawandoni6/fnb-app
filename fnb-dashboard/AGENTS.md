@@ -17,6 +17,8 @@ The checklist gates every commit.
 
 Phase 3 API integration complete: auth, orders, payments, settings, tables, menus, stock, users, audit, WebSocket (14/15 tasks, 3.11 reports deferred — no `/reports/*` endpoint in `api.md`). Phase 4 verification complete: mock contract self-check passes, all 13 pages verified against mocks, contract conformance confirmed, live API tested on `:8081` including WebSocket real-time updates. Build passes, lint clean (pre-existing warnings only), format passes.
 
+Phase 5 planned in `docs/implementation/phase-5-order-rules.md`: store-close guard with auto-cancel of unpaid orders, today-only order board, manual refresh, QR Menu closed-store notice.
+
 Environment gotchas learned during Phase 0:
 
 - `npm create vite` is interactive under the agent shell; scaffold to a temp dir under the workdir then `cp -R` (a `/tmp` path gets created inside the workdir by npm, so use a workdir-relative temp path and clean up).

@@ -279,6 +279,40 @@ sequenceDiagram
 
 A replayed callback returns `200` and writes nothing (BR-16).
 
+## Store close
+
+Closing the outlet is not a plain settings update. It validates the day's queue and cancels the unpaid remainder in one transaction.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant O as Owner (Dashboard)
+    participant API as fnb-server
+    participant DB as PostgreSQL
+
+    O->>API: POST /settings/close
+    Note over API,DB: TRANSACTION — all or nothing
+    API->>DB: count orders of current outlet day with status DIPROSES
+    alt any DIPROSES order exists
+        API-->>O: 409 INVALID_TRANSITION ("N orders still in progress")
+        Note over O: store stays open, nothing cancelled
+    else no DIPROSES order today
+        API->>DB: cancel unpaid MENUNGGU orders of that day
+        API->>DB: items -> CANCELLED, stock restored, RESTORE movements
+        API->>DB: audit_log per order
+        API->>DB: settings.is_open = false
+        API->>DB: commit
+        API-->>O: 200 updated settings
+    end
+```
+
+Rules:
+
+- The scope is the current outlet day; orders from earlier days neither block the close nor get cancelled by it.
+- A `DIPROSES` order has already been paid, so it can never be auto-cancelled. The cashier either completes it, or the scheduler auto-completes it after `delivered_auto_complete_minutes`.
+- `PATCH /settings` refuses `is_open: false` with `409 INVALID_TRANSITION`, so this validation cannot be bypassed (BR-26).
+- After the close, QR Menu and the dashboard see `is_open: false` through polling. The QR Menu menu query polls every 15 seconds and stops once the store reads closed.
+
 ## Scheduled jobs
 
 One loop runs every minute and is safe to repeat.

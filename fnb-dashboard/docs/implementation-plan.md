@@ -16,12 +16,13 @@ This document is the index. Every phase and every page has its own file in `docs
 
 ## Phase Map
 
-| Phase | Name              | Goal                                              | State       |
-| ----- | ----------------- | ------------------------------------------------- | ----------- |
-| 1     | Setup             | Scaffold, tooling, constants, types, mock harness | Done        |
-| 2     | Slicing with mock | Every page works against `src/mocks/`             | Done        |
-| 3     | API integration   | Swap mock for the live `fnb-server`               | Not started |
-| 4     | Verification      | Per-page manual verification and docs sync        | Not started |
+| Phase | Name                 | Goal                                              | State       |
+| ----- | -------------------- | ------------------------------------------------- | ----------- |
+| 1     | Setup                | Scaffold, tooling, constants, types, mock harness | Done        |
+| 2     | Slicing with mock    | Every page works against `src/mocks/`             | Done        |
+| 3     | API integration      | Swap mock for the live `fnb-server`               | Done        |
+| 4     | Verification         | Per-page manual verification and docs sync        | Done        |
+| 5     | Order business rules | Store-close guard, today-only board, refresh      | Not started |
 
 Work is organized per feature or per page so each page can be sliced, integrated, and verified independently.
 
@@ -57,6 +58,10 @@ Phase 2 is complete on the mock layer. The integration work that used to be list
 ## Phase 4 — Verification
 
 - [phase-4-verification.md](implementation/phase-4-verification.md) — gates, per-page checks, contract conformance, live API checks, documentation sync.
+
+## Phase 5 — Order Business Rules
+
+- [phase-5-order-rules.md](implementation/phase-5-order-rules.md) — store-close guard with auto-cancel, today-only order board, manual refresh, QR Menu closed-store notice.
 
 ## Excluded
 

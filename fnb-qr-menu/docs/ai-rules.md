@@ -39,8 +39,9 @@ These rules apply when AI creates or changes code in `fnb-qr-menu`. Sources of t
 
 ## Phase Rules
 
-- Phase 2 steps are `[MOCK]`; they must work against `src/mocks/` without a backend.
-- `[TODO-API]` work belongs to Phase 3 and must not leak into Phase 2.
+- Phase 2 slices one screen or feature per file and must work against `src/mocks/` without a backend.
+- Phase 2.8 owns the WebSocket subscription, order discovery, and the removal of the non-persisted payment link.
+- Phase 3 work belongs to the HTTP layer and must not leak into phase 2.
 - The mock and HTTP implementations must share signatures, so swapping them never touches a component.
 
 ## Testing Rules
@@ -73,19 +74,22 @@ These rules apply when AI creates or changes code in `fnb-qr-menu`. Sources of t
 - Never compute subtotal, service, tax, or total. `api.md` forbids the client from determining prices, tax, and totals; the cart shows unit prices only.
 - Lines whose menu is missing from the menu response are hidden and dropped from the submit payload.
 - Do not enable submission while the cart is empty, fully hidden, or `is_open` is `false`.
+- Store the order before navigating. `NON_CASH` navigates to `payment_url` only when the create response carries one; `payment_url` is not persisted, so never render a resume-payment link.
 
 ## Order and Status Rules
 
 - Order status is the backend aggregate; do not calculate a different status in the UI.
 - The status stepper is derived from item statuses (the aggregate has no `SIAP` / `DIANTAR`); there is no timeline in the API.
 - `/status` lists one card per order, newest first, with exactly one card open.
-- One `GET /public/orders` poll every 5 seconds refreshes every stored card; collapsed cards render their snapshot between polls.
+- One `GET /public/orders` poll every 5 seconds refreshes every stored card; collapsed cards render their snapshot between polls. Phase 2.8 adds the `session:{token}` WebSocket as an accelerator; polling stays the fallback.
 - The client may cancel a whole order only while it is `MENUNGGU` with `payment_status` `BELUM`, through `POST /public/orders/:id/cancel` with `{ reason }`.
 - A `LUNAS` or `DIPROSES` order shows no cancel action; there is no refund warning in v1.
 - `CANCELLED` items stay visible, crossed out.
 - Stop polling when every stored order is `SELESAI`, `DIBATALKAN`, or the screen unmounts.
 - An entry missing from the list response keeps its snapshot instead of disappearing.
+- An order returned by the list but not stored yet is appended, so an existing session still shows its orders on a second tab or after local storage is cleared.
 - `unbounded` order history is a deliberate choice; do not add limits without confirmation.
+- A socket message only invalidates the orders query; never treat the partial payload as a full order or as the source of truth.
 
 ## Money and Data Rules
 

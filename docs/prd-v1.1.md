@@ -1,5 +1,7 @@
 # PRD — FnB-App (Self-Service Order & Kasir Take Away)
 
+> Superseded: this Indonesian document is kept for history. `PRD.md` is the source of truth.
+
 ## 1. Overview
 
 ### 1.1 Latar Belakang

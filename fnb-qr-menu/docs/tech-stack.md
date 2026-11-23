@@ -33,7 +33,7 @@ Single Page Application only. No SSR, no `@tanstack/react-router`, no `@tanstack
 - The table is identified by the `meja` query parameter, which carries a `qr_token`; `POST /public/tables/:qr_token/sessions` exchanges it for a `session_token`.
 - The session token is stored in `localStorage` and sent as `X-Session-Token` on every public call except the session open. A `401 UNAUTHORIZED` re-opens the session from the stored `qr_token` once; a `404 NOT_FOUND` routes to `/tidak-valid`.
 - Orders are identified by `id` inside the session; there is no `tracking_token`.
-- MVP updates: polling the order list every 5 seconds with TanStack Query; no WebSocket or SSE (PRD v1 ships WebSocket with polling fallback — polling ships first, WS is a follow-up).
+- Realtime: TanStack Query polls the order list every 5 seconds; phase 2.8 adds the `session:{token}` WebSocket as an accelerator, and polling stays the fallback (PRD v1, EC-19).
 - Polling runs while the tab is active; default TanStack behavior pauses when the tab is hidden.
 - Mobile-first layout: the menu is designed for phones, not desktop dashboards.
 - Money is integer rupiah; QR Menu never computes prices, tax, or totals — the server does, and the cart shows unit prices only.
@@ -103,17 +103,17 @@ Read with `useSyncExternalStore`; write with `update(draft => ...)`. A different
 - The cart shows unit prices only. No subtotal, service, tax, or total is computed — `api.md` forbids it. The footer reads "N item · total dihitung kasir".
 - Lines whose menu is missing from the menu response are hidden and dropped from the submit payload.
 - The checkout form collects `customer_name` (required), `customer_phone` (optional), and `payment_method` (`CASH` / `NON_CASH`). Only the server computes money; the form never shows a preview total.
-- `NON_CASH` submit stores the order, then navigates to the returned `payment_url` (Midtrans Snap).
+- `NON_CASH` submit stores the order, then navigates to `payment_url` only when the create response carries it (Midtrans Snap). A `null` URL means Snap failed: the order stays unpaid, the app routes to `/status`, and there is no resume-payment link because `payment_url` is not persisted.
 
 ## Public API
 
-| Method | Endpoint                            | Purpose                                                                                             |
-| ------ | ----------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `POST` | `/public/tables/:qr_token/sessions` | Open (or resume) a table session; returns `session_token`, `table_number`                           |
-| `GET`  | `/public/menu`                      | `cafe_name`, `service_rate`, `tax_rate`, `is_open`, categories and menus                            |
-| `POST` | `/public/orders`                    | Create a DINE_IN order in the session; returns `order_number`, totals, `payment_url` for `NON_CASH` |
-| `GET`  | `/public/orders`                    | Every order in the session with items, newest first                                                 |
-| `POST` | `/public/orders/:id/cancel`         | Cancel the whole order while `MENUNGGU` and `BELUM`, body `{ reason }`                              |
+| Method | Endpoint                            | Purpose                                                                                                          |
+| ------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `POST` | `/public/tables/:qr_token/sessions` | Open (or resume) a table session; returns `session_token`, `table_number`                                        |
+| `GET`  | `/public/menu`                      | `cafe_name`, `service_rate`, `tax_rate`, `is_open`, categories and menus                                         |
+| `POST` | `/public/orders`                    | Create a DINE_IN order in the session; returns `order_number`, totals, and nullable `payment_url` for `NON_CASH` |
+| `GET`  | `/public/orders`                    | Every order in the session with items, newest first                                                              |
+| `POST` | `/public/orders/:id/cancel`         | Cancel the whole order while `MENUNGGU` and `BELUM`, body `{ reason }`                                           |
 
 Every endpoint except the session open carries `X-Session-Token`.
 
@@ -133,7 +133,8 @@ The iul reference targets a different backend. These mappings are deliberate; th
 | Client `orderTotals()`                          | Server returns totals in every order response                                                       | Client displays server figures only                                       |
 | `@starter/shared` workspace package             | No shared package                                                                                   | Helpers live in `src/lib/`                                                |
 | Per-order tracking view                         | `GET /public/orders` returns the whole session                                                      | One list query refreshes every stored card                                |
-| WebSocket `session:{token}` topic               | Exists on the server, deferred in this plan                                                         | Polling ships first; WS is a follow-up                                    |
+| `order_number`                                  | `DI-YYYYMMDD-SSS`, zero-padded daily sequence                                                       | Display only; the client never parses it                                  |
+| WebSocket `session:{token}` topic               | Exists on the server; phase 2.8 connects it                                                         | Socket accelerates updates; 5-second polling stays the fallback           |
 
 ## Polling Rules
 
@@ -143,6 +144,8 @@ The iul reference targets a different backend. These mappings are deliberate; th
 - Polling respects the 30/minute orders limit per session: one 5-second poll is 12/minute.
 - Mutations (cancel) update the stored snapshot and the list query so changes appear immediately.
 - The menu query (`GET /public/menu`) polls every 15 seconds and stops once `is_open` is `false`, so a store closed mid-browse lands on `/tutup` without waiting for a checkout attempt.
+- Phase 2.8 listens on `session:{token}`; an event invalidates the orders query so the list stays authoritative.
+- The list merge is a union: returned orders not yet stored are appended, and stored orders missing from the response keep their snapshot.
 - No background polling on other paths.
 - A `429` skips the next interval instead of retrying immediately.
 
@@ -172,7 +175,7 @@ Do not add these for MVP:
 
 - SSR, `@tanstack/react-router`, `@tanstack/react-start`, nitro.
 - Redux or Zustand: the versioned session store covers customer state.
-- WebSocket or SSE: PRD v1 ships WebSocket with polling fallback; this plan ships the polling fallback first and records WS as a follow-up.
+- SSE, and any WebSocket work beyond the phase 2.8 `session:{token}` subscription.
 - Authentication or role guards: customers never log in.
 - Chart or date libraries: use `Intl` first.
 - Storybook.

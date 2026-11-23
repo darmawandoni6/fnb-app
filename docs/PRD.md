@@ -860,7 +860,7 @@ Non-trivial changes must add or update the relevant tests.
 |---|---|---|
 | 1 | Separate waiter? | No. The waiter has no application and follows `SOP-WAITER-01`. The kitchen owns `READY → DELIVERED`. |
 | 2 | Payment gateway? | Midtrans Snap, with an idempotent webhook. The integration is specified in v1 and implemented when credentials exist; manual non-cash confirmation bridges the gap. |
-| 3 | Order number format? | `TA-001` for take away, `DI-001` for dine-in, daily reset per type, more than three digits allowed after 999. |
+| 3 | Order number format? | `TA-YYYYMMDD-SSS` for take away, `DI-YYYYMMDD-SSS` for dine-in (`SSS` is the zero-padded daily sequence per type). |
 | 4 | Digital receipt in v1? | No, phase 2. The physical thermal receipt for take away is v1, printed from the browser. |
 | 5 | Customer login? | No. Scan the table QR, then name (required) and phone (optional). |
 | 6 | Meaning of `DELIVERED`? | Handed to the waiter or cashier, not served at the table. |

@@ -8,7 +8,7 @@ Project docs live in `docs/` and are the source of truth:
 - `docs/ai-rules.md` — coding rules for AI (no `any`, API layer boundaries, session/cart rules, money rules).
 - `docs/conventions.md` — naming: `SCREAMING_SNAKE_CASE` constants in `src/constants/`, `camelCase` variables, `as const` object maps instead of TS `enum`.
 - `docs/qr-menu-structure.md` — routes, search params, folder layout, session store shape, cart rules.
-- `docs/implementation-plan.md` + `docs/implementation/phase-0.md` … `phase-4.md` — phased plan; the plan file is the index.
+- `docs/implementation-plan.md` + `docs/implementation/phase-*.md` — per-phase, per-screen plan; the plan file is the index.
 - Sibling docs in `../docs/`: `PRD.md` (§2.3, §4.7, §5, §7.1), `api.md` (Public — customer), `api-response.md` (envelope), `flow.md`, `doc-naming.md` + `doc-language.md`.
 
 Screen slicing is adapted from `/home/doni/me/iul-fnb/apps/qr-menu`. Keep the six screens and the session store model; do not copy its TanStack Start/SSR setup or its `pl-*` CSS.
@@ -17,15 +17,12 @@ The checklist gates every commit.
 
 ## Status
 
-Phases 0–2.6 are shipped against the current `../docs/api.md` contract (table session token, order-level cancel, checkout form, list polling); the `[REWORK]` steps in phases 0–2.6 are applied. Next step: `docs/implementation/phase-3.md` (HTTP client behind `@/api`). Vitest runs with `npm test`.
-
-Phase 5 (`docs/implementation/phase-5.md`) adds menu polling so a store closed mid-browse reaches `/tutup` without a checkout attempt.
+Phases 0–2.7 are shipped against the current `../docs/api.md` contract (table session token, order-level cancel, checkout form, list polling, menu polling). Next step: `docs/implementation/phase-2-8-realtime-sync.md` (session WebSocket, order discovery, payment-link cleanup), then `docs/implementation/phase-3-api.md` (HTTP client behind `@/api`). Vitest runs with `npm test`; phase 4 tracks the remaining tests and docs sync.
 
 ## Plan conventions
 
-- Phase 2 steps are tagged `[MOCK]` (buildable against `src/mocks/`) or untagged (UI-only).
-- `[REWORK]` marks shipped code built against the old contract that must be updated to the current `../docs/api.md`.
-- `[TODO-API]` steps belong to Phase 3 and never leak into Phase 2.
+- Phase 2 files slice one screen or feature each; phase 2.8 covers the WebSocket `session:{token}` topic, order discovery, and the removal of the non-persisted payment link.
+- Phase 3 changes `src/api/` and the env flag only; components and hooks stay untouched.
 - `src/api/index.ts` is the only mock/HTTP switch; components import from `@/api` only.
 - Mock scenarios are picked by `qr_token` (`demo-meja`, `demo-tutup`, `demo-habis`, `demo-invalid`).
 - A production build with `VITE_USE_MOCKS=true` fails in `vite.config.ts`.
@@ -57,14 +54,14 @@ Verification order before commit: `npm run lint && npm run format:check && npm r
 - Customer state is one versioned `localStorage` record (`fnb-qr-menu:session`, `v: 1`) read with `useSyncExternalStore`: `qr`, `sessionToken`, `cart`, `orders[]`, `browseOnly`, `invalidTable`. Each order keeps `{ id, snapshot }`; `orders` has no size cap and no clear action. A different `qr` resets the cart, orders, and `sessionToken`.
 - The session token comes from `POST /public/tables/:qr_token/sessions` and travels as `X-Session-Token` on every public call except the open itself. On `401` the client re-opens the session from the stored `qr` once; `404` routes to `/tidak-valid`.
 - Dependency direction: `features → api → server`. Components import from `@/api` only; no direct `fetch`/axios outside `src/api/`.
-- The client sends `order_type`, `customer_name`, `customer_phone`, `payment_method`, and `items: [{ menu_id, qty, note }]`. Prices, service, tax, totals, stock, and order status are server-owned. The cart shows unit prices only and never an aggregate total. `NON_CASH` submit stores the order, then navigates to the returned `payment_url`.
+- The client sends `order_type`, `customer_name`, `customer_phone`, `payment_method`, and `items: [{ menu_id, qty, note }]`. Prices, service, tax, totals, stock, and order status are server-owned. The cart shows unit prices only and never an aggregate total. `NON_CASH` submit stores the order, then navigates to `payment_url` only when the create response carries it; a `null` URL (Snap failure) leaves the order unpaid and routes to `/status`. `payment_url` is not persisted, so there is no resume-payment link.
 - Cart rules: merge by `menuId|note.trim().toLowerCase()`, `MAX_QTY` 50, `NOTE_MAX` 120.
-- Polling: TanStack Query `refetchInterval: 5_000` on `/status`, one `GET /public/orders` list request for all cards. Stops when every stored order is `SELESAI`/`DIBATALKAN` or on unmount.
+- Polling: TanStack Query `refetchInterval: 5_000` on `/status`, one `GET /public/orders` list request for all cards. Stops when every stored order is `SELESAI`/`DIBATALKAN` or on unmount. Phase 2.8 adds the `session:{token}` WebSocket as an accelerator; polling stays the fallback.
 - Cancellation is order-level: `POST /public/orders/:id/cancel` with `{ reason }`, only while the order is `MENUNGGU` with `payment_status` `BELUM`. No item-level cancel, no refund warning in v1.
 - API errors use envelope codes (`UNAUTHORIZED`, `STORE_CLOSED`, `STOCK_NOT_ENOUGH`, `NOT_FOUND`, `VALIDATION_ERROR`, `INVALID_TRANSITION`). Branch on `code`, display `message`. See `../docs/api-response.md`.
 - Ordering is disabled while `is_open` is `false`.
 - The menu response returns no `table_number` (only the session open does), no opening hours, and no order timeline; the header shows `cafe_name` plus optional leading/trailing slots, and the stepper derives from item statuses.
-- Unit tests are Vitest only (`cart`, `session`, `status`), delivered in Phase 4 per PRD §15.
+- Unit tests are Vitest only (`cart`, `session`, `status`, plus socket/merge cases in phase 4 per PRD §15).
 
 ## Tooling quirks
 

@@ -116,6 +116,7 @@ Categories with no available menu are omitted. When `is_open` is `false`, the cl
 - `order_type` is `DINE_IN` for this endpoint; `table_id` and `table_session_id` come from the session.
 - `payment_method` is `CASH` or `NON_CASH`. For `NON_CASH` the response also carries `payment_url` and `snap_token`.
 - A Snap gateway failure never fails order creation: the order is still written, `payment_url` and `snap_token` come back `null`, and the server logs a warning (EC-05).
+- `payment_url` and `snap_token` are returned by this create response only. They are not persisted, so `GET /public/orders*` always returns `payment_url: null`; clients must not offer a resume-payment link from stored or listed orders.
 - The server validates menu availability, recipes, and stock, then writes order, items, order number, snapshots, and `OUT` stock movements in one transaction.
 
 Response:

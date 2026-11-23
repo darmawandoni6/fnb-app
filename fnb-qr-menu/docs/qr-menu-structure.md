@@ -49,13 +49,19 @@ fnb-qr-menu/
 │   ├── conventions.md
 │   ├── implementation-plan.md
 │   ├── implementation/
-│   │   ├── phase-0.md
-│   │   ├── phase-1.md
-│   │   ├── phase-2.md
-│   │   ├── phase-2.5.md
-│   │   ├── phase-2.6.md
-│   │   ├── phase-3.md
-│   │   └── phase-4.md
+│   │   ├── phase-0-setup.md
+│   │   ├── phase-1-mock.md
+│   │   ├── phase-2-1-shell-session.md
+│   │   ├── phase-2-2-menu-home.md
+│   │   ├── phase-2-3-menu-detail.md
+│   │   ├── phase-2-4-cart.md
+│   │   ├── phase-2-5-checkout.md
+│   │   ├── phase-2-6-status.md
+│   │   ├── phase-2-7-closed-invalid.md
+│   │   ├── phase-2-8-realtime-sync.md
+│   │   ├── phase-3-api.md
+│   │   ├── phase-4-verification.md
+│   │   └── phase-5-menu-polling.md
 │   ├── qr-menu-structure.md
 │   └── tech-stack.md
 ├── public/
@@ -196,20 +202,22 @@ Rules:
 - Lines whose menu disappeared from the menu response are hidden and dropped from the submit payload.
 - The cart shows unit prices only. No subtotal, service, tax, or total is computed in the client; the footer reads "N item · total dihitung kasir".
 - The checkout form collects `customer_name` (required), `customer_phone` (optional), and `payment_method` (`CASH` / `NON_CASH`).
-- On success the order is written to `session.orders` first; `NON_CASH` then navigates to the returned `payment_url` (Midtrans Snap), `CASH` navigates to `/status`.
+- On success the order is written to `session.orders` first; `NON_CASH` navigates to `payment_url` only when the create response carries it (Midtrans Snap), otherwise it routes to `/status` with an info toast. `CASH` always routes to `/status`. `payment_url` is ephemeral, so the app never offers a resume-payment link.
 
 ## Order History
 
 - `session.orders` is an append-only array with no size cap and no clear action.
 - Each entry is `{ id, snapshot }`; `snapshot` holds the last full order response and is overwritten on every successful list refresh.
+- The merge is a union: orders returned by the list but not stored yet are appended, and stored orders missing from the response keep their snapshot.
 - `/status` renders one accordion card per order, newest first; exactly one card is open.
 - One `GET /public/orders` poll every 5 seconds refreshes every stored card; collapsed cards render their snapshot between polls.
+- Phase 2.8 also subscribes to `session:{token}`; an event invalidates the list query, and polling remains the fallback.
 - Scanning a different table QR clears `cart`, `orders`, and `sessionToken`.
 
 ## Runtime Rules
 
-- The status screen polls the session's order list every 5 seconds while any stored order is unfinished.
-- Polling stops on unmount and when every stored order is `SELESAI` or `DIBATALKAN`.
+- The status screen polls the session's order list every 5 seconds while any stored order is unfinished, and subscribes to `session:{token}` so an event refreshes it sooner.
+- Polling stops on unmount and when every stored order is `SELESAI` or `DIBATALKAN`; a socket drop falls back to polling without a user-visible change.
 - The backend calculates order status from item statuses and payment status; the stepper derives its labels from item statuses.
 - The UI does not change order status directly.
 - The customer may cancel a whole order only while it is `MENUNGGU` with `payment_status` `BELUM`, with an optional reason; there is no refund warning in v1.

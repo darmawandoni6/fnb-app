@@ -2,14 +2,17 @@ import { useState } from 'react'
 
 import { useNavigate } from 'react-router-dom'
 
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
 import type { Order } from '@/types'
+import { RefreshCw } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { ORDER_STATUS, type OrderStatus } from '@/constants/orderStatus'
 import { PAYMENT_STATUS } from '@/constants/paymentStatus'
 import { ROUTES } from '@/constants/routes'
+import { toastApiError } from '@/lib/errors'
 import { formatRupiah } from '@/lib/format'
 
 import { useAuth } from '@/auth/context'
@@ -34,15 +37,28 @@ type ViewMode = 'all' | 'unpaid' | 'done'
 
 export function OrdersPage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { user } = useAuth()
   const { data: orders, isPending } = useOrders()
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: api.getSettings })
   const stats = useOrderStats()
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const canAct = user?.role === 'OWNER' || user?.role === 'CASHIER'
-  // BR-01 / BR-24: cashier and owner create manual take away orders.
   const canCreate = user?.role === 'CASHIER' || user?.role === 'OWNER'
+
+  const refresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await queryClient.invalidateQueries({ queryKey: ['orders'] }, { throwOnError: true })
+      toast.success('Data order diperbarui')
+    } catch (error) {
+      toastApiError(error)
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
 
   const visibleOrders = (orders ?? []).filter((order) => {
     if (viewMode === 'unpaid') return order.payment_status === PAYMENT_STATUS.BELUM
@@ -56,11 +72,17 @@ export function OrdersPage() {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold">Orders</h1>
-        {canCreate && (
-          <Button size="sm" onClick={() => navigate(ROUTES.ORDERS_NEW)}>
-            + Order Manual
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={refresh} disabled={isRefreshing}>
+            <RefreshCw className={isRefreshing ? 'size-4 animate-spin' : 'size-4'} />
+            {isRefreshing ? 'Memuat...' : 'Refresh'}
           </Button>
-        )}
+          {canCreate && (
+            <Button size="sm" onClick={() => navigate(ROUTES.ORDERS_NEW)}>
+              + Order Manual
+            </Button>
+          )}
+        </div>
       </div>
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard label="Pesanan Aktif" value={String(stats.activeCount)} />

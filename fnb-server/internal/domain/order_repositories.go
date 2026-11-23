@@ -14,6 +14,7 @@ type OrderFilter struct {
 	OrderType     *OrderType
 	PaymentMethod *PaymentMethod
 	Date          *time.Time
+	DateLoc       *time.Location
 	From          *time.Time
 	To            *time.Time
 	PaidOnly      bool

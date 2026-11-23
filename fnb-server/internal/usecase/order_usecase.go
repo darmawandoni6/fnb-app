@@ -50,6 +50,12 @@ func (u *OrderUsecase) List(ctx context.Context, filter domain.OrderFilter, role
 	if role == domain.UserRoleKitchen {
 		filter.PaidOnly = true
 	}
+	if filter.Date == nil && filter.From == nil && filter.To == nil {
+		now := time.Now().In(u.loc)
+		day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, u.loc)
+		filter.Date = &day
+		filter.DateLoc = u.loc
+	}
 	return u.orderRepo.List(ctx, filter)
 }
 

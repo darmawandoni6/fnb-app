@@ -31,38 +31,13 @@ func cancelOrderHelper(
 		return nil, domain.NewError(domain.CodeInvalidTransition, "order cannot be cancelled", http.StatusConflict, nil)
 	}
 
-	now := time.Now().UTC()
 	err = withTx(ctx, func(tx OrderTx) error {
-		if err := tx.RestoreStock(ctx, order, order.Items); err != nil {
-			return err
-		}
-		if err := tx.CancelOrder(ctx, order.ID, reason, actorID); err != nil {
-			return err
-		}
-		if err := tx.UpdateAggregate(ctx, order.ID, domain.OrderStatusCancelled); err != nil {
-			return err
-		}
-		audit := &domain.AuditLog{
-			Entity:    "order",
-			EntityID:  order.ID,
-			Action:    "order_cancelled",
-			ToValue:   &reason,
-			ActorID:   actorID,
-			ActorRole: actorRole,
-		}
-		return tx.Audit(ctx, audit)
+		return cancelOrderInTx(ctx, tx, order, reason, actorID, actorRole)
 	})
 	if err != nil {
 		return nil, err
 	}
-
-	order.Status = domain.OrderStatusCancelled
-	order.CancelReason = &reason
-	order.CanceledAt = &now
-	for i := range order.Items {
-		order.Items[i].Status = domain.OrderItemStatusCancelled
-		order.Items[i].CancelledAt = &now
-	}
+	markCancelled(order, reason, time.Now().UTC())
 
 	if publisher != nil {
 		publisher.PublishOrder(ctx, domain.OrderEvent{Event: "order.updated", Order: order})
@@ -72,4 +47,42 @@ func cancelOrderHelper(
 	}
 
 	return order, nil
+}
+
+func cancelOrderInTx(
+	ctx context.Context,
+	tx OrderTx,
+	order *domain.Order,
+	reason string,
+	actorID *uuid.UUID,
+	actorRole *domain.UserRole,
+) error {
+	if err := tx.RestoreStock(ctx, order, order.Items); err != nil {
+		return err
+	}
+	if err := tx.CancelOrder(ctx, order.ID, reason, actorID); err != nil {
+		return err
+	}
+	if err := tx.UpdateAggregate(ctx, order.ID, domain.OrderStatusCancelled); err != nil {
+		return err
+	}
+	audit := &domain.AuditLog{
+		Entity:    "order",
+		EntityID:  order.ID,
+		Action:    "order_cancelled",
+		ToValue:   &reason,
+		ActorID:   actorID,
+		ActorRole: actorRole,
+	}
+	return tx.Audit(ctx, audit)
+}
+
+func markCancelled(order *domain.Order, reason string, at time.Time) {
+	order.Status = domain.OrderStatusCancelled
+	order.CancelReason = &reason
+	order.CanceledAt = &at
+	for i := range order.Items {
+		order.Items[i].Status = domain.OrderItemStatusCancelled
+		order.Items[i].CancelledAt = &at
+	}
 }

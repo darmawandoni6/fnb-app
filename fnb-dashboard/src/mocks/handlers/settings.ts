@@ -1,6 +1,8 @@
-import { API_ERROR_CODE, USER_ROLE } from '@/constants'
+import { API_ERROR_CODE, ITEM_STATUS, ORDER_STATUS, PAYMENT_STATUS, USER_ROLE } from '@/constants'
 import { db } from '@/mocks/db'
 import type { Settings } from '@/types'
+
+import { businessDay } from '@/lib/orderNumber'
 
 import { audit, delay, fail, requireRole } from './shared'
 
@@ -22,6 +24,7 @@ const requireMinutes = (value: number, label: string) => {
 export const updateSettings = async (body: Partial<Settings>): Promise<Settings> => {
   await delay()
   requireRole(USER_ROLE.OWNER)
+  if (body.is_open === false) fail(API_ERROR_CODE.INVALID_TRANSITION, 'Gunakan tombol tutup toko')
   // `../docs/api.md`: validate the timer pair as a whole, so a partial patch cannot break it.
   const nextDeliver = body.ready_auto_deliver_minutes ?? db.settings.ready_auto_deliver_minutes
   const nextWarning =
@@ -66,5 +69,68 @@ export const updateSettings = async (body: Partial<Settings>): Promise<Settings>
       to_value: String(body.is_open),
     })
   }
+  return { ...db.settings }
+}
+
+export const closeStore = async (): Promise<Settings> => {
+  await delay()
+  requireRole(USER_ROLE.OWNER)
+  const day = businessDay()
+  const todays = db.orders.filter((order) => businessDay(order.created_at) === day)
+
+  const processing = todays.filter((order) => order.status === ORDER_STATUS.DIPROSES)
+  if (processing.length > 0)
+    fail(API_ERROR_CODE.INVALID_TRANSITION, `${processing.length} pesanan masih diproses hari ini`)
+
+  const pending = todays.filter(
+    (order) =>
+      order.status === ORDER_STATUS.MENUNGGU && order.payment_status === PAYMENT_STATUS.BELUM,
+  )
+  const now = new Date().toISOString()
+  pending.forEach((order) => {
+    order.items
+      .filter((item) => item.status !== ITEM_STATUS.CANCELLED)
+      .forEach((item) => {
+        db.recipeItems
+          .filter((recipe) => recipe.menu_id === item.menu_id)
+          .forEach((recipe, index) => {
+            const ingredient = db.ingredients.find(({ id }) => id === recipe.ingredient_id)
+            if (!ingredient) return
+            const qty = recipe.qty_used * item.qty
+            ingredient.stock_qty += qty
+            db.stockMovements.unshift({
+              id: `movement-restore-${Date.now()}-${item.id}-${index}`,
+              ingredient_id: ingredient.id,
+              type: 'RESTORE',
+              qty,
+              created_at: now,
+              note: `Tutup toko: batal pesanan #${order.order_number}`,
+              order_id: order.id,
+              order_item_id: item.id,
+            })
+          })
+        item.status = ITEM_STATUS.CANCELLED
+        item.cancelled_at = now
+      })
+    order.status = ORDER_STATUS.DIBATALKAN
+    order.cancel_reason = 'store closed'
+    order.canceled_at = now
+    audit({
+      entity: 'order',
+      entity_id: order.id,
+      action: 'order_cancelled',
+      from_value: ORDER_STATUS.MENUNGGU,
+      to_value: ORDER_STATUS.DIBATALKAN,
+    })
+  })
+
+  db.settings.is_open = false
+  audit({
+    entity: 'settings',
+    entity_id: 'settings',
+    action: 'store_closed',
+    from_value: null,
+    to_value: 'false',
+  })
   return { ...db.settings }
 }

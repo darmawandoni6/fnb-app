@@ -87,6 +87,9 @@ func (noopOrderTx) UpdateAggregate(context.Context, uuid.UUID, domain.OrderStatu
 	return nil
 }
 func (noopOrderTx) Audit(context.Context, *domain.AuditLog) error { return nil }
+func (noopOrderTx) SaveSetting(context.Context, *domain.Setting) error {
+	return nil
+}
 func (noopOrderTx) SetPaid(context.Context, uuid.UUID, domain.PaymentMethod, *string, time.Time, *int64, *int64) error {
 	return nil
 }

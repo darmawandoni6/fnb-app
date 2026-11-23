@@ -8,7 +8,7 @@ Keep the QR Menu honest about the store status. The customer should land on `/tu
 
 ## Status
 
-OPEN — not started.
+DONE — menu polling shipped.
 
 ## Depends on
 
@@ -16,9 +16,9 @@ OPEN — not started.
 
 ## Tasks
 
-- [ ] 5.1 `src/features/catalog/queries.ts` — `menuQuery` gets `refetchInterval: (query) => (query.state.data?.isOpen ? 15_000 : false)`, so polling stops once the store reads closed instead of hammering a dead endpoint.
-- [ ] 5.2 Confirm the existing guard in `src/features/browse/pages/MenuHomePage.tsx` (already redirects to `/tutup` when `isOpen` is false) fires from a poll rather than only from the first load; no code change expected.
-- [ ] 5.3 `src/pages/ClosedPage.tsx` (or its equivalent) — verify it offers a way back once the store reopens, or state explicitly that a reload is required.
+- [x] 5.1 `src/features/catalog/queries.ts` — `menuQuery` gets `refetchInterval: (query) => (query.state.data?.isOpen ? 15_000 : false)`, so polling stops once the store reads closed instead of hammering a dead endpoint.
+- [x] 5.2 Confirm the existing guard in `src/features/browse/pages/MenuHomePage.tsx` (already redirects to `/tutup` when `isOpen` is false) fires from a poll rather than only from the first load; no code change expected.
+- [x] 5.3 `src/pages/ClosedPage.tsx` (or its equivalent) — verify it offers a way back once the store reopens, or state explicitly that a reload is required.
 
 ## Verification
 

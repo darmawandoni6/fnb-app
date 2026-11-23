@@ -16,13 +16,13 @@ This document is the index. Every phase and every page has its own file in `docs
 
 ## Phase Map
 
-| Phase | Name                 | Goal                                              | State       |
-| ----- | -------------------- | ------------------------------------------------- | ----------- |
-| 1     | Setup                | Scaffold, tooling, constants, types, mock harness | Done        |
-| 2     | Slicing with mock    | Every page works against `src/mocks/`             | Done        |
-| 3     | API integration      | Swap mock for the live `fnb-server`               | Done        |
-| 4     | Verification         | Per-page manual verification and docs sync        | Done        |
-| 5     | Order business rules | Store-close guard, today-only board, refresh      | Not started |
+| Phase | Name                 | Goal                                              | State |
+| ----- | -------------------- | ------------------------------------------------- | ----- |
+| 1     | Setup                | Scaffold, tooling, constants, types, mock harness | Done  |
+| 2     | Slicing with mock    | Every page works against `src/mocks/`             | Done  |
+| 3     | API integration      | Swap mock for the live `fnb-server`               | Done  |
+| 4     | Verification         | Per-page manual verification and docs sync        | Done  |
+| 5     | Order business rules | Store-close guard, today-only board, refresh      | Done  |
 
 Work is organized per feature or per page so each page can be sliced, integrated, and verified independently.
 

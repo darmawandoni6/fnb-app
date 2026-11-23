@@ -12,11 +12,13 @@ import (
 )
 
 type mockOrderQueryRepo struct {
-	orders []domain.Order
-	byID   map[uuid.UUID]*domain.Order
+	orders     []domain.Order
+	byID       map[uuid.UUID]*domain.Order
+	lastFilter domain.OrderFilter
 }
 
 func (m *mockOrderQueryRepo) List(ctx context.Context, filter domain.OrderFilter) ([]domain.Order, error) {
+	m.lastFilter = filter
 	var result []domain.Order
 	for _, o := range m.orders {
 		if filter.PaidOnly && o.PaymentStatus != domain.PaymentStatusPaid {
@@ -141,6 +143,7 @@ type mockTx struct {
 	paymentLogUpdates    int
 	restoreCount         int
 	auditActions         []string
+	savedSetting         *domain.Setting
 }
 
 func (t *mockTx) NextOrderNumber(ctx context.Context, oType domain.OrderType, day time.Time) (string, error) {
@@ -193,6 +196,11 @@ func (t *mockTx) UpdateAggregate(ctx context.Context, id uuid.UUID, s domain.Ord
 
 func (t *mockTx) Audit(ctx context.Context, entry *domain.AuditLog) error {
 	t.auditActions = append(t.auditActions, entry.Action)
+	return nil
+}
+
+func (t *mockTx) SaveSetting(ctx context.Context, setting *domain.Setting) error {
+	t.savedSetting = setting
 	return nil
 }
 
@@ -613,6 +621,35 @@ func TestOrderUsecase_CancelOrder_PaidOrderRejected(t *testing.T) {
 	var appErr *domain.AppError
 	if !errors.As(err, &appErr) || appErr.Code != domain.CodeInvalidTransition {
 		t.Fatalf("expected INVALID_TRANSITION when cancelling paid order, got %v", err)
+	}
+}
+
+func TestOrderList_DefaultsToOutletDay(t *testing.T) {
+	loc := time.FixedZone("WIB", 7*3600)
+	repo := &mockOrderQueryRepo{}
+	u := NewOrderUsecase(repo, nil, nil, nil, nil, nil, nil, loc)
+
+	if _, err := u.List(context.Background(), domain.OrderFilter{}, domain.UserRoleOwner); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.lastFilter.Date == nil {
+		t.Fatal("expected List to default the date filter")
+	}
+	if repo.lastFilter.DateLoc != loc {
+		t.Errorf("expected the outlet location on the filter, got %v", repo.lastFilter.DateLoc)
+	}
+	now := time.Now().In(loc)
+	start := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	if !repo.lastFilter.Date.Equal(start) {
+		t.Errorf("expected today's outlet midnight %v, got %v", start, *repo.lastFilter.Date)
+	}
+
+	explicit := time.Date(2026, 1, 2, 0, 0, 0, 0, loc)
+	if _, err := u.List(context.Background(), domain.OrderFilter{Date: &explicit}, domain.UserRoleOwner); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !repo.lastFilter.Date.Equal(explicit) {
+		t.Errorf("explicit date must be honoured, got %v", *repo.lastFilter.Date)
 	}
 }
 

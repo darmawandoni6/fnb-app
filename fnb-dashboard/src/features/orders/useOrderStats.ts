@@ -2,14 +2,13 @@ import { useMemo } from 'react'
 
 import { ORDER_STATUS, type OrderStatus } from '@/constants/orderStatus'
 import { PAYMENT_STATUS } from '@/constants/paymentStatus'
-import { todayUTC } from '@/lib/format'
 
 import { useOrders } from './useOrders'
 
 const activeStatuses: OrderStatus[] = [ORDER_STATUS.MENUNGGU, ORDER_STATUS.DIPROSES]
 
 export function useOrderStats() {
-  const { data: orders } = useOrders({ date: todayUTC() })
+  const { data: orders } = useOrders()
 
   return useMemo(() => {
     const list = orders ?? []

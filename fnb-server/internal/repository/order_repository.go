@@ -175,6 +175,10 @@ func (r *OrderRepository) Audit(ctx context.Context, entry *domain.AuditLog) err
 	return r.db.WithContext(ctx).Create(entry).Error
 }
 
+func (r *OrderRepository) SaveSetting(ctx context.Context, setting *domain.Setting) error {
+	return r.db.WithContext(ctx).Save(setting).Error
+}
+
 func (r *OrderRepository) List(ctx context.Context, filter domain.OrderFilter) ([]domain.Order, error) {
 	query := r.db.WithContext(ctx).Model(&domain.Order{}).
 		Preload("Items.Menu").
@@ -206,7 +210,12 @@ func (r *OrderRepository) List(ctx context.Context, filter domain.OrderFilter) (
 		query = query.Where("created_at < ?", *filter.To)
 	}
 	if filter.Date != nil {
-		start := filter.Date.UTC().Truncate(24 * time.Hour)
+		loc := filter.DateLoc
+		if loc == nil {
+			loc = time.UTC
+		}
+		d := filter.Date.In(loc)
+		start := time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, loc)
 		end := start.Add(24 * time.Hour)
 		query = query.Where("created_at >= ? AND created_at < ?", start, end)
 	}

@@ -15,4 +15,5 @@ export const menuQuery = (sessionToken: string) =>
     queryKey: catalogKeys.menu(sessionToken),
     queryFn: () => withSessionRetry((token) => getPublicMenu(token)),
     enabled: Boolean(sessionToken),
+    refetchInterval: (query) => (query.state.data?.isOpen ? 15_000 : false),
   })

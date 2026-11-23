@@ -29,10 +29,26 @@ export function NewOrderPage() {
     queryFn: api.getMenuCategories,
   })
 
-  const { data: settings } = useQuery({
+  const {
+    data: settings,
+    refetch: refetchSettings,
+    isFetching: isCheckingStore,
+  } = useQuery({
     queryKey: ['settings'],
     queryFn: api.getSettings,
+    refetchInterval: 10_000,
   })
+
+  const checkStoreStatus = async () => {
+    const result = await refetchSettings()
+    if (result.error) {
+      toast.error(result.error.message)
+      return
+    }
+    toast.success(
+      result.data?.is_open ? 'Toko sudah buka. Pesanan bisa dibuat.' : 'Toko masih tutup.',
+    )
+  }
 
   const isStoreClosed = settings ? !settings.is_open : false
   const serviceRate = settings?.service_rate ?? 0
@@ -135,6 +151,20 @@ export function NewOrderPage() {
             </p>
           </div>
         </div>
+        {isStoreClosed && (
+          <div className="flex items-center gap-2">
+            <span className="text-destructive text-xs font-semibold">Toko sedang tutup.</span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isCheckingStore}
+              onClick={() => void checkStoreStatus()}
+            >
+              {isCheckingStore ? 'Memuat...' : 'Cek Status Toko'}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Main 2-Column POS Layout */}

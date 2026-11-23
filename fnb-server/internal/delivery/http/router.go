@@ -74,6 +74,7 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	admin.GET("/audit-log", h.Audit.List)
 	admin.GET("/settings", h.Users.GetSettings)
 	admin.PATCH("/settings", h.Users.UpdateSettings)
+	admin.POST("/settings/close", h.Users.CloseStore)
 
 	reports := e.Group("/reports", JWTMiddleware(authUsecase), RequireRoles(domain.UserRoleOwner))
 	reports.GET("/summary", h.Report.Summary)

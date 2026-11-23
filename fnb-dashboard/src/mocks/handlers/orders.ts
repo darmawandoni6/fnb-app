@@ -54,13 +54,14 @@ const nextOrderNumber = (orderType: OrderType): string => {
 export const getOrders = async (filters?: OrderFilters): Promise<Order[]> => {
   await delay()
   const paidOnly = currentUser().role === USER_ROLE.KITCHEN
+  const day = filters?.date ?? businessDay()
   const orders = db.orders.filter(
     (order) =>
       (!paidOnly || order.payment_status === PAYMENT_STATUS.LUNAS) &&
       (!filters?.status || order.status === filters.status) &&
       (!filters?.table_id || order.table_id === filters.table_id) &&
       (!filters?.order_type || order.order_type === filters.order_type) &&
-      (!filters?.date || order.created_at.startsWith(filters.date)),
+      businessDay(order.created_at) === day,
   )
   return orders.map((order) => structuredClone(order))
 }

@@ -10,6 +10,8 @@ import {
 } from '@/constants'
 import type { Order } from '@/types'
 
+import { businessDay } from '@/lib/orderNumber'
+
 import { db } from './db'
 import { deriveOrderStatus } from './handlers/deriveStatus'
 
@@ -419,6 +421,37 @@ export const runMockSelfCheck = async () => {
   db.currentUserId = 'user-2'
   await throwsCode(() => api.updateSettings({ tax_rate: 5 }), 'FORBIDDEN')
   db.currentUserId = 'user-1'
+
+  await throwsCode(() => api.updateSettings({ is_open: false }), 'INVALID_TRANSITION')
+
+  const today = businessDay()
+  const todaysOrders = db.orders.filter((order) => businessDay(order.created_at) === today)
+  todaysOrders
+    .filter((order) => order.status === ORDER_STATUS.DIPROSES)
+    .forEach((order) => {
+      order.status = ORDER_STATUS.SELESAI
+    })
+  const blocking = todaysOrders.find((order) => order.status === ORDER_STATUS.SELESAI)
+  assert(blocking !== undefined, 'a today order exists to flip')
+  blocking!.status = ORDER_STATUS.DIPROSES
+  await throwsCode(() => api.closeStore(), 'INVALID_TRANSITION')
+
+  blocking!.status = ORDER_STATUS.SELESAI
+  const unpaidBefore = todaysOrders.filter(
+    (order) =>
+      order.status === ORDER_STATUS.MENUNGGU && order.payment_status === PAYMENT_STATUS.BELUM,
+  )
+  const stockBeforeClose = db.ingredients.reduce((sum, ingredient) => sum + ingredient.stock_qty, 0)
+  const closed = await api.closeStore()
+  assert(closed.is_open === false, 'closeStore closes the store')
+  assert(
+    unpaidBefore.every((order) => order.status === ORDER_STATUS.DIBATALKAN),
+    'closeStore cancels unpaid orders',
+  )
+  const stockAfterClose = db.ingredients.reduce((sum, ingredient) => sum + ingredient.stock_qty, 0)
+  assert(stockAfterClose >= stockBeforeClose, 'closeStore restores stock for the cancelled orders')
+  const reopened = await api.updateSettings({ is_open: true })
+  assert(reopened.is_open === true, 'updateSettings may still open the store')
 
   console.warn('Mock self-check passed')
 }

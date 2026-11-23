@@ -93,6 +93,10 @@ func (t *mockOrderTx) Audit(ctx context.Context, entry *domain.AuditLog) error {
 	return nil
 }
 
+func (t *mockOrderTx) SaveSetting(ctx context.Context, setting *domain.Setting) error {
+	return nil
+}
+
 func (t *mockOrderTx) SetPaid(ctx context.Context, orderID uuid.UUID, method domain.PaymentMethod, ref *string, paidAt time.Time, amountReceived, changeAmount *int64) error {
 	return nil
 }

@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"testing"
+	"time"
 
 	"fnb-server/internal/domain"
 	"github.com/google/uuid"
@@ -131,7 +132,7 @@ func validSetting() *domain.Setting {
 
 func TestSettingsUpdate_ValidatesAcrossFields(t *testing.T) {
 	repo := &settingsRepo{setting: validSetting()}
-	uc := NewSettingsUsecase(repo)
+	uc := NewSettingsUsecase(repo, nil, nil, nil)
 
 	in := validSetting()
 	in.CafeName = "Renamed"
@@ -154,4 +155,52 @@ func TestSettingsUpdate_ValidatesAcrossFields(t *testing.T) {
 	if _, err := uc.Update(context.Background(), rate); err == nil {
 		t.Error("expected tax rate above 100 to be rejected")
 	}
+}
+
+func TestSettingsClose(t *testing.T) {
+	loc := time.FixedZone("WIB", 7*3600)
+	orderRepo := &mockOrderQueryRepo{byID: map[uuid.UUID]*domain.Order{}}
+	tx := &mockTx{}
+	withTx := func(_ context.Context, fn func(OrderTx) error) error { return fn(tx) }
+	setting := validSetting()
+	repo := &settingsRepo{setting: setting}
+	uc := NewSettingsUsecase(repo, orderRepo, withTx, loc)
+
+	unpaid := domain.Order{ID: uuid.New(), Status: domain.OrderStatusWaiting, PaymentStatus: domain.PaymentStatusUnpaid}
+	paid := domain.Order{ID: uuid.New(), Status: domain.OrderStatusProcessing, PaymentStatus: domain.PaymentStatusPaid}
+
+	orderRepo.orders = []domain.Order{unpaid, paid}
+	if _, err := uc.Close(context.Background(), nil, nil); err == nil {
+		t.Fatal("expected close to be blocked while an order is DIPROSES")
+	}
+	if !repo.setting.IsOpen {
+		t.Error("store must stay open when the close is blocked")
+	}
+	if tx.cancelCount() != 0 {
+		t.Error("no order may be cancelled when the close is blocked")
+	}
+
+	orderRepo.orders = []domain.Order{unpaid, {ID: uuid.New(), Status: domain.OrderStatusCompleted, PaymentStatus: domain.PaymentStatusPaid}}
+	if _, err := uc.Close(context.Background(), nil, nil); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if repo.setting.IsOpen {
+		t.Error("store must be closed after a successful close")
+	}
+	if tx.cancelCount() != 1 {
+		t.Errorf("expected one cancelled order, got %d", tx.cancelCount())
+	}
+	if !tx.stockRestored {
+		t.Error("stock must be restored for the cancelled order")
+	}
+}
+
+func (t *mockTx) cancelCount() int {
+	n := 0
+	for _, a := range t.auditActions {
+		if a == "order_cancelled" {
+			n++
+		}
+	}
+	return n
 }

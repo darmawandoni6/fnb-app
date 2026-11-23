@@ -29,7 +29,7 @@ func newHandlers(db *gorm.DB, cfg *config.Config, hub *usecase.Hub, log *slog.Lo
 		Payment: newPaymentHandler(db, cfg, hub, log),
 		Admin:   adminHandler,
 		Stock:   newStockHandler(db),
-		Users:   newUsersSettingsHandler(db),
+		Users:   newUsersSettingsHandler(db, cfg),
 		WS:      newWSHandler(db, hub, authUsecase, sessionUsecase),
 		Audit:   httpDelivery.NewAuditHandler(usecase.NewAuditUsecase(repository.NewAuditRepository(db))),
 		Report:  newReportHandler(db),
@@ -54,11 +54,15 @@ func newStockHandler(db *gorm.DB) *httpDelivery.StockHandler {
 	return httpDelivery.NewStockHandler(ingredientUsecase, recipeUsecase)
 }
 
-func newUsersSettingsHandler(db *gorm.DB) *httpDelivery.UsersSettingsHandler {
+func newUsersSettingsHandler(db *gorm.DB, cfg *config.Config) *httpDelivery.UsersSettingsHandler {
 	userRepo := repository.NewUserRepository(db)
 	sessionRepo := repository.NewSessionRepository(db)
 	settingRepo := repository.NewSettingRepository(db)
-	return httpDelivery.NewUsersSettingsHandler(usecase.NewUserAdminUsecase(userRepo, sessionRepo), usecase.NewSettingsUsecase(settingRepo))
+	orderRepo := repository.NewOrderRepository(db)
+	return httpDelivery.NewUsersSettingsHandler(
+		usecase.NewUserAdminUsecase(userRepo, sessionRepo),
+		usecase.NewSettingsUsecase(settingRepo, orderRepo, newOrderTxRunner(db), cfg.Location()),
+	)
 }
 
 func newAuthUsecase(db *gorm.DB, cfg *config.Config) *usecase.AuthUsecase {

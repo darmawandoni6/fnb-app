@@ -2,9 +2,11 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/mail"
 	"strings"
+	"time"
 
 	"fnb-server/internal/domain"
 
@@ -101,10 +103,18 @@ func (u *UserAdminUsecase) Update(ctx context.Context, id uuid.UUID, name *strin
 	return user, nil
 }
 
-type SettingsUsecase struct{ repo domain.AdminSettingRepository }
+type SettingsUsecase struct {
+	repo      domain.AdminSettingRepository
+	orderRepo domain.OrderQueryRepository
+	withTx    TxRunner
+	loc       *time.Location
+}
 
-func NewSettingsUsecase(repo domain.AdminSettingRepository) *SettingsUsecase {
-	return &SettingsUsecase{repo: repo}
+func NewSettingsUsecase(repo domain.AdminSettingRepository, orderRepo domain.OrderQueryRepository, withTx TxRunner, loc *time.Location) *SettingsUsecase {
+	if loc == nil {
+		loc = time.FixedZone("WIB", 7*3600)
+	}
+	return &SettingsUsecase{repo: repo, orderRepo: orderRepo, withTx: withTx, loc: loc}
 }
 func defaultSetting() *domain.Setting {
 	return &domain.Setting{CafeName: "", TaxRate: 0, ServiceRate: 5, IsOpen: true}
@@ -163,4 +173,70 @@ func (u *SettingsUsecase) Update(ctx context.Context, in *domain.Setting) (*doma
 		return nil, e
 	}
 	return s, nil
+}
+
+func (u *SettingsUsecase) Close(ctx context.Context, actorID *uuid.UUID, actorRole *domain.UserRole) (*domain.Setting, error) {
+	now := time.Now().In(u.loc)
+	day := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, u.loc)
+
+	processing := domain.OrderStatusProcessing
+	orders, err := u.orderRepo.List(ctx, domain.OrderFilter{Date: &day, DateLoc: u.loc})
+	if err != nil {
+		return nil, err
+	}
+
+	pendingCancel := make([]*domain.Order, 0, len(orders))
+	for i := range orders {
+		switch orders[i].Status {
+		case processing:
+			return nil, domain.NewError(
+				domain.CodeInvalidTransition,
+				fmt.Sprintf("%d order(s) are still in progress today", countByStatus(orders, processing)),
+				http.StatusConflict,
+				nil,
+			)
+		case domain.OrderStatusWaiting:
+			if orders[i].PaymentStatus == domain.PaymentStatusUnpaid && orders[i].CanceledAt == nil {
+				pendingCancel = append(pendingCancel, &orders[i])
+			}
+		}
+	}
+
+	const reason = "store closed"
+	at := time.Now().UTC()
+	s, err := u.repo.GetFirst(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if s == nil {
+		s = defaultSetting()
+	}
+	s.IsOpen = false
+
+	err = u.withTx(ctx, func(tx OrderTx) error {
+		for _, order := range pendingCancel {
+			if err := cancelOrderInTx(ctx, tx, order, reason, actorID, actorRole); err != nil {
+				return err
+			}
+		}
+		return tx.SaveSetting(ctx, s)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, order := range pendingCancel {
+		markCancelled(order, reason, at)
+	}
+	return s, nil
+}
+
+func countByStatus(orders []domain.Order, status domain.OrderStatus) int {
+	n := 0
+	for i := range orders {
+		if orders[i].Status == status {
+			n++
+		}
+	}
+	return n
 }

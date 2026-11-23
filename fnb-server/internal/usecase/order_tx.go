@@ -18,6 +18,7 @@ type OrderTx interface {
 	CancelOrder(ctx context.Context, orderID uuid.UUID, reason string, actor *uuid.UUID) error
 	UpdateAggregate(ctx context.Context, orderID uuid.UUID, status domain.OrderStatus) error
 	Audit(ctx context.Context, entry *domain.AuditLog) error
+	SaveSetting(ctx context.Context, setting *domain.Setting) error
 
 	SetPaid(ctx context.Context, orderID uuid.UUID, method domain.PaymentMethod, ref *string, paidAt time.Time, amountReceived, changeAmount *int64) error
 	CreatePaymentLog(ctx context.Context, log *domain.PaymentLog) error

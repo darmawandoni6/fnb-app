@@ -9,6 +9,8 @@ import { AlertTriangle, Building2, CheckCircle2, Percent, Store, Timer } from 'l
 import { useForm, useWatch } from 'react-hook-form'
 import { toast } from 'sonner'
 
+import { ORDER_STATUS } from '@/constants/orderStatus'
+import { PAYMENT_STATUS } from '@/constants/paymentStatus'
 import { toastApiError } from '@/lib/errors'
 
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -35,11 +37,30 @@ const RATE_PRESETS = [
   { value: 11, label: '11%' },
 ] as const
 
+const closeDescription = (unpaidCount: number, processingCount: number) => {
+  const parts = ['Pesanan baru dari QR dan Manual POS akan ditolak sampai toko dibuka kembali.']
+  if (processingCount > 0) {
+    parts.push(
+      `${processingCount} pesanan masih DIPROSES (sudah dibayar). Selesaikan dulu — toko belum bisa ditutup.`,
+    )
+  }
+  if (unpaidCount > 0) {
+    parts.push(
+      `${unpaidCount} pesanan belum dibayar akan otomatis dibatalkan dan stok dikembalikan.`,
+    )
+  }
+  return parts.join(' ')
+}
+
 export function SettingsPage() {
   const queryClient = useQueryClient()
   const { data: settings, isPending } = useQuery({
     queryKey: ['settings'],
     queryFn: api.getSettings,
+  })
+  const { data: orders } = useQuery({
+    queryKey: ['orders'],
+    queryFn: () => api.getOrders(),
   })
 
   const mutation = useMutation({
@@ -59,6 +80,20 @@ export function SettingsPage() {
     onError: toastApiError,
   })
 
+  const closeMutation = useMutation({
+    mutationFn: api.closeStore,
+    onSuccess: () => {
+      toast.success('Toko ditutup. Pesanan belum dibayar dibatalkan.')
+      queryClient.invalidateQueries({ queryKey: ['settings'] })
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+      queryClient.invalidateQueries({ queryKey: ['ingredients'] })
+    },
+    onError: (error) => {
+      toastApiError(error)
+      queryClient.invalidateQueries({ queryKey: ['orders'] })
+    },
+  })
+
   if (isPending || !settings) {
     return <SettingsSkeleton />
   }
@@ -74,8 +109,19 @@ export function SettingsPage() {
 
       <StoreStatusCard
         isOpen={settings.is_open}
-        isPending={mutation.isPending}
+        isPending={mutation.isPending || closeMutation.isPending}
+        unpaidCount={
+          (orders ?? []).filter(
+            (order) =>
+              order.status === ORDER_STATUS.MENUNGGU &&
+              order.payment_status === PAYMENT_STATUS.BELUM,
+          ).length
+        }
+        processingCount={
+          (orders ?? []).filter((order) => order.status === ORDER_STATUS.DIPROSES).length
+        }
         onToggle={(isOpen) => mutation.mutate({ is_open: isOpen })}
+        onClose={() => closeMutation.mutate()}
       />
 
       <StoreProfileForm
@@ -99,11 +145,17 @@ export function SettingsPage() {
 function StoreStatusCard({
   isOpen,
   isPending,
+  unpaidCount,
+  processingCount,
   onToggle,
+  onClose,
 }: {
   isOpen: boolean
   isPending: boolean
+  unpaidCount: number
+  processingCount: number
   onToggle: (isOpen: boolean) => void
+  onClose: () => void
 }) {
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false)
 
@@ -192,10 +244,10 @@ function StoreStatusCard({
           open={confirmCloseOpen}
           onOpenChange={setConfirmCloseOpen}
           title="Tutup Operasional Toko?"
-          description="Seluruh pemesanan baru dari scan QR meja pelanggan dan Manual POS kasir akan otomatis ditolak sampai toko dibuka kembali. Pastikan semua antrean aktif telah selesai dilayani."
+          description={closeDescription(unpaidCount, processingCount)}
           onConfirm={() => {
             setConfirmCloseOpen(false)
-            onToggle(false)
+            onClose()
           }}
           pending={isPending}
         />

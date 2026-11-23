@@ -8,7 +8,7 @@ Four business rules on top of the shipped order flow: orders blocked while the s
 
 ## Status
 
-OPEN — not started.
+DONE — shipped and verified against the live API.
 
 ## Gates
 
@@ -40,38 +40,38 @@ VITE_RUN_MOCK_SELFCHECK=true npm run dev
 
 ### Backend — `../fnb-server`
 
-- [ ] 5.1 `internal/usecase/order_usecase.go` — `List` fills `filter.Date` with the current outlet day when the caller omits it. `date` sent explicitly is still honoured.
-- [ ] 5.2 `internal/usecase/users_settings_usecase.go` — `SettingsUsecase` takes `domain.OrderQueryRepository` and a transaction runner. `Update` rejects `IsOpen == false` with `INVALID_TRANSITION`.
-- [ ] 5.3 Close operation — new usecase method and `POST /settings/close` handler:
+- [x] 5.1 `internal/usecase/order_usecase.go` — `List` fills `filter.Date` with the current outlet day when the caller omits it. `date` sent explicitly is still honoured.
+- [x] 5.2 `internal/usecase/users_settings_usecase.go` — `SettingsUsecase` takes `domain.OrderQueryRepository` and a transaction runner. `Update` rejects `IsOpen == false` with `INVALID_TRANSITION`.
+- [x] 5.3 Close operation — new usecase method and `POST /settings/close` handler:
   - reject with `409 INVALID_TRANSITION` when any order created on the current outlet day is `DIPROSES`; the message reports the count
   - otherwise cancel every unpaid `MENUNGGU` order of that day in one transaction: `DIBATALKAN`, items `CANCELLED`, stock restored, `RESTORE` movements, `audit_log`
   - set `is_open = false`, return the settings
-- [ ] 5.4 `internal/delivery/http/router.go` — register `POST /settings/close` for `OWNER`.
-- [ ] 5.5 Wiring in `cmd/api/wiring.go` — pass the order repository into `SettingsUsecase`.
-- [ ] 5.6 Tests — `settings` close blocked by `DIPROSES`; close cancels unpaid orders and restores stock; close is a no-op when already closed; `PATCH /settings` rejects `is_open:false`; `GET /orders` without `date` returns the outlet day.
+- [x] 5.4 `internal/delivery/http/router.go` — register `POST /settings/close` for `OWNER`.
+- [x] 5.5 Wiring in `cmd/api/wiring.go` — pass the order repository into `SettingsUsecase`.
+- [x] 5.6 Tests — `settings` close blocked by `DIPROSES`; close cancels unpaid orders and restores stock; close is a no-op when already closed; `PATCH /settings` rejects `is_open:false`; `GET /orders` without `date` returns the outlet day.
 
 ### Dashboard — `fnb-dashboard`
 
-- [ ] 5.7 `src/api/http/settings.ts` — add `closeStore()` calling `POST /settings/close`.
-- [ ] 5.8 `src/pages/SettingsPage.tsx` — the close toggle calls `closeStore()`; the confirm dialog states how many unpaid orders will be cancelled; a blocked close surfaces the server message.
-- [ ] 5.9 `src/pages/OrdersPage.tsx` — manual refresh button invalidating the `['orders']` prefix, so the board and the stat cards refetch together.
-- [ ] 5.10 `src/features/orders/useOrderStats.ts` — drop `date: todayUTC()`; rely on the server default.
-- [ ] 5.11 Store-closed awareness — `['settings']` query polls so the POS guard and the closed banner react without a reload; `NewOrderPage` offers a refresh action while the store reads closed.
-- [ ] 5.12 `src/mocks/handlers/orders.ts` — `getOrders` defaults to the current day when `date` is omitted.
-- [ ] 5.13 `src/mocks/handlers/settings.ts` — mirror the server: reject `is_open:false` on patch, add a close handler that validates `DIPROSES` and cancels unpaid orders.
-- [ ] 5.14 `src/mocks/selfcheck.ts` — close blocked by `DIPROSES` returns `INVALID_TRANSITION`; close cancels unpaid orders and restores stock; `PATCH is_open:false` returns `INVALID_TRANSITION`; `getOrders()` without a filter excludes a previous-day order.
+- [x] 5.7 `src/api/http/settings.ts` — add `closeStore()` calling `POST /settings/close`.
+- [x] 5.8 `src/pages/SettingsPage.tsx` — the close toggle calls `closeStore()`; the confirm dialog states how many unpaid orders will be cancelled; a blocked close surfaces the server message.
+- [x] 5.9 `src/pages/OrdersPage.tsx` — manual refresh button invalidating the `['orders']` prefix, so the board and the stat cards refetch together.
+- [x] 5.10 `src/features/orders/useOrderStats.ts` — drop `date: todayUTC()`; rely on the server default.
+- [x] 5.11 Store-closed awareness — `['settings']` query polls so the POS guard and the closed banner react without a reload; `NewOrderPage` offers a refresh action while the store reads closed.
+- [x] 5.12 `src/mocks/handlers/orders.ts` — `getOrders` defaults to the current day when `date` is omitted.
+- [x] 5.13 `src/mocks/handlers/settings.ts` — mirror the server: reject `is_open:false` on patch, add a close handler that validates `DIPROSES` and cancels unpaid orders.
+- [x] 5.14 `src/mocks/selfcheck.ts` — close blocked by `DIPROSES` returns `INVALID_TRANSITION`; close cancels unpaid orders and restores stock; `PATCH is_open:false` returns `INVALID_TRANSITION`; `getOrders()` without a filter excludes a previous-day order.
 
 ### QR Menu — `../fnb-qr-menu`
 
-- [ ] 5.15 `src/features/catalog/queries.ts` — `menuQuery` polls every 15 seconds and stops once `isOpen` is `false`, so a store closed mid-browse reaches `/tutup` without a checkout attempt.
+- [x] 5.15 `src/features/catalog/queries.ts` — `menuQuery` polls every 15 seconds and stops once `isOpen` is `false`, so a store closed mid-browse reaches `/tutup` without a checkout attempt.
 
 ### Docs
 
-- [ ] 5.16 `../../docs/PRD.md` — §7.4 close rules, §7.5 auto-cancel on close, BR-25/BR-26.
-- [ ] 5.17 `../../docs/api.md` — `POST /settings/close`, `PATCH /settings` rejection, `GET /orders` default day.
-- [ ] 5.18 `../../docs/flow.md` — store close sequence.
-- [ ] 5.19 `docs/tech-stack.md` — refresh action, server-owned day, settings polling.
-- [ ] 5.20 `../fnb-qr-menu/docs/tech-stack.md` — menu polling for the closed notice.
+- [x] 5.16 `../../docs/PRD.md` — §7.4 close rules, §7.5 auto-cancel on close, BR-25/BR-26.
+- [x] 5.17 `../../docs/api.md` — `POST /settings/close`, `PATCH /settings` rejection, `GET /orders` default day.
+- [x] 5.18 `../../docs/flow.md` — store close sequence.
+- [x] 5.19 `docs/tech-stack.md` — refresh action, server-owned day, settings polling.
+- [x] 5.20 `../fnb-qr-menu/docs/tech-stack.md` — menu polling for the closed notice.
 
 ## Verification
 

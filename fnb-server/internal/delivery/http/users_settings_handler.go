@@ -66,6 +66,9 @@ func (h *UsersSettingsHandler) UpdateSettings(c echo.Context) error {
 	if e := c.Bind(&r); e != nil {
 		return e
 	}
+	if r.IsOpen != nil && !*r.IsOpen {
+		return domain.NewError(domain.CodeInvalidTransition, "use POST /settings/close to close the store", http.StatusConflict, nil)
+	}
 	old, e := h.settings.Get(c.Request().Context())
 	if e != nil {
 		return e
@@ -95,6 +98,19 @@ func (h *UsersSettingsHandler) UpdateSettings(c echo.Context) error {
 		old.ReadyAutoDeliverWarningMinutes = *r.ReadyAutoDeliverWarningMinutes
 	}
 	v, e := h.settings.Update(c.Request().Context(), old)
+	if e != nil {
+		return e
+	}
+	return Success(c, http.StatusOK, v)
+}
+
+func (h *UsersSettingsHandler) CloseStore(c echo.Context) error {
+	actorID, ok := GetCurrentUserID(c)
+	if !ok {
+		return domain.NewError(domain.CodeUnauthorized, "missing actor", http.StatusUnauthorized, nil)
+	}
+	role, _ := GetCurrentUserRole(c)
+	v, e := h.settings.Close(c.Request().Context(), &actorID, &role)
 	if e != nil {
 		return e
 	}

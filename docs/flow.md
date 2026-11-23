@@ -105,7 +105,7 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     autonumber
-    participant K as Cashier (Dashboard)
+    participant K as Cashier / Owner (Dashboard)
     participant D as Kitchen (Dashboard)
     participant API as fnb-server
     participant DB as PostgreSQL
@@ -113,7 +113,7 @@ sequenceDiagram
     K->>API: POST /orders/manual (JWT)
     Note over API,DB: TRANSACTION
     API->>DB: validate is_open, menu, recipes, stock, required customer_name
-    API->>DB: next order_number (TA-###) from order_sequence
+    API->>DB: next order_number (TA-YYYYMMDD-SSS) from order_sequence
     API->>DB: insert order TAKE_AWAY, table_id NULL, table_session_id NULL, payment BELUM
     API->>DB: insert order_items PENDING, decrease stock, audit_log
     API->>DB: commit
@@ -129,7 +129,7 @@ sequenceDiagram
     API->>DB: order SELESAI when every item is terminal
 ```
 
-Manual orders have no table and no table session. Payment, item transitions, stock, and cancellation behave exactly like dine-in orders, except that the cashier owns `READY → DELIVERED → COMPLETED`.
+Manual orders have no table and no table session. Payment, item transitions, stock, and cancellation behave exactly like dine-in orders, except that the cashier owns `READY → DELIVERED → COMPLETED`. Either the cashier or the owner may create a manual order, and either may cancel an unpaid one with a required reason.
 
 ## Table session lifecycle
 
@@ -151,15 +151,15 @@ stateDiagram-v2
 ```mermaid
 sequenceDiagram
     autonumber
-    participant A as Customer / Owner
+    participant A as Customer / Owner / Cashier
     participant S as Scheduler / Midtrans
     participant API as fnb-server
     participant DB as PostgreSQL
 
     alt public customer
         A->>API: POST /public/orders/:id/cancel (X-Session-Token, reason)
-    else owner
-        A->>API: POST /orders/:id/cancel (JWT, reason)
+    else owner or cashier
+        A->>API: POST /orders/:id/cancel (JWT, reason required)
     else automatic
         S->>API: cash timeout or Midtrans expire
     end
@@ -178,7 +178,7 @@ sequenceDiagram
     API-->>A: WS order.updated, session topic
 ```
 
-Allowed while the store is closed. A paid order (`DIPROSES`) cannot be cancelled in v1; the owner handles it manually (BR-06).
+Allowed while the store is closed. A manual cancel from the dashboard requires a `reason` and is performed by the owner or the cashier. A paid order (`DIPROSES`) cannot be cancelled in v1; the owner handles it manually (BR-06).
 
 ## Stock
 

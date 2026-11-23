@@ -61,7 +61,7 @@ export const runMockSelfCheck = async () => {
   db.currentUserId = 'user-1'
   await api.updateMenu('menu-3', { is_available: true })
 
-  // Order creation: CASHIER only, TAKE_AWAY only, DI/TA-YYYYMMDD-SSS number, OUT movement, snapshots.
+  // Order creation: CASHIER and OWNER, TAKE_AWAY only, DI/TA-YYYYMMDD-SSS number, OUT movement, snapshots.
   db.currentUserId = 'user-2'
   const created = await api.createManualOrder({
     items: [{ menu_id: 'menu-1', qty: 1, note: null }],
@@ -89,24 +89,15 @@ export const runMockSelfCheck = async () => {
     ),
     'order creation writes a negative OUT movement with order ids',
   )
-  db.currentUserId = 'user-1'
-  await throwsCode(
-    () =>
-      api.createManualOrder({
-        items: [{ menu_id: 'menu-1', qty: 1, note: null }],
-        customer_name: 'X',
-      }),
-    'FORBIDDEN',
-  )
+  // Owner also creates manual take away orders (checked after the cancel block below).
   db.currentUserId = 'user-2'
 
-  // Order-level cancel: OWNER only, restores stock, DIBATALKAN.
-  await throwsCode(() => api.cancelOrder(created.id, 'uji'), 'FORBIDDEN')
-  db.currentUserId = 'user-1'
-  const cancelled = await api.cancelOrder(created.id, 'uji')
-  assert(cancelled.status === ORDER_STATUS.DIBATALKAN, 'cancel sets DIBATALKAN')
+  // Order-level cancel: OWNER or CASHIER, reason required, restores stock, DIBATALKAN.
+  await throwsCode(() => api.cancelOrder(created.id, '   '), 'VALIDATION_ERROR')
+  const cashierCancelled = await api.cancelOrder(created.id, 'kasir batal')
+  assert(cashierCancelled.status === ORDER_STATUS.DIBATALKAN, 'cashier can cancel an unpaid order')
   assert(
-    cancelled.items.every(({ status }) => status === ITEM_STATUS.CANCELLED),
+    cashierCancelled.items.every(({ status }) => status === ITEM_STATUS.CANCELLED),
     'every item becomes CANCELLED',
   )
   assert(
@@ -125,7 +116,34 @@ export const runMockSelfCheck = async () => {
   )
   await throwsCode(() => api.cancelOrder(created.id, 'uji'), 'INVALID_TRANSITION')
 
+  // Owner creates a manual take away order, then cancels it.
+  db.currentUserId = 'user-1'
+  const ownerCreated = await api.createManualOrder({
+    items: [{ menu_id: 'menu-1', qty: 1, note: null }],
+    customer_name: 'Sari',
+  })
+  assert(ownerCreated.order_type === ORDER_TYPE.TAKE_AWAY, 'owner manual order is TAKE_AWAY')
+  assert(
+    /^TA-\d{8}-\d{3,}$/.test(ownerCreated.order_number),
+    'owner take away number is TA-YYYYMMDD-SSS',
+  )
+  const ownerCancelled = await api.cancelOrder(ownerCreated.id, 'owner batal')
+  assert(ownerCancelled.status === ORDER_STATUS.DIBATALKAN, 'owner can cancel an unpaid order')
+  await throwsCode(() => api.cancelOrder(ownerCreated.id, 'uji'), 'INVALID_TRANSITION')
+
+  // Kitchen may never create or cancel orders.
+  db.currentUserId = 'user-3'
+  await throwsCode(
+    () =>
+      api.createManualOrder({
+        items: [{ menu_id: 'menu-1', qty: 1, note: null }],
+        customer_name: 'X',
+      }),
+    'FORBIDDEN',
+  )
+
   // Ingredients: min_stock is stored and editable, restock/adjust write signed movements.
+  db.currentUserId = 'user-1'
   const newIngredient = await api.createIngredient({
     name: 'Gula',
     unit: 'gram',

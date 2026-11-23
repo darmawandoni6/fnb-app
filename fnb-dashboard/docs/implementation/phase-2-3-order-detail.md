@@ -21,7 +21,7 @@ DONE — all tasks complete.
 
 - [x] Show order header, item table, and totals; readable by `OWNER` and `CASHIER`.
 - [x] Receipt reprint for paid orders through `PaymentReceiptDialog`.
-- [x] Order-level cancel rendered for `OWNER` only, calling `POST /orders/:id/cancel`; hidden unless the order is `MENUNGGU` and `BELUM`.
+- [x] Order-level cancel rendered for `OWNER` and `CASHIER`, calling `POST /orders/:id/cancel` with a required reason; hidden unless the order is `MENUNGGU` and `BELUM`.
 - [x] Close table session action for `CASHIER` and `OWNER` (PRD §9).
   - Read the open session with `getTableSession(order.table_id)`; close it with `closeTableSession(order.table_id)`.
   - Only for `DINE_IN` orders that still have `table_id`; take away orders have none.
@@ -34,4 +34,4 @@ DONE — all tasks complete.
 - `CASHIER` sees the close action on a dine-in order with an open session; `KITCHEN` never reaches the dialog.
 - Closing removes the action and leaves the order history untouched (PRD §4.6 point 5).
 - Second close attempt after the action is hidden is unreachable; a direct API call returns `NOT_FOUND`.
-- Cancel stays invisible to `CASHIER` and visible to `OWNER` only while unpaid.
+- Cancel stays hidden unless the order is `MENUNGGU` and unpaid; visible to both `OWNER` and `CASHIER`, and the reason field is required.

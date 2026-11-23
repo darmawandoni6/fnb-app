@@ -123,7 +123,7 @@ export function OrderPaymentPage() {
 
   const isAlreadyPaid = order.payment_status === PAYMENT_STATUS.LUNAS
   const canCancelOrder =
-    user?.role === 'OWNER' &&
+    (user?.role === 'OWNER' || user?.role === 'CASHIER') &&
     !isAlreadyPaid &&
     order.status === 'MENUNGGU' &&
     order.items.some((item) => item.status !== ITEM_STATUS.CANCELLED)

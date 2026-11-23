@@ -28,8 +28,8 @@ VITE_RUN_MOCK_SELFCHECK=true npm run dev
 
 - [x] Login — bad credentials return `UNAUTHORIZED`; each demo role button lands on its home route.
 - [x] Orders board — four status columns; stat cards filter; 5 s polling; cash countdown on `MENUNGGU` + `BELUM`.
-- [x] Order detail — receipt reprint; cancel `OWNER` only; session close for `CASHIER` and `OWNER`; take away has no session action.
-- [x] Take away POS — `TAKE_AWAY` only; `CASHIER` only; `STORE_CLOSED` blocks creation; draft survives reload.
+- [x] Order detail — receipt reprint; cancel `OWNER` and `CASHIER` with required reason; session close for `CASHIER` and `OWNER`; take away has no session action.
+- [x] Take away POS — `TAKE_AWAY` only; `CASHIER` and `OWNER`; `STORE_CLOSED` blocks creation; draft survives reload.
 - [x] Checkout — change calculation; idempotent confirm; `NON_CASH` confirmation; receipt figures match; countdown shown.
 - [x] Kitchen board — both tabs; `LUNAS` only; `PAYMENT_REQUIRED` on unpaid cook; auto-deliver warning; groups per table or `order_number`.
 - [x] Menus — `OWNER` CRUD; recipe edit returns `STORE_CLOSED` while open; `CASHIER` toggles availability only.
@@ -46,9 +46,9 @@ VITE_RUN_MOCK_SELFCHECK=true npm run dev
 - [x] Item status set includes `COMPLETED`; an order is `SELESAI` only when every item is `COMPLETED` or `CANCELLED`.
 - [x] Totals use `service_rate_snapshot` and `tax_rate_snapshot`, integer rupiah, round half up per component.
 - [x] `order_number` is `DI-YYYYMMDD-SSS` / `TA-YYYYMMDD-SSS`, reset daily per type.
-- [x] Cashier creates `TAKE_AWAY` orders only; owner creates none.
+- [x] Cashier and owner create `TAKE_AWAY` orders only; dine-in only through the QR menu.
 - [x] Payment confirmation is idempotent; no second `payment_log`.
-- [x] Cancellation is order-level, `OWNER` only, unpaid only, and restores stock.
+- [x] Cancellation is order-level, `OWNER` or `CASHIER`, unpaid only, and restores stock.
 - [x] Error codes follow the envelope: `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `STOCK_NOT_ENOUGH`, `STORE_CLOSED`, `INVALID_TRANSITION`, `PAYMENT_REQUIRED`, `INTERNAL_ERROR`.
 
 ## 4.3 Live API verification

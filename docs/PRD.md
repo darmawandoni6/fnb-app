@@ -79,8 +79,8 @@ PostgREST is not used. All data access goes through the Go API so authentication
 
 Vite SPA + TypeScript, one build, routes and menus based on role.
 
-- `OWNER`: order board, cancel unpaid order, cash confirmation (backup), outlet settings, users and roles, stock, menus, tables and QR, audit log, reports (phase 2).
-- `CASHIER`: take away orders, cash confirmation, thermal receipt, `READY → DELIVERED → COMPLETED` for take away, active order list, menu availability, stock read-only.
+- `OWNER`: order board, take away order creation, cancel unpaid order, cash confirmation (backup), outlet settings, users and roles, stock, menus, tables and QR, audit log, reports (phase 2).
+- `CASHIER`: take away orders, cash confirmation, thermal receipt, `READY → DELIVERED → COMPLETED` for take away, cancel unpaid order, active order list, menu availability, stock read-only.
 - `KITCHEN`: two tabs — "Masak" (`PENDING → COOKING → READY`) and "Pass/Counter" (`READY → DELIVERED`, override `DELIVERED → COMPLETED`), auto-deliver warning.
 
 ### 2.3 QR Menu — `fnb-qr-menu`
@@ -102,9 +102,9 @@ Application UI copy is written in Indonesian (product decision), while all docum
 | Actor | Description | Access |
 |---|---|---|
 | Customer | Dine-in guest who scans the table QR code | QR Menu, no login, table session token; name required, phone optional |
-| Cashier | Creates take away orders, confirms cash, hands over take away orders, prints receipts | Dashboard (login) |
+| Cashier | Creates take away orders, confirms cash, cancels unpaid orders, hands over take away orders, prints receipts | Dashboard (login) |
 | Kitchen | Updates production and hand-over status | Dashboard (login) |
-| Owner | Manages orders, cancels unpaid orders, configures outlet, manages users, reads audit log | Dashboard (login) |
+| Owner | Manages orders, creates take away orders, cancels unpaid orders, configures outlet, manages users, reads audit log | Dashboard (login) |
 | Waiter | Picks up `READY` items from the counter and serves them | No system access; `SOP-WAITER-01` |
 
 The first owner is created through an environment seed:
@@ -153,7 +153,7 @@ The seed creates an owner only when the `users` table is empty. Public registrat
 
 ### 4.3 Cash Confirmation
 
-1. The customer or cashier creates a cash order: status `MENUNGGU`, `payment_status` `BELUM`, with `order_number` and a 15-minute timer.
+1. The customer, cashier, or owner creates a cash order: status `MENUNGGU`, `payment_status` `BELUM`, with `order_number` and a 15-minute timer.
 2. The cashier scans the order QR, opens the order from the board, or enters the order number.
 3. The cashier sees the order detail and the grand total.
 4. The cashier enters the amount received; the client shows the change.
@@ -204,10 +204,10 @@ Scenario B — Midtrans expiry:
 2. The customer does not pay; Midtrans sends the expiry callback.
 3. The order becomes `DIBATALKAN`, and every item becomes `CANCELLED`; stock is restored.
 
-Scenario C — owner cancels manually:
+Scenario C — owner or cashier cancels manually:
 
-1. The owner opens an order with status `MENUNGGU`.
-2. The owner cancels it with a reason.
+1. The owner or the cashier opens an order with status `MENUNGGU`.
+2. They cancel it with a required reason.
 3. The order becomes `DIBATALKAN`, written to `cancel_reason` and `canceled_at`; every item becomes `CANCELLED`; stock is restored.
 4. The customer screen updates.
 
@@ -237,7 +237,7 @@ MENUNGGU ──→ DIPROSES ──→ SELESAI
 | From | To | Trigger | Actor |
 |---|---|---|---|
 | `MENUNGGU` | `DIPROSES` | Non-cash payment succeeded or cashier confirmed cash | System / `CASHIER` |
-| `MENUNGGU` | `DIBATALKAN` | Cash timeout, Midtrans expiry, or manual cancel | System / `OWNER` |
+| `MENUNGGU` | `DIBATALKAN` | Cash timeout, Midtrans expiry, or manual cancel with a required reason | System / `OWNER` / `CASHIER` |
 | `DIPROSES` | `SELESAI` | Every item is `COMPLETED` or `CANCELLED` | System |
 
 `DIPROSES → DIBATALKAN` does not exist in v1.
@@ -251,7 +251,7 @@ MENUNGGU ──→ DIPROSES ──→ SELESAI
 | `READY` | siap | `KITCHEN`, `OWNER` |
 | `DELIVERED` | dalam pengantaran | `KITCHEN`, `OWNER` for dine-in; `CASHIER`, `OWNER` for take away |
 | `COMPLETED` | selesai | Auto after 5 minutes; `KITCHEN`, `CASHIER`, `OWNER` override |
-| `CANCELLED` | batal | `OWNER` or system, only while the whole order is cancelled |
+| `CANCELLED` | batal | `OWNER`, `CASHIER`, or system, only while the whole order is cancelled |
 
 | From | To | Actor |
 |---|---|---|
@@ -259,7 +259,7 @@ MENUNGGU ──→ DIPROSES ──→ SELESAI
 | `COOKING` | `READY` | `KITCHEN`, `OWNER` |
 | `READY` | `DELIVERED` | `KITCHEN`, `OWNER`, and `CASHIER` for take away |
 | `DELIVERED` | `COMPLETED` | Scheduler after 5 minutes, or `KITCHEN`, `CASHIER`, `OWNER` |
-| `PENDING` | `CANCELLED` | System or `OWNER`, only as part of order cancellation |
+| `PENDING` | `CANCELLED` | System, `OWNER`, or `CASHIER`, only as part of order cancellation |
 
 - `COOKING` is rejected with `409 PAYMENT_REQUIRED` while the order is `BELUM`.
 - There is no `COOKING`/`READY`/`DELIVERED` → `CANCELLED` transition in v1.
@@ -317,6 +317,7 @@ total_amount   = subtotal + service_amount + tax_amount
 - Move take away items `READY → DELIVERED → COMPLETED`.
 - Print the thermal receipt through the browser print dialog.
 - View the active order list and the order detail.
+- Cancel an unpaid order with a required reason.
 - Read stock, and mark menu availability.
 
 ### 7.3 Kitchen (Dashboard, Two Tabs)
@@ -330,7 +331,8 @@ total_amount   = subtotal + service_amount + tax_amount
 ### 7.4 Owner (Dashboard)
 
 - View all orders in every status.
-- Cancel an order only while it is `MENUNGGU` and unpaid.
+- Create take away orders from the dashboard (BR-24).
+- Cancel an order only while it is `MENUNGGU` and unpaid; the cancel reason is required.
 - Configure outlet settings: `service_rate`, `tax_rate`, `cash_timeout_minutes`, `ready_auto_deliver_minutes`, `ready_auto_deliver_warning_minutes`, `delivered_auto_complete_minutes`, `is_open`.
 - Manage users and roles (`OWNER`, `CASHIER`, `KITCHEN`), activate or deactivate users.
 - Read the audit log.
@@ -367,10 +369,10 @@ total_amount   = subtotal + service_amount + tax_amount
 
 ## 8. Business Rules
 
-- BR-01: The cashier creates take away orders only; the cashier cannot create a dine-in order.
+- BR-01: The cashier and the owner create take away orders only; neither can create a dine-in order.
 - BR-02: The kitchen starts cooking only after payment is confirmed.
 - BR-03: A cash order unpaid after `cash_timeout_minutes` (default 15) is cancelled automatically.
-- BR-04: An order can be cancelled only while it is `MENUNGGU` and unpaid, by the owner or by the system (cash timeout, Midtrans expiry).
+- BR-04: An order can be cancelled only while it is `MENUNGGU` and unpaid, by the owner, the cashier, or the system (cash timeout, Midtrans expiry). A manual cancel from the dashboard records a required reason.
 - BR-05: Cancellation is order-level; every item becomes `CANCELLED` at the same time.
 - BR-06: A paid order (`DIPROSES`) cannot be cancelled in v1; the owner handles it manually outside the system.
 - BR-07: An order is `SELESAI` only when every item is `COMPLETED` or `CANCELLED`.
@@ -390,7 +392,7 @@ total_amount   = subtotal + service_amount + tax_amount
 - BR-21: Cancelling an order restores the stock of every item in the same transaction.
 - BR-22: `customer_name` is required on every order; `customer_phone` is optional.
 - BR-23: Recipes can be edited only while `settings.is_open` is false; store closure only blocks new orders.
-- BR-24: The owner does not create orders, dine-in or take away.
+- BR-24: The owner may create take away orders from the dashboard; the owner cannot create a dine-in order.
 
 ## 9. Access Matrix
 
@@ -398,14 +400,14 @@ total_amount   = subtotal + service_amount + tax_amount
 |---|---|---|---|---|
 | Open table session | Yes | — | — | — |
 | Create order (QR, dine-in) | Yes | No | No | No |
-| Create order (take away) | No | Yes | No | No |
+| Create order (take away) | No | Yes | No | Yes |
 | Confirm cash payment | No | Yes | No | Yes |
 | `PENDING → COOKING` | No | No | Yes | Yes |
 | `COOKING → READY` | No | No | Yes | Yes |
 | `READY → DELIVERED` (dine-in) | No | No | Yes | Yes |
 | `READY → DELIVERED` (take away) | No | Yes | Yes | Yes |
 | `DELIVERED → COMPLETED` | No | Yes (take away) | Yes (override) | Yes |
-| Cancel order (only `MENUNGGU`) | No | No | No | Yes |
+| Cancel order (only `MENUNGGU`) | No | Yes | No | Yes |
 | Close table session | No | Yes | No | Yes |
 | Configure service charge and tax | No | No | No | Yes |
 | Print thermal receipt | No | Yes | No | Yes |
@@ -673,9 +675,9 @@ Every endpoint below requires JWT and role middleware.
 ```text
 GET   /orders                                  list orders; filter status, table_id, order_type, date
 GET   /orders/:id                              order with items
-POST  /orders/manual                           create a take away order (`CASHIER`)
+POST  /orders/manual                           create a take away order (`CASHIER`, `OWNER`)
 PATCH /orders/:id/payment                      confirm payment, idempotent (`CASHIER`, `OWNER`)
-POST  /orders/:id/cancel                       cancel an unpaid order (`OWNER`)
+POST  /orders/:id/cancel                       cancel an unpaid order, `reason` required (`CASHIER`, `OWNER`)
 PATCH /orders/:id/items/:item_id/status        move an item along the matrix (role depends on the target)
 GET   /tables/:id/session                      read the open session of a table (`CASHIER`, `OWNER`)
 POST  /tables/:id/session/close                close a table session manually (`CASHIER`, `OWNER`)
@@ -771,7 +773,7 @@ One scheduler loop runs every minute and is safe to run repeatedly.
 - EC-12: The kitchen forgets `READY → DELIVERED` → fallback after 10 minutes, warning 2 minutes earlier.
 - EC-13: The kitchen completes an item early → the auto-complete job skips it.
 - EC-14: The customer closes the browser after scanning → the session token stays valid, and scanning the table QR again returns the same token while the session is open.
-- EC-15: The owner cancels an unpaid order → every item is cancelled and stock is restored.
+- EC-15: The owner or the cashier cancels an unpaid order → every item is cancelled, the reason is recorded, and stock is restored.
 - EC-16: The customer asks for a refund after payment → handled manually by the owner; not a v1 feature.
 - EC-17: The customer asks to change a paid order → handled manually by the owner; the alternative is to finish it and order again.
 - EC-18: Two orders are created at the same instant → the order number sequence is atomic, no duplicate number.

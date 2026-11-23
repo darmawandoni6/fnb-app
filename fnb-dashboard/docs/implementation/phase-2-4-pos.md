@@ -4,7 +4,7 @@ Granular plan for executing section 2.4 from `../implementation-plan.md`.
 
 ## Scope
 
-`/orders/new` point-of-sale for `CASHIER`. Creates `TAKE_AWAY` orders only. PRD §4.2, §7.2, BR-01, BR-24.
+`/orders/new` point-of-sale for `CASHIER` and `OWNER`. Creates `TAKE_AWAY` orders only. PRD §4.2, §7.2, BR-01, BR-24.
 
 ## Status
 
@@ -20,7 +20,7 @@ DONE — all tasks complete.
 
 ## Tasks
 
-- [x] Dedicated page at `/orders/new`; the button on the board is visible to `CASHIER` only.
+- [x] Dedicated page at `/orders/new`; the button on the board is visible to `CASHIER` and `OWNER`.
 - [x] No `DINE_IN` toggle and no table select; `order_type = TAKE_AWAY` and `table_id = null` (BR-01).
 - [x] Category tabs, search input, and menu catalog grid with 2-character initials when `image_url` is absent.
 - [x] Cart panel: `customer_name` required, `customer_phone` optional, per-item note, quantity controls.

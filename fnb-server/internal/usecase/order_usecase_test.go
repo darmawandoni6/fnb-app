@@ -318,7 +318,7 @@ func TestOrderUsecase_CreateManual_StoreClosed(t *testing.T) {
 		PaymentMethod: domain.PaymentMethodCash,
 		Items:         []CreateOrderItem{{MenuID: uuid.New(), Qty: 1}},
 	}
-	_, err := u.CreateManual(context.Background(), uuid.New(), in)
+	_, err := u.CreateManual(context.Background(), uuid.New(), domain.UserRoleCashier, in)
 	if err == nil {
 		t.Fatal("expected STORE_CLOSED error, got nil")
 	}
@@ -338,7 +338,7 @@ func TestOrderUsecase_CreateManual_ValidationRejects(t *testing.T) {
 		PaymentMethod: domain.PaymentMethodCash,
 		Items:         []CreateOrderItem{{MenuID: uuid.New(), Qty: 1}},
 	}
-	_, err := u.CreateManual(context.Background(), uuid.New(), in)
+	_, err := u.CreateManual(context.Background(), uuid.New(), domain.UserRoleCashier, in)
 	var appErr *domain.AppError
 	if !errors.As(err, &appErr) || appErr.Code != domain.CodeValidationError {
 		t.Fatalf("expected VALIDATION_ERROR on blank customer_name, got %v", err)
@@ -350,7 +350,7 @@ func TestOrderUsecase_CreateManual_ValidationRejects(t *testing.T) {
 		PaymentMethod: domain.PaymentMethodCash,
 		Items:         []CreateOrderItem{},
 	}
-	_, err = u.CreateManual(context.Background(), uuid.New(), in)
+	_, err = u.CreateManual(context.Background(), uuid.New(), domain.UserRoleCashier, in)
 	if !errors.As(err, &appErr) || appErr.Code != domain.CodeValidationError {
 		t.Fatalf("expected VALIDATION_ERROR on empty items, got %v", err)
 	}
@@ -361,7 +361,7 @@ func TestOrderUsecase_CreateManual_ValidationRejects(t *testing.T) {
 		PaymentMethod: domain.PaymentMethodCash,
 		Items:         []CreateOrderItem{{MenuID: uuid.New(), Qty: 0}},
 	}
-	_, err = u.CreateManual(context.Background(), uuid.New(), in)
+	_, err = u.CreateManual(context.Background(), uuid.New(), domain.UserRoleCashier, in)
 	if !errors.As(err, &appErr) || appErr.Code != domain.CodeValidationError {
 		t.Fatalf("expected VALIDATION_ERROR on qty=0, got %v", err)
 	}
@@ -378,7 +378,7 @@ func TestOrderUsecase_CreateManual_UnavailableMenu(t *testing.T) {
 		PaymentMethod: domain.PaymentMethodCash,
 		Items:         []CreateOrderItem{{MenuID: menuID, Qty: 1}},
 	}
-	_, err := u.CreateManual(context.Background(), uuid.New(), in)
+	_, err := u.CreateManual(context.Background(), uuid.New(), domain.UserRoleCashier, in)
 	var appErr *domain.AppError
 	if !errors.As(err, &appErr) || appErr.Code != domain.CodeNotFound {
 		t.Fatalf("expected NOT_FOUND on missing menu, got %v", err)
@@ -401,7 +401,7 @@ func TestOrderUsecase_CreateManual_InsufficientStock(t *testing.T) {
 		PaymentMethod: domain.PaymentMethodCash,
 		Items:         []CreateOrderItem{{MenuID: menuID, Qty: 5}},
 	}
-	_, err := u.CreateManual(context.Background(), uuid.New(), in)
+	_, err := u.CreateManual(context.Background(), uuid.New(), domain.UserRoleCashier, in)
 	var appErr *domain.AppError
 	if !errors.As(err, &appErr) || appErr.Code != domain.CodeStockNotEnough {
 		t.Fatalf("expected STOCK_NOT_ENOUGH, got %v", err)
@@ -429,7 +429,7 @@ func TestOrderUsecase_CreateManual_TotalsAndSnapshots(t *testing.T) {
 		Items:         []CreateOrderItem{{MenuID: menuID, Qty: 2}},
 	}
 
-	order, err := u.CreateManual(context.Background(), actorID, in)
+	order, err := u.CreateManual(context.Background(), actorID, domain.UserRoleCashier, in)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

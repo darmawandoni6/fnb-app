@@ -271,28 +271,51 @@ func TestOrderHandler_CreateManual_RoleGuardAndSuccess(t *testing.T) {
 }
 
 func TestOrderHandler_CancelOrder_RoleGuardAndSuccess(t *testing.T) {
-	e, ownerToken, cashierToken, _, order, _ := setupTestOrderApp(t)
-
 	body := `{"reason":"Customer left"}`
 
-	// Cashier cannot cancel order (OWNER only) -> 403 Forbidden
+	// Kitchen cannot cancel an order -> 403 Forbidden
+	e, _, _, kitchenToken, order, _ := setupTestOrderApp(t)
 	req := httptest.NewRequest(http.MethodPost, "/orders/"+order.ID.String()+"/cancel", bytes.NewBufferString(body))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-	req.Header.Set(echo.HeaderAuthorization, "Bearer "+cashierToken)
+	req.Header.Set(echo.HeaderAuthorization, "Bearer "+kitchenToken)
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 for cashier, got %d", rec.Code)
+		t.Fatalf("expected 403 for kitchen, got %d", rec.Code)
 	}
 
-	// Owner can cancel order -> 200 OK
+	// Cashier can cancel an unpaid order -> 200 OK
+	e, _, cashierToken, _, order, _ := setupTestOrderApp(t)
+	req = httptest.NewRequest(http.MethodPost, "/orders/"+order.ID.String()+"/cancel", bytes.NewBufferString(body))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set(echo.HeaderAuthorization, "Bearer "+cashierToken)
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("expected 200 for cashier, got %d. Body: %s", rec.Code, rec.Body.String())
+	}
+
+	// Owner can cancel an unpaid order -> 200 OK
+	e, ownerToken, _, _, order, _ := setupTestOrderApp(t)
 	req = httptest.NewRequest(http.MethodPost, "/orders/"+order.ID.String()+"/cancel", bytes.NewBufferString(body))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	req.Header.Set(echo.HeaderAuthorization, "Bearer "+ownerToken)
 	rec = httptest.NewRecorder()
 	e.ServeHTTP(rec, req)
-
 	if rec.Code != http.StatusOK {
 		t.Fatalf("expected 200, got %d. Body: %s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestOrderHandler_CancelOrder_EmptyReasonRejected(t *testing.T) {
+	e, ownerToken, _, _, order, _ := setupTestOrderApp(t)
+
+	req := httptest.NewRequest(http.MethodPost, "/orders/"+order.ID.String()+"/cancel", bytes.NewBufferString(`{"reason":""}`))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set(echo.HeaderAuthorization, "Bearer "+ownerToken)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d. Body: %s", rec.Code, rec.Body.String())
 	}
 }

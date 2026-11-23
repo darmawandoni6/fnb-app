@@ -75,6 +75,7 @@ func (h *OrderHandler) Get(c echo.Context) error {
 
 func (h *OrderHandler) CreateManual(c echo.Context) error {
 	actorID, _ := GetCurrentUserID(c)
+	role, _ := GetCurrentUserRole(c)
 	var req dto.ManualOrderRequest
 	if err := c.Bind(&req); err != nil {
 		return err
@@ -100,7 +101,7 @@ func (h *OrderHandler) CreateManual(c echo.Context) error {
 		Items:         items,
 	}
 
-	order, err := h.orderUsecase.CreateManual(c.Request().Context(), actorID, in)
+	order, err := h.orderUsecase.CreateManual(c.Request().Context(), actorID, role, in)
 	if err != nil {
 		return err
 	}

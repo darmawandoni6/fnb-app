@@ -102,7 +102,7 @@ func NewRouterWithUpload(h Handlers, authUsecase *usecase.AuthUsecase, sessionUs
 	orders.POST("/manual", h.Order.CreateManual, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
 	orders.PATCH("/:id/payment", h.Order.ConfirmPayment, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
 	orders.PATCH("/:id/items/:item_id/status", h.Order.UpdateItemStatus, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier, domain.UserRoleKitchen))
-	orders.POST("/:id/cancel", h.Order.CancelOrder, RequireRoles(domain.UserRoleOwner))
+	orders.POST("/:id/cancel", h.Order.CancelOrder, RequireRoles(domain.UserRoleOwner, domain.UserRoleCashier))
 
 	return e
 }

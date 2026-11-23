@@ -75,8 +75,8 @@ export const getOrder = async (id: string): Promise<Order> => {
 
 export const createManualOrder = async (body: CreateManualOrderInput): Promise<Order> => {
   await delay()
-  // BR-01 / BR-24: only the cashier creates orders, and only take away.
-  requireRole(USER_ROLE.CASHIER)
+  // BR-01 / BR-24: cashier and owner create orders, and only take away.
+  requireRole(USER_ROLE.CASHIER, USER_ROLE.OWNER)
   if (!db.settings.is_open) fail(API_ERROR_CODE.STORE_CLOSED, 'Store is closed')
   if (!body.customer_name?.trim())
     fail(API_ERROR_CODE.VALIDATION_ERROR, 'Customer name is required')
@@ -234,10 +234,10 @@ export const updateItemStatus = async (
   return structuredClone(order)
 }
 
-/** PRD §4.7 / §11.3: order-level cancellation, unpaid only, OWNER. */
+/** PRD §4.7 / §11.3: order-level cancellation, unpaid only, OWNER or CASHIER. */
 export const cancelOrder = async (id: string, reason: string): Promise<Order> => {
   await delay()
-  requireRole(USER_ROLE.OWNER)
+  requireRole(USER_ROLE.OWNER, USER_ROLE.CASHIER)
   const order = findOrder(id)
   if (order.status !== ORDER_STATUS.MENUNGGU || order.payment_status !== PAYMENT_STATUS.BELUM)
     fail(API_ERROR_CODE.INVALID_TRANSITION, 'Only unpaid MENUNGGU orders can be cancelled')

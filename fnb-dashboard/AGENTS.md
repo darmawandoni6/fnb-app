@@ -20,7 +20,7 @@ Phase 3 API integration complete: auth, orders, payments, settings, tables, menu
 Environment gotchas learned during Phase 0:
 
 - `npm create vite` is interactive under the agent shell; scaffold to a temp dir under the workdir then `cp -R` (a `/tmp` path gets created inside the workdir by npm, so use a workdir-relative temp path and clean up).
-- This machine's npm enforces `allow-scripts` (`~/.npmrc` has `allow-scripts=9router`). The shadcn CLI shells out to `npm install` and trips `EALLOWSCRIPTS`. Workaround: pre-install the packages yourself (`npm install cn sonner next-themes class-variance-authority radix-ui lucide-react tw-animate-css`), then run `npx shadcn@latest add ...`; the CLI's own install becomes a no-op. Keep project `.npmrc` to `allow-scripts=9router` only.
+- This machine's npm enforces `allow-scripts` (`~/.npmrc` has `allow-scripts=9router`). The shadcn CLI shells out to `npm install` and trips `EALLOWSCRIPTS`. Workaround: pre-install the packages yourself (`npm install cn sonner next-themes class-variance-authority radix-ui lucide-react tw-animate-css`), then run `npx shadcn@latest add ...`; the CLI's own install becomes a no-op. The project has no `.npmrc`; global config covers it.
 - shadcn CLI may write components into a literal `@/` directory instead of `src/` when resolution misbehaves — after `add`, check for a stray `@/` folder and move files into `src/`.
 - TypeScript 7 removed `baseUrl`; use `paths` alone: `"paths": {"@/*": ["./src/*"]}`.
 - Vite 8 warns on `__dirname` in config; use `import.meta.dirname`.

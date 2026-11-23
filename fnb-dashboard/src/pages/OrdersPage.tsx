@@ -41,8 +41,8 @@ export function OrdersPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const canAct = user?.role === 'OWNER' || user?.role === 'CASHIER'
-  // BR-01 / BR-24: only the cashier creates manual orders.
-  const canCreate = user?.role === 'CASHIER'
+  // BR-01 / BR-24: cashier and owner create manual take away orders.
+  const canCreate = user?.role === 'CASHIER' || user?.role === 'OWNER'
 
   const visibleOrders = (orders ?? []).filter((order) => {
     if (viewMode === 'unpaid') return order.payment_status === PAYMENT_STATUS.BELUM

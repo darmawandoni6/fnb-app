@@ -182,9 +182,9 @@ All endpoints below use JWT and role middleware.
 |---|---|---|---|
 | `GET` | `/orders` | All roles | Filter by `status`, `table_id`, `order_type`, `date` |
 | `GET` | `/orders/:id` | All roles | Order and item details |
-| `POST` | `/orders/manual` | `CASHIER` | Create a take away order |
+| `POST` | `/orders/manual` | `CASHIER`, `OWNER` | Create a take away order |
 | `PATCH` | `/orders/:id/payment` | `CASHIER`, `OWNER` | Confirm payment, idempotent |
-| `POST` | `/orders/:id/cancel` | `OWNER` | Cancel an unpaid order |
+| `POST` | `/orders/:id/cancel` | `CASHIER`, `OWNER` | Cancel an unpaid order, `reason` required |
 
 `orders.status` is a stored aggregate recomputed on every item and payment change (PRD §5.3). There is no endpoint that sets it directly. `GET /orders` returns at most 200 rows, newest first; `date` is a UTC day (`YYYY-MM-DD`).
 
@@ -203,7 +203,7 @@ Create manual order:
 }
 ```
 
-Manual orders have `order_type = TAKE_AWAY`, `created_by` from the JWT, and `table_id = NULL`. `customer_name` is required. When `settings.is_open` is `false`, creation returns `409 STORE_CLOSED`, the same as QR orders.
+Manual orders have `order_type = TAKE_AWAY`, `created_by` from the JWT, and `table_id = NULL`. Both `CASHIER` and `OWNER` may create them. `customer_name` is required. When `settings.is_open` is `false`, creation returns `409 STORE_CLOSED`, the same as QR orders.
 
 Payment:
 
@@ -223,7 +223,7 @@ Cancel order:
 { "reason": "customer left" }
 ```
 
-`OWNER` only. Same rules as the public cancel endpoint.
+`CASHIER` or `OWNER`. Same rules as the public cancel endpoint. `reason` is required and stored in `cancel_reason`; an empty or missing reason returns `400 VALIDATION_ERROR`.
 
 ## Internal — kitchen items
 

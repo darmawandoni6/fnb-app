@@ -36,7 +36,7 @@ const demoAccounts = [
   },
   {
     email: 'dapur@demo.cafe',
-    apiEmail: 'dapur@example.com',
+    apiEmail: 'kitchen@example.com',
     password: 'demo',
     apiPassword: 'password123',
     label: 'Login Dapur',

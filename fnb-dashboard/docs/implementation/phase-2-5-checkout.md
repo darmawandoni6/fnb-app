@@ -23,7 +23,7 @@ DONE — all tasks complete.
 - [x] Send only `BELUM → LUNAS` through `PATCH /orders/:id/payment`; a repeat returns `200` with the same order and writes no second `payment_log` (BR-11).
 - [x] Printable receipt at 58/80 mm through `window.print()`, showing `order_number`, service amount, tax amount, and the persisted `amount_received` / `change_amount`.
 - [x] Leaving with an unpaid order asks for confirmation; the order board routes payment actions here.
-- [x] Order-level cancel from this page is visible to `OWNER` only.
+- [x] Order-level cancel from this page is visible to `OWNER` and `CASHIER`, with a required reason.
 - [x] Cash countdown on the unpaid order, reusing `CashCountdown` from `phase-2-2-orders-board.md` instead of recomputing the deadline.
 
 ## Verification

@@ -67,14 +67,13 @@ func (u *OrderUsecase) Get(ctx context.Context, id uuid.UUID, role domain.UserRo
 	return order, nil
 }
 
-func (u *OrderUsecase) CreateManual(ctx context.Context, actorID uuid.UUID, in OrderInput) (*domain.Order, error) {
+func (u *OrderUsecase) CreateManual(ctx context.Context, actorID uuid.UUID, actorRole domain.UserRole, in OrderInput) (*domain.Order, error) {
 	order, items, err := buildOrder(ctx, u.menuRepo, u.settingRepo, in, domain.OrderTypeTakeAway, nil, nil, &actorID)
 	if err != nil {
 		return nil, err
 	}
 
 	day := time.Now().In(u.loc)
-	actorRole := domain.UserRoleCashier
 	statusStr := string(order.Status)
 
 	err = u.withTx(ctx, func(tx OrderTx) error {

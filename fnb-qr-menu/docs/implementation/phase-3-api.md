@@ -8,7 +8,7 @@ Replace the mock with the live `fnb-server` public API by changing `src/api/` an
 
 ## Status
 
-PLANNED — `src/api/publicMenu.ts`, `session.ts`, and `publicOrders.ts` still throw `NOT_IMPLEMENTED`.
+DONE — HTTP client, mappers, endpoints, and the env flag are live.
 
 ## Depends on
 
@@ -23,18 +23,18 @@ PLANNED — `src/api/publicMenu.ts`, `session.ts`, and `publicOrders.ts` still t
 
 ## Tasks
 
-- [ ] Axios instance with `baseURL` from `VITE_API_URL`; no credentials, no cookies.
-- [ ] Request interceptor attaches `X-Session-Token` from the session store for every path except `POST /public/tables/:qr_token/sessions`.
-- [ ] Response interceptor unwraps `{ success: true, data }`; maps `{ success: false, error }` to `ApiError { code, message, status }`; maps network failure to `NETWORK_ERROR`.
-- [ ] `openTableSession(qrToken)` posts the encoded token with no session header; `404 NOT_FOUND` means unknown or inactive table.
-- [ ] `getPublicMenu()` takes no argument, reads the header from the interceptor, and does not filter, sort, or recompute prices.
-- [ ] `createPublicOrder` sends `order_type`, `customer_name`, `customer_phone`, `payment_method`, and `items: [{ menu_id, qty, note }]`; never prices, totals, or stock.
-- [ ] Map the create response unchanged, including `order_number`, four money figures, and nullable `payment_url`.
-- [ ] Map the list response unchanged; merge and discovery live in `features/orders`.
-- [ ] `cancelPublicOrder` posts `{ reason }` and returns the full order; `409 INVALID_TRANSITION` means it is no longer `MENUNGGU` + `BELUM`.
-- [ ] Flip the switch: `VITE_USE_MOCKS=false`; confirm no component changed (`git diff --stat` limited to `src/api/` and `.env`).
-- [ ] Keep `src/mocks/` in the repo; confirm `VITE_USE_MOCKS=true npm run build` still fails.
-- [ ] Update `docs/tech-stack.md` if any response shape differs from the mock.
+- [x] Axios instance with `baseURL` from `VITE_API_URL`; no credentials, no cookies.
+- [x] Request interceptor attaches `X-Session-Token` from the session store for every path except `POST /public/tables/:qr_token/sessions`.
+- [x] Response interceptor unwraps `{ success: true, data }`; maps `{ success: false, error }` to `ApiError { code, message, status }`; maps network failure to `NETWORK_ERROR`.
+- [x] `openTableSession(qrToken)` posts the encoded token with no session header; `404 NOT_FOUND` means unknown or inactive table.
+- [x] `getPublicMenu()` takes no argument, reads the header from the interceptor, and does not filter, sort, or recompute prices.
+- [x] `createPublicOrder` sends `order_type`, `customer_name`, `customer_phone`, `payment_method`, and `items: [{ menu_id, qty, note }]`; never prices, totals, or stock.
+- [x] Map the create response unchanged, including `order_number`, four money figures, and nullable `payment_url`.
+- [x] Map the list response unchanged; merge and discovery live in `features/orders`.
+- [x] `cancelPublicOrder` posts `{ reason }` and returns the full order; `409 INVALID_TRANSITION` means it is no longer `MENUNGGU` + `BELUM`.
+- [x] Flip the switch: `VITE_USE_MOCKS=false`; confirm no component changed (`git diff --stat` limited to `src/api/` and `.env`).
+- [x] Keep `src/mocks/` in the repo; confirm `VITE_USE_MOCKS=true npm run build` still fails.
+- [x] Update `docs/tech-stack.md` if any response shape differs from the mock.
 
 ## Verification
 

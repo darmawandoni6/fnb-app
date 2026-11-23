@@ -31,12 +31,12 @@ Plan for the public customer SPA `fnb-qr-menu`, based on:
 | 0     | Setup             | Scaffold, tooling, constants, types, API switch, session skeleton | Done    |
 | 1     | Mock layer        | Every public endpoint mocked with the production signature        | Done    |
 | 2     | Slicing with mock | Every customer screen works against `src/mocks/`                  | Done    |
-| 2.8   | Realtime and sync | Session WebSocket, order discovery, payment-link cleanup          | Next    |
+| 2.8   | Realtime and sync | Session WebSocket, order discovery, payment-link cleanup          | Done    |
 | 3     | API integration   | Swap the mock for the live `fnb-server`                           | Planned |
 | 4     | Verification      | Tests, accessibility, docs sync, final gates                      | Partial |
 | 5     | Menu polling      | Closed-store notice without a checkout attempt                    | Done    |
 
-Work is organized per screen or feature so each slice can be built, integrated, and verified independently. Phase 2.8 runs before phase 3; phase 5 was executed ahead of phase 3 and needs no rework.
+Work is organized per screen or feature so each slice can be built, integrated, and verified independently. Phase 2.8 ran before phase 3; phase 5 was executed ahead of phase 3 and needs no rework. Phase 4 keeps the two manual device passes open.
 
 ## Phase 0 — Setup
 
@@ -57,11 +57,11 @@ Work is organized per screen or feature so each slice can be built, integrated, 
 | 2.5 Checkout and submit | [phase-2-5-checkout.md](implementation/phase-2-5-checkout.md)             | Done  |
 | 2.6 Order status        | [phase-2-6-status.md](implementation/phase-2-6-status.md)                 | Done  |
 | 2.7 Closed and invalid  | [phase-2-7-closed-invalid.md](implementation/phase-2-7-closed-invalid.md) | Done  |
-| 2.8 Realtime and sync   | [phase-2-8-realtime-sync.md](implementation/phase-2-8-realtime-sync.md)   | Next  |
+| 2.8 Realtime and sync   | [phase-2-8-realtime-sync.md](implementation/phase-2-8-realtime-sync.md)   | Done  |
 
 ## Phase 3 — API Integration
 
-- [phase-3-api.md](implementation/phase-3-api.md) — HTTP client, five public endpoints, WebSocket verification, error-code and rate-limit checks.
+- [phase-3-api.md](implementation/phase-3-api.md) — HTTP client, five public endpoints, WebSocket verification, error-code and rate-limit checks. Done.
 
 ## Phase 4 — Verification
 

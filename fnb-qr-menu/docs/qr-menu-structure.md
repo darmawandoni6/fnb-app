@@ -71,10 +71,11 @@ fnb-qr-menu/
 │   ├── api/
 │   │   ├── index.ts
 │   │   ├── client.ts
+│   │   ├── mappers.ts
 │   │   ├── session.ts
 │   │   ├── publicMenu.ts
 │   │   ├── publicOrders.ts
-│   │   └── types.ts
+│   │   └── socket.ts
 │   ├── components/
 │   │   └── ui/
 │   ├── constants/
@@ -127,6 +128,7 @@ fnb-qr-menu/
 │   ├── mocks/
 │   │   ├── data/
 │   │   ├── handlers/
+│   │   ├── socket.ts
 │   │   └── index.ts
 │   ├── schemas/
 │   │   └── checkout.ts

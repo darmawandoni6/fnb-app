@@ -6,7 +6,7 @@ import type { PublicOrder } from '@/types/order'
 
 import type { TrackedOrder } from '@/features/session/store'
 
-import { isFinished, unfinishedOrderCount } from './status'
+import { isFinished, mergeOrders, ordersPollInterval, unfinishedOrderCount } from './status'
 
 const order = (id: string, status: PublicOrder['status']): TrackedOrder => ({
   id,
@@ -52,4 +52,31 @@ test('a fully finished history is zero', () => {
   expect(
     unfinishedOrderCount([order('a', ORDER_STATUS.SELESAI), order('b', ORDER_STATUS.DIBATALKAN)]),
   ).toBe(0)
+})
+
+test('union merge appends discovered orders and keeps stored snapshots', () => {
+  const stored = order('a', ORDER_STATUS.MENUNGGU)
+  const merged = mergeOrders(
+    [stored],
+    [order('a', ORDER_STATUS.DIPROSES).snapshot, order('b', ORDER_STATUS.DIPROSES).snapshot],
+  )
+
+  expect(merged.map((entry) => entry.id)).toEqual(['a', 'b'])
+  expect(merged[0].snapshot.status).toBe(ORDER_STATUS.DIPROSES)
+  expect(merged[1].snapshot.status).toBe(ORDER_STATUS.DIPROSES)
+})
+
+test('a stored order missing from the list keeps its snapshot', () => {
+  const stored = order('a', ORDER_STATUS.MENUNGGU)
+  expect(mergeOrders([stored], [])).toEqual([stored])
+})
+
+test('polling stops when every order is terminal', () => {
+  expect(ordersPollInterval([order('a', ORDER_STATUS.SELESAI).snapshot], null)).toBe(false)
+})
+
+test('a 429 doubles the poll interval', () => {
+  const rateLimited = { code: 'INTERNAL_ERROR', message: 'too many', status: 429 }
+  expect(ordersPollInterval([], rateLimited)).toBe(10_000)
+  expect(ordersPollInterval([], null)).toBe(5_000)
 })

@@ -24,7 +24,7 @@ DONE — status screen shipped.
 - [x] Merge returned orders into `session.orders` by `id`, preferring the newest list entry; stored entries absent from the list keep their snapshot.
 - [x] Phase 2.8 extends this merge to append list entries not yet stored.
 - [x] `/status` redirects to `/` when no order is stored.
-- [x] Accordion: newest first, exactly one card open.
+- [x] Accordion via shadcn `Collapsible`: newest first, exactly one card open.
 - [x] Collapsed cards render from `snapshot`; no per-card query.
 - [x] Stepper derives from item statuses: all `PENDING` → Menunggu; any `COOKING` → Diproses; any `READY` → Siap; any `DELIVERED` → Dalam pengantaran; all `COMPLETED`/`CANCELLED` → done.
 - [x] `DIBATALKAN` renders a distinct cancelled row, not a step.

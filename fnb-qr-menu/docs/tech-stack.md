@@ -27,8 +27,8 @@ Single Page Application only. No SSR, no `@tanstack/react-router`, no `@tanstack
 
 ## Runtime
 
-- Local API base URL: `http://localhost:8081` via `VITE_API_URL`.
-- Mocks enabled with `VITE_USE_MOCKS=true`.
+- `VITE_API_URL` is empty in development; the Vite dev proxy forwards `/public` and `/ws` to `http://localhost:8081`. Set the API origin only when the app is served from a different host than the API.
+- Mocks enabled with `VITE_USE_MOCKS=true`; the checked-in `.env.example` keeps mocks on, while local `.env` points at the live API once phase 3 lands.
 - All responses follow the `{success, data}` / `{success, error{code, message}}` envelope.
 - The table is identified by the `meja` query parameter, which carries a `qr_token`; `POST /public/tables/:qr_token/sessions` exchanges it for a `session_token`.
 - The session token is stored in `localStorage` and sent as `X-Session-Token` on every public call except the session open. A `401 UNAUTHORIZED` re-opens the session from the stored `qr_token` once; a `404 NOT_FOUND` routes to `/tidak-valid`.
@@ -54,7 +54,10 @@ Adapted from the iul reference; routes and search params are defined in `docs/qr
 
 ## Mock Switch
 
-`src/api/index.ts` picks the mock or HTTP implementation at module load from `VITE_USE_MOCKS`. Components and hooks import only from `@/api`, so Phase 3 changes no component.
+`src/api/index.ts` picks the mock or HTTP implementation at module load from `VITE_USE_MOCKS`. Components and hooks import only from `@/api`, so the swap changes no component.
+
+- Phase 3 ships the HTTP side: `client.ts` (axios, envelope unwrap, error mapping), `mappers.ts` (snake_case → camelCase), and the three endpoint modules. A `NETWORK_ERROR` means the server was unreachable or returned a non-envelope failure.
+- The session token travels as `X-Session-Token`; only the session open calls without it.
 
 - Mock scenarios are selected at session open by `qr_token` (`demo-meja` open, `demo-tutup` `is_open = false`, `demo-habis` `STOCK_NOT_ENOUGH`, `demo-invalid` 404) and bound to the issued `session_token`.
 - A production build with `VITE_USE_MOCKS=true` fails in `vite.config.ts`.
@@ -90,7 +93,7 @@ Read with `useSyncExternalStore`; write with `update(draft => ...)`. A different
 
 ## Order History
 
-- `/status` lists one card per order, newest first, as an accordion with exactly one card open.
+- `/status` lists one card per order, newest first, as a shadcn `Collapsible` accordion with exactly one card open.
 - One `GET /public/orders` poll refreshes every stored card; collapsed cards render their snapshot between polls.
 - Scanning a different table QR clears `cart`, `orders`, and `sessionToken` and raises a "new table session" toast.
 - Cancellation is order-level and only while the order is `MENUNGGU` with `payment_status` `BELUM`; there is no refund warning in v1.

@@ -88,9 +88,12 @@ export async function createPublicOrder(
   const serviceAmount = Math.round((subtotalAmount * OPEN_MENU.serviceRate) / 100)
   const taxAmount = Math.round(((subtotalAmount + serviceAmount) * OPEN_MENU.taxRate) / 100)
 
+  const now = new Date()
+  const day = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+
   const order: PublicOrder = {
     id: `order-mock-${ORDER_STORE.nextSeq}`,
-    orderNumber: `DI-${String(ORDER_STORE.nextSeq).padStart(3, '0')}`,
+    orderNumber: `DI-${day}-${String(ORDER_STORE.nextSeq).padStart(3, '0')}`,
     status: ORDER_STATUS.MENUNGGU,
     paymentStatus: PAYMENT_STATUS.BELUM,
     orderType: 'DINE_IN',
@@ -112,7 +115,7 @@ export async function getPublicOrders(sessionToken: string): Promise<PublicOrder
   await sleep()
 
   requireSession(sessionToken)
-  return ordersOf(sessionToken).map(cloneOrder)
+  return ordersOf(sessionToken).map((order) => ({ ...cloneOrder(order), paymentUrl: null }))
 }
 
 export async function cancelPublicOrder(

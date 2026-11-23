@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-import { cancelPublicOrder } from '@/api'
+import { cancelPublicOrder, subscribeSessionEvents } from '@/api'
 import { toast } from 'sonner'
 
 import { API_ERROR } from '@/constants/errors'
@@ -27,6 +27,25 @@ export const unfinishedOrderCount = (orders: TrackedOrder[]) =>
 
 const isRateLimited = (error: unknown) => isApiError(error) && error.status === 429
 
+export const mergeOrders = (stored: TrackedOrder[], list: PublicOrder[]): TrackedOrder[] => {
+  const merged = stored.map((entry) => {
+    const fresh = list.find((order) => order.id === entry.id)
+    return fresh ? { ...entry, snapshot: fresh } : entry
+  })
+  const known = new Set(merged.map((entry) => entry.id))
+  const discovered = list
+    .filter((order) => !known.has(order.id))
+    .map((order) => ({ id: order.id, snapshot: order }))
+  return discovered.length > 0 ? [...merged, ...discovered] : merged
+}
+
+export const ordersPollInterval = (latest: PublicOrder[] | undefined, error: unknown) => {
+  if (latest && latest.length > 0 && latest.every((order) => isFinished(order.status))) {
+    return false
+  }
+  return isRateLimited(error) ? POLL_INTERVAL_MS * 2 : POLL_INTERVAL_MS
+}
+
 export function useOrderList(enabled: boolean) {
   const [session, updateSession] = useCustomerSession()
 
@@ -35,31 +54,30 @@ export function useOrderList(enabled: boolean) {
     enabled: enabled && Boolean(session.sessionToken),
     refetchIntervalInBackground: true,
     retry: (failureCount, error) => !isRateLimited(error) && failureCount < 1,
-    refetchInterval: (query) => {
-      if (!enabled) return false
-      const latest = query.state.data
-      if (latest && latest.length > 0 && latest.every((order) => isFinished(order.status))) {
-        return false
-      }
-      if (isRateLimited(query.state.error)) return POLL_INTERVAL_MS * 2
-      return POLL_INTERVAL_MS
-    },
+    refetchInterval: (query) =>
+      enabled ? ordersPollInterval(query.state.data, query.state.error) : false,
   })
 
   useEffect(() => {
-    const list = query.data
-    if (!list) return
-
-    updateSession((prev) => ({
-      ...prev,
-      orders: prev.orders.map((entry) => {
-        const fresh = list.find((order) => order.id === entry.id)
-        return fresh ? { ...entry, snapshot: fresh } : entry
-      }),
-    }))
+    if (!query.data) return
+    updateSession((prev) => ({ ...prev, orders: mergeOrders(prev.orders, query.data) }))
   }, [query.data, updateSession])
 
   return query
+}
+
+export function useOrderRealtime(enabled: boolean) {
+  const [session] = useCustomerSession()
+  const queryClient = useQueryClient()
+  const token = session.sessionToken
+
+  useEffect(() => {
+    if (!enabled || !token) return
+
+    return subscribeSessionEvents(token, () => {
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.publicOrders(token) })
+    })
+  }, [enabled, token, queryClient])
 }
 
 export function useCancelOrder(order: PublicOrder) {

@@ -17,7 +17,7 @@ The checklist gates every commit.
 
 ## Status
 
-Phases 0–2.7 are shipped against the current `../docs/api.md` contract (table session token, order-level cancel, checkout form, list polling, menu polling). Next step: `docs/implementation/phase-2-8-realtime-sync.md` (session WebSocket, order discovery, payment-link cleanup), then `docs/implementation/phase-3-api.md` (HTTP client behind `@/api`). Vitest runs with `npm test`; phase 4 tracks the remaining tests and docs sync.
+Phases 0–3 and 5 are shipped against the current `../docs/api.md` contract: table session token, order-level cancel, checkout form, list polling, menu polling, the `session:{token}` WebSocket, order discovery, and the HTTP layer behind `@/api`. `VITE_USE_MOCKS=false` in local `.env`; the mock layer stays in the repo and `.env.example` keeps mocks on. Phase 4 tracks the remaining manual device and keyboard passes.
 
 ## Plan conventions
 
@@ -42,7 +42,7 @@ Verification order before commit: `npm run lint && npm run format:check && npm r
 
 ## Environment
 
-- Backend API at `http://localhost:8081` (see `../fnb-server/AGENTS.md` for how to run it).
+- Backend API at `http://localhost:8081` (see `../fnb-server/AGENTS.md` for how to run it). The dev server proxies `/public` and `/ws` there, so `VITE_API_URL` stays empty locally; the server has no CORS middleware by design.
 - `VITE_API_URL` and `VITE_USE_MOCKS` in `.env` / `.env.example`; only `VITE_*` vars reach the client bundle. Never put secrets in `VITE_*`.
 - No `VITE_QR_MENU_URL` here; the dashboard owns that variable and encodes `${VITE_QR_MENU_URL}/?meja=<qr_token>`.
 - Ports 8080/5432 may be occupied by other local projects; the API uses 8081.

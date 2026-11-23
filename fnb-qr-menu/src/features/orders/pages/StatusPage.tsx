@@ -12,14 +12,19 @@ import { usePublicMenu } from '@/features/catalog/hooks'
 import { OrderCard } from '@/features/orders/components/OrderCard'
 import { useCustomerSession } from '@/features/session/store'
 
-import { useOrderList } from '../status'
+import { useOrderList, useOrderRealtime } from '../status'
 
 export function StatusPage() {
   const [session, updateSession] = useCustomerSession()
   const [selectedId, setSelectedId] = useState<string | null>(() => session.orders[0]?.id ?? null)
   const navigate = useNavigate()
   const { data: menuData } = usePublicMenu(session.sessionToken)
-  useOrderList(session.orders.length > 0)
+  const orders = useOrderList(Boolean(session.sessionToken))
+  useOrderRealtime(session.orders.length > 0)
+
+  if (!session.sessionToken || (orders.isPending && session.orders.length === 0)) {
+    return null
+  }
 
   if (session.orders.length === 0) {
     return <Navigate to={ROUTES.HOME} replace />

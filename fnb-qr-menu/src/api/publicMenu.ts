@@ -1,6 +1,10 @@
-import { notImplemented } from '@/api/notImplemented'
 import type { PublicMenu } from '@/types/menu'
 
-export async function getPublicMenu(_sessionToken: string): Promise<PublicMenu> {
-  notImplemented('GET /public/menu')
+import { request } from './client'
+import { toPublicMenu } from './mappers'
+import type { RawMenu } from './mappers'
+
+export async function getPublicMenu(sessionToken: string): Promise<PublicMenu> {
+  const raw = await request<RawMenu>({ method: 'GET', url: '/public/menu' }, sessionToken)
+  return toPublicMenu(raw)
 }

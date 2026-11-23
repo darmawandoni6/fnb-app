@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { TrackedOrder } from '@/features/session/store'
@@ -49,7 +50,6 @@ export function OrderCard({ order, open, onToggle }: OrderCardProps) {
 
   const canCancel =
     data.status === ORDER_STATUS.MENUNGGU && data.paymentStatus === PAYMENT_STATUS.BELUM
-  const contentId = `order-content-${order.id}`
 
   function handleConfirmCancel() {
     cancelMutation.mutate(reason.trim(), {
@@ -61,104 +61,104 @@ export function OrderCard({ order, open, onToggle }: OrderCardProps) {
   }
 
   return (
-    <div className="border-border bg-surface overflow-hidden rounded-2xl border shadow-xs">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-controls={contentId}
-        className="hover:bg-surface-muted/50 flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors"
-      >
-        <div className="min-w-0 flex-1">
-          <p className="text-text truncate text-sm font-semibold">Pesanan #{data.orderNumber}</p>
-          <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge
-              variant="outline"
-              className={cn('border-transparent', ORDER_STATUS_CLASS[data.status])}
-            >
-              {ORDER_STATUS_LABEL[data.status]}
-            </Badge>
-            <Badge
-              variant="outline"
-              className={cn(
-                'border-transparent',
-                data.paymentStatus === PAYMENT_STATUS.LUNAS
-                  ? 'bg-positive/10 text-positive'
-                  : 'bg-warning/10 text-warning',
-              )}
-            >
-              {PAYMENT_STATUS_LABEL[data.paymentStatus]}
-            </Badge>
+    <Collapsible
+      open={open}
+      onOpenChange={(next) => {
+        if (next) onToggle()
+      }}
+      className="border-border bg-surface overflow-hidden rounded-2xl border shadow-xs"
+    >
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="hover:bg-surface-muted/50 flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="text-text truncate text-sm font-semibold">Pesanan #{data.orderNumber}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              <Badge
+                variant="outline"
+                className={cn('border-transparent', ORDER_STATUS_CLASS[data.status])}
+              >
+                {ORDER_STATUS_LABEL[data.status]}
+              </Badge>
+              <Badge
+                variant="outline"
+                className={cn(
+                  'border-transparent',
+                  data.paymentStatus === PAYMENT_STATUS.LUNAS
+                    ? 'bg-positive/10 text-positive'
+                    : 'bg-warning/10 text-warning',
+                )}
+              >
+                {PAYMENT_STATUS_LABEL[data.paymentStatus]}
+              </Badge>
+            </div>
+          </div>
+
+          <span className="text-text shrink-0 text-sm font-semibold">
+            {formatRupiah(data.totalAmount)}
+          </span>
+          <ChevronDown
+            className={cn(
+              'text-text-muted size-4 shrink-0 transition-transform',
+              open && 'rotate-180',
+            )}
+          />
+        </button>
+      </CollapsibleTrigger>
+
+      <CollapsibleContent className="border-border flex flex-col gap-4 border-t px-4 py-4">
+        <StatusStepper items={data.items} status={data.status} />
+
+        <div className="divide-border flex flex-col divide-y">
+          {data.items.map((item) => (
+            <OrderItemRow key={item.id} item={item} />
+          ))}
+        </div>
+
+        <div className="border-border flex flex-col gap-1.5 border-t pt-3 text-sm">
+          <div className="text-text-muted flex justify-between">
+            <span>Subtotal</span>
+            <span>{formatRupiah(data.subtotalAmount)}</span>
+          </div>
+          <div className="text-text-muted flex justify-between">
+            <span>Layanan</span>
+            <span>{formatRupiah(data.serviceAmount)}</span>
+          </div>
+          <div className="text-text-muted flex justify-between">
+            <span>Pajak</span>
+            <span>{formatRupiah(data.taxAmount)}</span>
+          </div>
+          <div className="text-text flex justify-between font-semibold">
+            <span>Total</span>
+            <span>{formatRupiah(data.totalAmount)}</span>
           </div>
         </div>
 
-        <span className="text-text shrink-0 text-sm font-semibold">
-          {formatRupiah(data.totalAmount)}
-        </span>
-        <ChevronDown
-          className={cn(
-            'text-text-muted size-4 shrink-0 transition-transform',
-            open && 'rotate-180',
-          )}
-        />
-      </button>
+        {data.cancelReason && (
+          <p className="text-text-muted border-border border-t pt-3 text-xs italic">
+            Alasan: {data.cancelReason}
+          </p>
+        )}
 
-      {open && (
-        <div id={contentId} className="border-border flex flex-col gap-4 border-t px-4 py-4">
-          <StatusStepper items={data.items} status={data.status} />
+        {data.paymentStatus === PAYMENT_STATUS.BELUM && (
+          <p className="text-text-muted border-border border-t pt-3 text-xs">
+            Menunggu konfirmasi pembayaran. Tunjukkan pesanan ke kasir.
+          </p>
+        )}
 
-          <div className="divide-border flex flex-col divide-y">
-            {data.items.map((item) => (
-              <OrderItemRow key={item.id} item={item} />
-            ))}
-          </div>
-
-          <div className="border-border flex flex-col gap-1.5 border-t pt-3 text-sm">
-            <div className="text-text-muted flex justify-between">
-              <span>Subtotal</span>
-              <span>{formatRupiah(data.subtotalAmount)}</span>
-            </div>
-            <div className="text-text-muted flex justify-between">
-              <span>Layanan</span>
-              <span>{formatRupiah(data.serviceAmount)}</span>
-            </div>
-            <div className="text-text-muted flex justify-between">
-              <span>Pajak</span>
-              <span>{formatRupiah(data.taxAmount)}</span>
-            </div>
-            <div className="text-text flex justify-between font-semibold">
-              <span>Total</span>
-              <span>{formatRupiah(data.totalAmount)}</span>
-            </div>
-          </div>
-
-          {data.cancelReason && (
-            <p className="text-text-muted border-border border-t pt-3 text-xs italic">
-              Alasan: {data.cancelReason}
-            </p>
-          )}
-
-          {data.paymentUrl && data.paymentStatus === PAYMENT_STATUS.BELUM && (
-            <a
-              href={data.paymentUrl}
-              className="bg-accent hover:bg-accent/90 flex h-10 items-center justify-center rounded-full text-sm font-semibold text-white transition-colors"
-            >
-              Lanjutkan Pembayaran
-            </a>
-          )}
-
-          {canCancel && (
-            <Button
-              type="button"
-              variant="outline"
-              className="text-destructive border-destructive/30 hover:bg-destructive/10 h-10 rounded-full"
-              onClick={() => setConfirmOpen(true)}
-            >
-              Batalkan Pesanan
-            </Button>
-          )}
-        </div>
-      )}
+        {canCancel && (
+          <Button
+            type="button"
+            variant="outline"
+            className="text-destructive border-destructive/30 hover:bg-destructive/10 h-10 rounded-full"
+            onClick={() => setConfirmOpen(true)}
+          >
+            Batalkan Pesanan
+          </Button>
+        )}
+      </CollapsibleContent>
 
       <AlertDialog open={confirmOpen} onOpenChange={(next) => !next && setConfirmOpen(false)}>
         <AlertDialogContent size="sm">
@@ -193,6 +193,6 @@ export function OrderCard({ order, open, onToggle }: OrderCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </Collapsible>
   )
 }

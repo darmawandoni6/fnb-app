@@ -17,5 +17,11 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(import.meta.dirname, './src'),
       },
     },
+    server: {
+      proxy: {
+        '/public': { target: 'http://localhost:8081', changeOrigin: true },
+        '/ws': { target: 'http://localhost:8081', changeOrigin: true, ws: true },
+      },
+    },
   }
 })

@@ -14,7 +14,7 @@ export const SEEDED_ORDERS: PublicOrder[] = [
   {
     ...base,
     id: 'order-menunggu',
-    orderNumber: 'DI-001',
+    orderNumber: 'DI-20261121-001',
     status: ORDER_STATUS.MENUNGGU,
     paymentStatus: PAYMENT_STATUS.BELUM,
     subtotalAmount: 81000,
@@ -45,7 +45,7 @@ export const SEEDED_ORDERS: PublicOrder[] = [
   {
     ...base,
     id: 'order-diproses',
-    orderNumber: 'DI-002',
+    orderNumber: 'DI-20261121-002',
     status: ORDER_STATUS.DIPROSES,
     paymentStatus: PAYMENT_STATUS.LUNAS,
     subtotalAmount: 42000,
@@ -76,7 +76,7 @@ export const SEEDED_ORDERS: PublicOrder[] = [
   {
     ...base,
     id: 'order-siap',
-    orderNumber: 'DI-003',
+    orderNumber: 'DI-20261121-003',
     status: ORDER_STATUS.DIPROSES,
     paymentStatus: PAYMENT_STATUS.LUNAS,
     subtotalAmount: 32000,
@@ -98,7 +98,7 @@ export const SEEDED_ORDERS: PublicOrder[] = [
   {
     ...base,
     id: 'order-diantar',
-    orderNumber: 'DI-004',
+    orderNumber: 'DI-20261121-004',
     status: ORDER_STATUS.DIPROSES,
     paymentStatus: PAYMENT_STATUS.LUNAS,
     subtotalAmount: 50000,
@@ -129,7 +129,7 @@ export const SEEDED_ORDERS: PublicOrder[] = [
   {
     ...base,
     id: 'order-selesai',
-    orderNumber: 'DI-005',
+    orderNumber: 'DI-20261121-005',
     status: ORDER_STATUS.SELESAI,
     paymentStatus: PAYMENT_STATUS.LUNAS,
     subtotalAmount: 18000,
@@ -151,7 +151,7 @@ export const SEEDED_ORDERS: PublicOrder[] = [
   {
     ...base,
     id: 'order-dibatalkan',
-    orderNumber: 'DI-006',
+    orderNumber: 'DI-20261121-006',
     status: ORDER_STATUS.DIBATALKAN,
     paymentStatus: PAYMENT_STATUS.BELUM,
     subtotalAmount: 27000,

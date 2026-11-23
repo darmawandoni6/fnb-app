@@ -1,6 +1,13 @@
-import { notImplemented } from '@/api/notImplemented'
 import type { OpenSessionResponse } from '@/types/order'
 
-export async function openTableSession(_qrToken: string): Promise<OpenSessionResponse> {
-  notImplemented('POST /public/tables/:qr_token/sessions')
+import { request } from './client'
+import { toOpenSession } from './mappers'
+import type { RawOpenSession } from './mappers'
+
+export async function openTableSession(qrToken: string): Promise<OpenSessionResponse> {
+  const raw = await request<RawOpenSession>({
+    method: 'POST',
+    url: `/public/tables/${encodeURIComponent(qrToken)}/sessions`,
+  })
+  return toOpenSession(raw)
 }

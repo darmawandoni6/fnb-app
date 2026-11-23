@@ -8,7 +8,7 @@ Satisfy PRD §15 with unit tests on non-trivial logic, verify every screen, clos
 
 ## Status
 
-PARTIAL — Vitest, scripts, and the first three test files exist; the remaining checks below are open.
+PARTIAL — unit coverage, formatting, and docs are done; the manual viewport and keyboard passes remain.
 
 ## Depends on
 
@@ -28,16 +28,16 @@ PARTIAL — Vitest, scripts, and the first three test files exist; the remaining
 - [x] Cart tests: key normalization, merge, clamp at 50, `saveCartLine` outcomes, hidden lines, `qtyOf`.
 - [x] Session tests: corrupt storage, unknown version, new `qr` reset, cross-tab sync.
 - [x] Status tests: empty history, terminal predicate, unfinished count.
-- [ ] Status tests: union merge appends unknown list entries and keeps stored snapshots.
-- [ ] Socket tests: URL builder, topic string, backoff sequence, cleanup stops reconnect.
-- [ ] Polling test: `429` doubles the interval exactly once and keeps snapshots.
+- [x] Status tests: union merge appends unknown list entries and keeps stored snapshots.
+- [x] Socket tests: URL builder, topic string, backoff sequence, cleanup stops reconnect.
+- [x] Polling test: `429` doubles the interval exactly once and keeps snapshots.
 - [ ] Manual per-screen pass on a 375 px viewport: home, detail, cart, checkout, status, closed, invalid.
 - [ ] Keyboard pass: every control reachable with a visible focus ring; touch targets at least 44×44 px.
-- [ ] No `console.log` under `src/`; `console.warn` and `console.error` allowed.
-- [ ] Rupiah uses `Intl.NumberFormat('id-ID')`, no decimals; dates use `Intl` with no date library.
-- [ ] `AGENTS.md` status and commands match the code, including phase 2.8 and phase 5.
-- [ ] Root docs record the customer adaptations without changing any contract: session-token identity, `/tutup` and browse-only, polling plus the `session:{token}` socket.
-- [ ] `docs/tech-stack.md`, `docs/ai-rules.md`, `docs/qr-menu-structure.md` reflect the final behaviour.
+- [x] No `console.log` under `src/`; `console.warn` and `console.error` allowed.
+- [x] Rupiah uses `Intl.NumberFormat('id-ID')`, no decimals; dates use `Intl` with no date library.
+- [x] `AGENTS.md` status and commands match the code, including phase 2.8 and phase 5.
+- [x] Root docs record the customer adaptations without changing any contract: session-token identity, `/tutup` and browse-only, polling plus the `session:{token}` socket.
+- [x] `docs/tech-stack.md`, `docs/ai-rules.md`, `docs/qr-menu-structure.md` reflect the final behaviour.
 
 ## Verification
 

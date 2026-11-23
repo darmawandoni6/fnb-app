@@ -98,12 +98,20 @@ func (h *WSHandler) Connect(c echo.Context) error {
 	var role domain.UserRole
 	sessionToken := strings.TrimSpace(c.QueryParam("session"))
 	if sessionToken == "" {
+		// Try Authorization header first (for non-browser clients)
 		authHeader := c.Request().Header.Get("Authorization")
 		parts := strings.SplitN(authHeader, " ", 2)
-		if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
+		token := ""
+		if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+			token = parts[1]
+		} else {
+			// Fallback to query parameter for browser WebSocket connections
+			token = strings.TrimSpace(c.QueryParam("token"))
+		}
+		if token == "" {
 			return domain.NewError(domain.CodeUnauthorized, "authorization or session token is required", http.StatusUnauthorized, nil)
 		}
-		claims, err := h.authUsecase.ValidateAccessToken(parts[1])
+		claims, err := h.authUsecase.ValidateAccessToken(token)
 		if err != nil {
 			return domain.NewError(domain.CodeUnauthorized, "invalid or expired access token", http.StatusUnauthorized, err)
 		}

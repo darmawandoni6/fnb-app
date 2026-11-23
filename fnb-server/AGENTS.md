@@ -52,3 +52,10 @@ Verification order before commit: `go test ./... && go build ./...`
 ## Sync
 
 Update this file when commands, ports, dependencies, or rules change.
+
+## Notes on Dashboard Integration
+
+- `POST /auth/login` returns `{access_token}` + httpOnly `refresh_token` cookie. No `GET /auth/me` endpoint exists; the dashboard caches the profile client-side (decoded JWT payload).
+- `POST /auth/refresh` returns only `access_token` — no user data. Dashboard must re-fetch the initial login response or decode the token to rebuild profile after refresh.
+- Clearing `localStorage` (profile cache) logs the user out even if the cookie is still valid, because there is no `GET /auth/me`. Consider adding one later.
+- No CORS middleware: same-origin deployment is required for production. The Vite proxy handles development.

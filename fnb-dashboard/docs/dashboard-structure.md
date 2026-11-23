@@ -12,7 +12,8 @@ Folder and runtime structure for the internal `fnb-dashboard` application.
 - Single Page Application (SPA)
 - One build for the `OWNER`, `CASHIER`, and `KITCHEN` roles
 - Dashboard uses a JWT bearer token for internal requests
-- Dashboard polls for current order and status data
+- Dashboard polls for current order and status data (TanStack Query `refetchInterval: 5_000`)
+- WebSocket `GET /ws` (order:{id}, session:{token}) invalidates queries on server events; polling is the fallback when the socket drops
 
 ## Folder Structure
 
@@ -96,9 +97,10 @@ fnb-dashboard/
 
 ## Runtime Rules
 
-- Dashboard polling runs every 3–5 seconds.
+- Dashboard polling runs every 3–5 seconds (`refetchInterval: 5_000`).
+- WebSocket `GET /ws` carries real-time updates; TanStack Query invalidation triggers immediate refetch. Polling takes over when the socket drops.
 - Backend calculates order status from item statuses and payment status.
 - The UI does not change order status directly.
-- Kitchen changes `PENDING` → `COOKING` → `READY`.
-- Cashier changes `READY` → `DELIVERED`.
+- Kitchen changes `PENDING` → `COOKING` → `READY` (on `LUNAS` orders only).
+- Cashier changes `READY` → `DELIVERED` → `COMPLETED` (limited to `TAKE_AWAY` orders).
 - `OWNER` can perform every transition allowed by the backend.

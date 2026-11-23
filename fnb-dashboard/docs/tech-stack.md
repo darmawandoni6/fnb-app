@@ -28,13 +28,15 @@
 - Local API base URL: `http://localhost:8081` via `VITE_API_URL`.
 - QR Menu base URL via `VITE_QR_MENU_URL` (no default). Table QR codes encode `${VITE_QR_MENU_URL}/?meja=<qr_token>`; when the var is empty the "Buka QR Menu" action is disabled and the QR dialog shows a warning.
 - All responses follow the `{success, data}` / `{success, error{code, message}}` envelope.
-- Updates: WebSocket hub `GET /ws` per PRD §11.4 (subscribed to `order:{id}`), with TanStack Query polling every 3–5 seconds as the fallback while the socket is down.
+- Updates: WebSocket hub `GET /ws` per PRD §11.4 (subscribed to `order:{id}` and `session:{token}`), with TanStack Query polling every 3–5 seconds as the fallback while the socket down. Reconnect with exponential backoff (2 s base). Invalidate on `order.updated`, `item.updated`, `session.closed`.
 - Polling runs while the tab is active; default TanStack behavior pauses when the tab is hidden.
 - Order boards fetch from `GET /orders` and filter client-side per role (the kitchen keeps `LUNAS` orders only).
 - Money is integer rupiah; dashboard never computes prices, tax, or totals — server does.
 - Order status is read from API aggregate; client never recalculates it.
 
-## Package Boundaries
+## Reported Data
+
+- Reports (`GET /reports/summary`, `GET /reports/transactions`) use the mock layer (`src/mocks/handlers/reports.ts`) — no backend endpoint exists in `api.md` yet. The UI is fully functional on mock data; the live path will be connected when `/reports/*` lands on the server.
 
 ```text
 api/ → features/* → components/ui
@@ -47,7 +49,7 @@ api/ → features/* → components/ui
 - `src/schemas/`: Zod schemas used by React Hook Form and type inference.
 - `src/features/*`: domain folders owning pages, components, and hooks.
 - `src/components/ui/`: shadcn source-owned components.
-- `src/auth/`: `AuthContext`, `ProtectedRoute`, and `RoleGuard`.
+- `src/auth/`: `context.tsx` (AuthProvider), `guards.tsx` (ProtectedRoute, RoleGuard), `token.ts` (bearer helpers).
 - `src/constants/`: status maps, roles, and polling intervals.
 
 ## Authentication
@@ -93,9 +95,9 @@ fnb-dashboard/
 │   │   ├── menus.ts
 │   │   └── payments.ts
 │   ├── auth/
-│   │   ├── AuthContext.tsx
-│   │   ├── ProtectedRoute.tsx
-│   │   └── RoleGuard.tsx
+│   │   ├── context.tsx
+│   │   ├── guards.tsx
+│   │   └── token.ts
 │   ├── components/
 │   │   └── ui/
 │   ├── constants/

@@ -340,7 +340,7 @@ total_amount   = subtotal + service_amount + tax_amount
 
 ### 7.5 System (Automatic)
 
-- Create the order number atomically: `TA-001` for take away, `DI-001` for dine-in, reset daily.
+- Create the order number atomically: `TA-YYYYMMDD-SSS` for take away, `DI-YYYYMMDD-SSS` for dine-in (`SSS` is the daily sequence, zero-padded), reset daily per type.
 - Snapshot menu name, price, and rates into the order.
 - Decrease ingredient stock when an order is created and write `OUT` movements.
 - Restore ingredient stock when an order is cancelled and write `RESTORE` movements.

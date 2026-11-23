@@ -1,61 +1,42 @@
 vars {
-  @description('''Local API base URL''')
+  @description('Local API base URL')
   baseUrl: http://localhost:8081
-
-  @description('''Local WebSocket base URL''')
+  @description('Local WebSocket base URL')
   wsUrl: ws://localhost:8081
-
-  @description('''Access token returned by login''')
-  accessToken:
-
-  @description('''Demo table QR token''')
+  @description('Access token returned by login')
+  accessToken: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiOGU3NzQ0ZmMtYWQwNC00MDVjLWE0MTYtZjRmNGFiMWM5NDczIiwicm9sZSI6Ik9XTkVSIiwic3ViIjoiOGU3NzQ0ZmMtYWQwNC00MDVjLWE0MTYtZjRmNGFiMWM5NDczIiwiZXhwIjoxNzk1MzMyNDE2LCJpYXQiOjE3OTUzMzE1MTZ9.MI5pNI1xSqNcusaWhaqvjFRoW7I3K4tVy0-m38h2jOI
+  @description('Demo table QR token')
   qrToken: demo-qr-token
-
-  @description('''Table session token returned by open session''')
-  sessionToken:
-
-  @description('''Menu ID used by create-order request''')
+  @description('Table session token returned by open session')
+  sessionToken: 
+  @description('Menu ID used by create-order request')
   menuId: 00000000-0000-0000-0000-000000000010
-
-  @description('''Order tracking token returned by create-order''')
-  trackingToken:
-
-  @description('''Order item ID returned by create-order''')
-  itemId:
-
-  @description('''Internal order ID''')
-  orderId:
-
-  @description('''Internal order item ID''')
-  orderItemId:
-
-  @description('''Menu category ID''')
-  categoryId:
-
-  @description('''Menu ID for administration''')
-  adminMenuId:
-
-  @description('''Table ID''')
-  tableId:
-
-  @description('''Ingredient ID''')
-  ingredientId:
-
-  @description('''Recipe item ID''')
-  recipeItemId:
-
-  @description('''Recipe menu ID''')
+  @description('Order tracking token returned by create-order')
+  trackingToken: 
+  @description('Order item ID returned by create-order')
+  itemId: 
+  @description('Internal order ID')
+  orderId: 
+  @description('Internal order item ID')
+  orderItemId: 
+  @description('Menu category ID')
+  categoryId: 
+  @description('Menu ID for administration')
+  adminMenuId: 
+  @description('Table ID')
+  tableId: 
+  @description('Ingredient ID')
+  ingredientId: 
+  @description('Recipe item ID')
+  recipeItemId: 
+  @description('Recipe menu ID')
   recipeMenuId: 00000000-0000-0000-0000-000000000010
-
-  @description('''Recipe ingredient ID''')
-  recipeIngredientId:
-
-  @description('''Internal user ID''')
-  userId:
-
-  @description('''Order number (DI-/TA- prefix) returned by create-order''')
-  orderNumber:
-
-  @description('''sha512(order_id + status_code + gross_amount + server key)''')
-  midtransSignature:
+  @description('Recipe ingredient ID')
+  recipeIngredientId: 
+  @description('Internal user ID')
+  userId: 
+  @description('Order number (DI-/TA- prefix) returned by create-order')
+  orderNumber: 
+  @description('sha512(order_id + status_code + gross_amount + server key)')
+  midtransSignature: 
 }

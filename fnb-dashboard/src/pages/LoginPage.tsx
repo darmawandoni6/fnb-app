@@ -17,16 +17,35 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { type LoginValues, loginSchema } from '@/features/auth/loginSchema'
 
+const isMockMode = useMocks
+
 const demoAccounts = [
-  { email: 'owner@demo.cafe', label: 'Login Owner' },
-  { email: 'kasir@demo.cafe', label: 'Login Kasir' },
-  { email: 'dapur@demo.cafe', label: 'Login Dapur' },
+  {
+    email: 'owner@demo.cafe',
+    apiEmail: 'owner@example.com',
+    password: 'demo',
+    apiPassword: 'password123',
+    label: 'Login Owner',
+  },
+  {
+    email: 'kasir@demo.cafe',
+    apiEmail: 'kasir@example.com',
+    password: 'demo',
+    apiPassword: 'password123',
+    label: 'Login Kasir',
+  },
+  {
+    email: 'dapur@demo.cafe',
+    apiEmail: 'dapur@example.com',
+    password: 'demo',
+    apiPassword: 'password123',
+    label: 'Login Dapur',
+  },
 ]
 
 export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
-  const showDemoAccounts = useMocks
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: '', password: '' },
@@ -44,6 +63,14 @@ export function LoginPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleDemoLogin = (account: (typeof demoAccounts)[0]) => {
+    const email = isMockMode ? account.email : account.apiEmail
+    const password = isMockMode ? account.password : account.apiPassword
+    form.setValue('email', email)
+    form.setValue('password', password)
+    void signIn(email, password)
   }
 
   return (
@@ -76,28 +103,24 @@ export function LoginPage() {
               {submitting ? 'Memproses…' : 'Masuk'}
             </Button>
           </form>
-          {showDemoAccounts && (
-            <div className="flex flex-col gap-2">
-              <p className="text-muted-foreground text-sm">
-                Mode mock — pilih role demo (password: demo)
-              </p>
-              {demoAccounts.map((account) => (
-                <Button
-                  key={account.email}
-                  type="button"
-                  variant="outline"
-                  disabled={submitting}
-                  onClick={() => {
-                    form.setValue('email', account.email)
-                    form.setValue('password', 'demo')
-                    void signIn(account.email, 'demo')
-                  }}
-                >
-                  {account.label}
-                </Button>
-              ))}
-            </div>
-          )}
+          <div className="flex flex-col gap-2">
+            <p className="text-muted-foreground text-sm">
+              {isMockMode
+                ? 'Mode mock — pilih role demo (password: demo)'
+                : 'Mode API — akun demo backend'}
+            </p>
+            {demoAccounts.map((account) => (
+              <Button
+                key={account.email}
+                type="button"
+                variant="outline"
+                disabled={submitting}
+                onClick={() => handleDemoLogin(account)}
+              >
+                {account.label}
+              </Button>
+            ))}
+          </div>
         </CardContent>
       </Card>
     </div>

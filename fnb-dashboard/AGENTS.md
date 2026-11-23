@@ -19,6 +19,8 @@ Phase 3 API integration complete: auth, orders, payments, settings, tables, menu
 
 Phase 5 complete in `docs/implementation/phase-5-order-rules.md`: store-close guard with auto-cancel of unpaid orders, today-only order board (server-owned outlet day), manual refresh, QR Menu closed-store polling.
 
+Phase 6 complete in `docs/implementation/phase-6-order-search.md`: `/orders` board search by `order_number`, seeded from `?q=`; pairs with the QR Menu "Tunjukkan QR" deep link.
+
 Environment gotchas learned during Phase 0:
 
 - `npm create vite` is interactive under the agent shell; scaffold to a temp dir under the workdir then `cp -R` (a `/tmp` path gets created inside the workdir by npm, so use a workdir-relative temp path and clean up).

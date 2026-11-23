@@ -23,6 +23,7 @@ This document is the index. Every phase and every page has its own file in `docs
 | 3     | API integration      | Swap mock for the live `fnb-server`               | Done  |
 | 4     | Verification         | Per-page manual verification and docs sync        | Done  |
 | 5     | Order business rules | Store-close guard, today-only board, refresh      | Done  |
+| 6     | Order search         | Board search by order number + QR deep link       | Done  |
 
 Work is organized per feature or per page so each page can be sliced, integrated, and verified independently.
 
@@ -62,6 +63,10 @@ Phase 2 is complete on the mock layer. The integration work that used to be list
 ## Phase 5 — Order Business Rules
 
 - [phase-5-order-rules.md](implementation/phase-5-order-rules.md) — store-close guard with auto-cancel, today-only order board, manual refresh, QR Menu closed-store notice.
+
+## Phase 6 — Order Search
+
+- [phase-6-order-search.md](implementation/phase-6-order-search.md) — board search by `order_number`, prefill from `?q=`, pairs with the QR Menu order QR.
 
 ## Excluded
 

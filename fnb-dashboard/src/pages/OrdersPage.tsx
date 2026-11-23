@@ -1,12 +1,12 @@
 import { useState } from 'react'
 
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { api } from '@/api'
 import type { Order } from '@/types'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Search, X } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { ORDER_STATUS, type OrderStatus } from '@/constants/orderStatus'
@@ -20,6 +20,7 @@ import { useAuth } from '@/auth/context'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { OrderCard } from '@/features/orders/OrderCard'
 import { OrderDetailDialog } from '@/features/orders/OrderDetailDialog'
@@ -42,6 +43,8 @@ export function OrdersPage() {
   const { data: orders, isPending } = useOrders()
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: api.getSettings })
   const stats = useOrderStats()
+  const [searchParams] = useSearchParams()
+  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
   const [viewMode, setViewMode] = useState<ViewMode>('all')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isRefreshing, setIsRefreshing] = useState(false)
@@ -60,19 +63,43 @@ export function OrdersPage() {
     }
   }
 
-  const visibleOrders = (orders ?? []).filter((order) => {
-    if (viewMode === 'unpaid') return order.payment_status === PAYMENT_STATUS.BELUM
-    if (viewMode === 'done') return order.status === ORDER_STATUS.SELESAI
-    return true
-  })
+  const search = query.trim().toLowerCase()
+  const visibleOrders = (orders ?? [])
+    .filter((order) => {
+      if (viewMode === 'unpaid') return order.payment_status === PAYMENT_STATUS.BELUM
+      if (viewMode === 'done') return order.status === ORDER_STATUS.SELESAI
+      return true
+    })
+    .filter((order) => !search || order.order_number.toLowerCase().includes(search))
 
   const toggleView = (mode: ViewMode) => setViewMode((current) => (current === mode ? 'all' : mode))
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h1 className="text-lg font-semibold">Orders</h1>
         <div className="flex items-center gap-2">
+          <div className="relative flex items-center">
+            <Search className="text-muted-foreground pointer-events-none absolute left-2.5 size-4" />
+            <Input
+              type="search"
+              placeholder="Cari nomor order..."
+              aria-label="Cari nomor order"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-48 pr-7 pl-8"
+            />
+            {query && (
+              <button
+                type="button"
+                aria-label="Hapus pencarian"
+                onClick={() => setQuery('')}
+                className="text-muted-foreground hover:text-foreground absolute right-2 flex size-4 items-center justify-center"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </div>
           <Button variant="outline" size="sm" onClick={refresh} disabled={isRefreshing}>
             <RefreshCw className={isRefreshing ? 'size-4 animate-spin' : 'size-4'} />
             {isRefreshing ? 'Memuat...' : 'Refresh'}
@@ -132,9 +159,13 @@ export function OrdersPage() {
       ) : (
         <Empty className="border">
           <EmptyHeader>
-            <EmptyMedia variant="icon">🍽️</EmptyMedia>
-            <EmptyTitle>Belum ada order</EmptyTitle>
-            <EmptyDescription>Order baru akan muncul di sini.</EmptyDescription>
+            <EmptyMedia variant="icon">{search ? '🔍' : '🍽️'}</EmptyMedia>
+            <EmptyTitle>{search ? 'Order tidak ditemukan' : 'Belum ada order'}</EmptyTitle>
+            <EmptyDescription>
+              {search
+                ? `Tidak ada order dengan nomor "${query.trim()}".`
+                : 'Order baru akan muncul di sini.'}
+            </EmptyDescription>
           </EmptyHeader>
         </Empty>
       )}

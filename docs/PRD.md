@@ -154,7 +154,7 @@ The seed creates an owner only when the `users` table is empty. Public registrat
 ### 4.3 Cash Confirmation
 
 1. The customer, cashier, or owner creates a cash order: status `MENUNGGU`, `payment_status` `BELUM`, with `order_number` and a 15-minute timer.
-2. The cashier scans the order QR, opens the order from the board, or enters the order number.
+2. The cashier scans the order QR, opens the order from the board, or enters the order number. The order QR is a dashboard deep link (`/orders?q=<order_number>`), not an API lookup.
 3. The cashier sees the order detail and the grand total.
 4. The cashier enters the amount received; the client shows the change.
 5. The cashier confirms the payment. The endpoint is idempotent: repeating the confirmation returns the same order without a second effect.
@@ -304,6 +304,7 @@ total_amount   = subtotal + service_amount + tax_amount
 - Enter name (required) and phone (optional).
 - Choose cash or non-cash payment.
 - See order and item status in real time.
+- Show an order QR that opens the dashboard order board filtered to that `order_number`, so the cashier needs no manual entry.
 - Add another order in the same table session.
 - See the screen notification for every status change (WhatsApp and push are phase 2).
 
@@ -317,6 +318,7 @@ total_amount   = subtotal + service_amount + tax_amount
 - Move take away items `READY → DELIVERED → COMPLETED`.
 - Print the thermal receipt through the browser print dialog.
 - View the active order list and the order detail.
+- Search the order board by `order_number`; the QR Menu order QR resolves to the same board with the search applied, so no manual entry is needed.
 - Cancel an unpaid order with a required reason.
 - Read stock, and mark menu availability.
 

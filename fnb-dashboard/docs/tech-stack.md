@@ -30,7 +30,7 @@
 - All responses follow the `{success, data}` / `{success, error{code, message}}` envelope.
 - Updates: WebSocket hub `GET /ws` per PRD §11.4 (subscribed to `order:{id}` and `session:{token}`), with TanStack Query polling every 3–5 seconds as the fallback while the socket down. Reconnect with exponential backoff (2 s base). Invalidate on `order.updated`, `item.updated`, `session.closed`.
 - Polling runs while the tab is active; default TanStack behavior pauses when the tab is hidden.
-- Order boards fetch from `GET /orders` and filter client-side per role (the kitchen keeps `LUNAS` orders only).
+- Order boards fetch from `GET /orders` and filter client-side per role (the kitchen keeps `LUNAS` orders only). The `/orders` board also filters by `order_number` search, seeded from `?q=` so a QR Menu order QR opens the board already filtered.
 - Money is integer rupiah; dashboard never computes prices, tax, or totals — server does.
 - Order status is read from API aggregate; client never recalculates it.
 

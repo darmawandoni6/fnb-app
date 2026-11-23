@@ -5,9 +5,8 @@ import { Timer } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 
 const remainingSeconds = (createdAt: string, timeoutMinutes: number) =>
-  Math.max(
-    0,
-    Math.floor(new Date(createdAt).getTime() / 1000) + timeoutMinutes * 60 - Date.now() / 1000,
+  Math.floor(
+    Math.max(0, new Date(createdAt).getTime() / 1000 + timeoutMinutes * 60 - Date.now() / 1000),
   )
 
 const formatRemaining = (seconds: number) =>
